@@ -245,27 +245,45 @@ html, body {
   letter-spacing: 0.08em;
 }
 
-.squat-target {
+.squat-input-row {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.squat-input-label {
   font-size: 0.9rem;
   color: var(--text-muted);
 }
 
-.squat-count {
-  font-size: clamp(3rem, 12vw, 4rem);
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
+.squat-input {
+  width: 100%;
+  min-height: 48px;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--primary);
+  border-radius: 10px;
+  background-color: rgba(15, 52, 96, 0.25);
   color: var(--text);
+  font-size: 1.1rem;
+  font-variant-numeric: tabular-nums;
 }
 
-.squat-counter--goal-reached .squat-count {
-  color: #4caf50;
+.squat-input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.squat-counter--goal-reached .squat-input {
+  border-color: #4caf50;
 }
 
 .squat-controls {
   display: flex;
-  gap: 0.75rem;
+  width: 100%;
+  gap: 0.5rem;
   flex-wrap: wrap;
-  justify-content: center;
+  justify-content: flex-end;
 }
 
 /* ── Daily Summary ───────────────────────────────────── */

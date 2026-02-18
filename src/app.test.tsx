@@ -8,7 +8,7 @@ test('App navigates between plank/squat/summary views', () => {
   const summaryHtml = renderToStaticMarkup(<App initialView="summary" />)
 
   expect(plankHtml).toContain('Start')
-  expect(squatHtml).toContain('Count:')
+  expect(squatHtml).toContain('Done reps')
   expect(summaryHtml).toContain('Plank target:')
 })
 

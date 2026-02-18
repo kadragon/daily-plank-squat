@@ -14,8 +14,8 @@ function toElapsedSeconds(elapsedMs: number): number {
   return Math.max(0, Math.floor(elapsedMs / 1000))
 }
 
-function formatElapsed(elapsedMs: number): string {
-  const totalSeconds = toElapsedSeconds(elapsedMs)
+function formatTime(ms: number): string {
+  const totalSeconds = toElapsedSeconds(ms)
   const minutes = Math.floor(totalSeconds / 60)
   const seconds = totalSeconds % 60
 
@@ -34,6 +34,7 @@ export default function PlankTimer({
   const progressPercent = targetSec > 0
     ? Math.min(100, Math.max(0, (elapsedMs / (targetSec * 1000)) * 100))
     : 0
+  const remainingMs = Math.max(0, targetSec * 1000 - elapsedMs)
 
   function renderControls() {
     switch (state) {
@@ -78,7 +79,7 @@ export default function PlankTimer({
     <div className={`plank-timer plank-timer--${state.toLowerCase()}`}>
       <h2>Plank Timer</h2>
       <div className="timer-target">Target: {targetSec}s</div>
-      <div className="timer-display" aria-live="polite">{formatElapsed(elapsedMs)}</div>
+      <div className="timer-display" aria-live="polite">{formatTime(remainingMs)}</div>
       <div className="progress-bar">
         <div className="progress-fill" style={{ width: `${progressPercent}%` }} />
       </div>

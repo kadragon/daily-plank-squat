@@ -2,10 +2,24 @@ import { expect, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
 import PlankTimer from './plank-timer'
 
-test('Plank view shows elapsed as MM:SS', () => {
-  const html = renderToStaticMarkup(<PlankTimer elapsedMs={61_000} />)
+test('Plank view shows remaining time as MM:SS', () => {
+  const html = renderToStaticMarkup(<PlankTimer elapsedMs={61_000} targetSec={120} />)
 
-  expect(html).toContain('01:01')
+  expect(html).toContain('00:59')
+})
+
+test('PlankTimer IDLE shows full target time', () => {
+  const html = renderToStaticMarkup(<PlankTimer state="IDLE" targetSec={60} />)
+
+  expect(html).toContain('01:00')
+})
+
+test('PlankTimer shows countdown at halfway', () => {
+  const html = renderToStaticMarkup(
+    <PlankTimer state="RUNNING" elapsedMs={30_000} targetSec={60} />,
+  )
+
+  expect(html).toContain('00:30')
 })
 
 test('Plank view shows start button in IDLE', () => {

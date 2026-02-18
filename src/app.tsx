@@ -13,8 +13,8 @@ import { createPlankTimer, type PlankTimer as DomainPlankTimer } from './models/
 import {
   complete as completeSquatCounter,
   createSquatCounter,
-  decrement as decrementSquatCounter,
-  increment as incrementSquatCounter,
+  sanitizeDoneReps,
+  sanitizeTargetReps,
   type SquatCounter as DomainSquatCounter,
 } from './models/squat-counter'
 import { loadAllRecords, saveRecord } from './storage/daily-record'
@@ -130,7 +130,7 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
   const [squatSuccess, setSquatSuccess] = useState(initial.squatSuccess)
 
   const [plankTargetSec] = useState(initial.plankTargetSec)
-  const [squatTargetReps] = useState(initial.squatTargetReps)
+  const [squatTargetReps, setSquatTargetReps] = useState(initial.squatTargetReps)
   const [fatigue, setFatigue] = useState(initial.fatigue)
   const [overloadWarning, setOverloadWarning] = useState(initial.overloadWarning)
   const [suspiciousSession, setSuspiciousSession] = useState(initial.suspiciousSession)
@@ -178,16 +178,19 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
     syncPlankState()
   }
 
-  function handleSquatIncrement() {
-    incrementSquatCounter(squatCounterRef.current as DomainSquatCounter)
-    const nextCount = squatCounterRef.current?.count ?? 0
+  function handleSquatDoneRepsChange(rawValue: string) {
+    const nextCount = sanitizeDoneReps(Number(rawValue))
+    if (squatCounterRef.current) {
+      squatCounterRef.current.count = nextCount
+    }
     setSquatCount(nextCount)
     goalAlertsRef.current.onSquatProgress(nextCount, squatTargetReps)
   }
 
-  function handleSquatDecrement() {
-    decrementSquatCounter(squatCounterRef.current as DomainSquatCounter)
-    setSquatCount(squatCounterRef.current?.count ?? 0)
+  function handleSquatTargetRepsChange(rawValue: string) {
+    const nextTarget = sanitizeTargetReps(Number(rawValue))
+    setSquatTargetReps(nextTarget)
+    goalAlertsRef.current.onSquatProgress(squatCount, nextTarget)
   }
 
   function handleSquatComplete() {
@@ -353,8 +356,8 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
           <SquatCounter
             count={squatCount}
             targetReps={squatTargetReps}
-            onIncrement={handleSquatIncrement}
-            onDecrement={handleSquatDecrement}
+            onDoneRepsChange={handleSquatDoneRepsChange}
+            onTargetRepsChange={handleSquatTargetRepsChange}
             onComplete={handleSquatComplete}
           />
         )
