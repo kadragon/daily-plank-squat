@@ -380,34 +380,23 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
     }
   }
 
+  const navViews = ['plank', 'squat', 'summary'] as const
+
   return (
     <div className="app">
       <h1 className="app-title">Daily Plank & Squat</h1>
       <nav className="nav">
-        <button
-          type="button"
-          className={`nav-btn${view === 'plank' ? ' nav-btn--active' : ''}`}
-          aria-current={view === 'plank' ? 'page' : undefined}
-          onClick={() => setView('plank')}
-        >
-          Plank
-        </button>
-        <button
-          type="button"
-          className={`nav-btn${view === 'squat' ? ' nav-btn--active' : ''}`}
-          aria-current={view === 'squat' ? 'page' : undefined}
-          onClick={() => setView('squat')}
-        >
-          Squat
-        </button>
-        <button
-          type="button"
-          className={`nav-btn${view === 'summary' ? ' nav-btn--active' : ''}`}
-          aria-current={view === 'summary' ? 'page' : undefined}
-          onClick={() => setView('summary')}
-        >
-          Summary
-        </button>
+        {navViews.map((targetView) => (
+          <button
+            key={targetView}
+            type="button"
+            className={`nav-btn${view === targetView ? ' nav-btn--active' : ''}`}
+            aria-current={view === targetView ? 'page' : undefined}
+            onClick={() => setView(targetView)}
+          >
+            {targetView.charAt(0).toUpperCase() + targetView.slice(1)}
+          </button>
+        ))}
       </nav>
       <main className="main-content">
         {renderView()}
