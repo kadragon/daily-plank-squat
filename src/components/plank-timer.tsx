@@ -2,12 +2,12 @@ import type { PlankState } from '../types'
 
 interface PlankTimerProps {
   elapsedMs?: number
+  targetSec?: number
   state?: PlankState
   onStart?: () => void
   onPause?: () => void
   onResume?: () => void
   onCancel?: () => void
-  onComplete?: () => void
 }
 
 function toElapsedSeconds(elapsedMs: number): number {
@@ -24,12 +24,12 @@ function formatElapsed(elapsedMs: number): string {
 
 export default function PlankTimer({
   elapsedMs = 0,
+  targetSec = 0,
   state = 'IDLE',
   onStart,
   onPause,
   onResume,
   onCancel,
-  onComplete,
 }: PlankTimerProps) {
   function renderControls() {
     switch (state) {
@@ -40,7 +40,6 @@ export default function PlankTimer({
           <>
             <button type="button" onClick={onPause}>Pause</button>
             <button type="button" onClick={onCancel}>Cancel</button>
-            <button type="button" onClick={onComplete}>Complete</button>
           </>
         )
       case 'PAUSED':
@@ -52,6 +51,8 @@ export default function PlankTimer({
         )
       case 'COMPLETED':
         return <div>Result: {toElapsedSeconds(elapsedMs)}s</div>
+      case 'CANCELLED':
+        return <div>Cancelled: {toElapsedSeconds(elapsedMs)}s</div>
       default:
         return null
     }
@@ -59,6 +60,7 @@ export default function PlankTimer({
 
   return (
     <div>
+      <div>Target: {targetSec}s</div>
       <div>{formatElapsed(elapsedMs)}</div>
       {renderControls()}
     </div>

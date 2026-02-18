@@ -1,4 +1,4 @@
-import { describe, test, expect } from 'bun:test'
+import { describe, expect, test } from 'bun:test'
 import { createPlankTimer } from './plank-timer'
 
 describe('PlankTimer integration', () => {
@@ -35,12 +35,13 @@ describe('PlankTimer integration', () => {
     expect(record.success).toBe(true)
   })
 
-  test('Cancel marks success=false', () => {
+  test('Cancel stores elapsed-based actual_sec and success=false', () => {
     const pt = createPlankTimer()
     pt.start(0)
-    const record = pt.cancel()
+    const record = pt.cancel(3499)
     expect(pt.state()).toBe('CANCELLED')
     expect(record.success).toBe(false)
+    expect(record.actual_sec).toBe(3)
   })
 
   test('Ignoring duplicate start does not create overlapping timer segments', () => {

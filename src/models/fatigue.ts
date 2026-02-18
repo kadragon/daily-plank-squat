@@ -1,89 +1,279 @@
-import type { ExerciseRecord, SquatRecord, FatigueParams } from '../types'
-
-export function normalizePerformance(actual: number, target: number): number {
-  if (target === 0) return 0
-  return Math.min(1.5, Math.max(0, actual / target))
-}
-
-const SIGMOID_K = 5
-export const MEDIAN_THRESHOLD = 0.5
-
-export function computeFatigueScore(F_total: number): number {
-  return 1 / (1 + Math.exp(-SIGMOID_K * (F_total - MEDIAN_THRESHOLD)))
-}
-
-export function computeFTotal(F_P: number, F_S: number, params: FatigueParams): number {
-  const weight_factor = params.weight / 70
-  const age_factor = 1 + Math.max(0, params.age - 30) * 0.01
-  return (F_P * weight_factor + F_S) * age_factor / 2
-}
+import type {
+  BaseTargets,
+  DailyRecord,
+  ExerciseRecord,
+  FatigueParams,
+  FatigueSnapshot,
+  SquatRecord,
+  TomorrowPlan,
+} from '../types'
 
 export const ALPHA_P = 0.35
 export const ALPHA_S = 0.40
+export const MEDIAN_INITIAL = 0.9
+
+const FATIGUE_SCALE = 2.2
+const FATIGUE_HOLD_THRESHOLD = 0.85
+const TARGET_INCREASE_FACTOR = 1.05
+const FAILURE_DECREASE_FACTOR = 0.9
+const FAILURE_STREAK_DAYS = 3
+const MEDIAN_WINDOW = 14
+
+function clip(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value))
+}
+
+export function normalizePerformance(actual: number, target: number): number {
+  return clip(actual / Math.max(target, 1), 0, 1.5)
+}
+
+export function computeTargetIntensity(target: number, base: number): number {
+  return Math.log(1 + (target / Math.max(base, 1)))
+}
+
+export function computeLoad(actual: number, target: number, base: number): number {
+  const r_e = normalizePerformance(actual, target)
+  const g_e = computeTargetIntensity(target, base)
+  const over_e = Math.max(0, r_e - 1)
+  const under_e = Math.max(0, 1 - r_e)
+  return g_e * (1 + 0.6 * over_e) * (1 + 0.3 * under_e)
+}
+
+export function computeRampPenalty(prevTarget: number, target: number): number {
+  const d_e = clip((target - prevTarget) / Math.max(prevTarget, 1), -0.3, 0.3)
+  return 1.2 * Math.max(0, d_e)
+}
 
 export function updateEWMA(alpha: number, prevFatigue: number, load: number): number {
   return alpha * load + (1 - alpha) * prevFatigue
 }
 
-const MAX_RAMP = 0.3
-
-export function computeRampStress(prevLoad: number, curLoad: number): number {
-  const delta = curLoad - prevLoad
-  return Math.min(MAX_RAMP, Math.max(-MAX_RAMP, delta))
+export function computeSharedFatigueRaw(F_P: number, F_S: number): number {
+  return 0.45 * F_P + 0.55 * F_S + 0.2 * F_P * F_S
 }
 
-const OVER_PENALTY = 0.5
-const UNDER_PENALTY = 0.2
-const FAILURE_STREAK_THRESHOLD = 3
-const FAILURE_DECREASE_FACTOR = 0.9
-const FATIGUE_HOLD_THRESHOLD = 0.85
-const TARGET_INCREASE_FACTOR = 1.05
-
-export function computeLoad(r_e: number): number {
-  if (r_e >= 1) return r_e + OVER_PENALTY * (r_e - 1)
-  return r_e + UNDER_PENALTY * (1 - r_e)
+export function computeWeightFactor(weight_kg: number): number {
+  return clip(1 + (0.10 * (weight_kg - 70)) / 70, 0.85, 1.20)
 }
 
-function clamp(value: number, floor?: number, ceiling?: number): number {
-  let result = value
-  if (floor !== undefined) result = Math.max(floor, result)
-  if (ceiling !== undefined) result = Math.min(ceiling, result)
-  return result
+export function computeAgeFactor(age: number): number {
+  return clip(1 + (0.08 * (age - 30)) / 30, 0.85, 1.25)
 }
 
+function sigmoid(x: number): number {
+  return 1 / (1 + Math.exp(-x))
+}
+
+export function computeFatigueScore(F_total_adj: number, medianThreshold: number): number {
+  return sigmoid(FATIGUE_SCALE * (F_total_adj - medianThreshold))
+}
+
+export function median(values: number[]): number {
+  if (values.length === 0) return MEDIAN_INITIAL
+  const sorted = values.toSorted((a, b) => a - b)
+  const middle = Math.floor(sorted.length / 2)
+  if (sorted.length % 2 === 1) {
+    return sorted[middle] ?? MEDIAN_INITIAL
+  }
+  const left = sorted[middle - 1] ?? MEDIAN_INITIAL
+  const right = sorted[middle] ?? MEDIAN_INITIAL
+  return (left + right) / 2
+}
+
+function sortByDateAscending(records: DailyRecord[]): DailyRecord[] {
+  return records.toSorted((a, b) => a.date.localeCompare(b.date))
+}
+
+function getRecentMedian(adjustedHistory: number[]): number {
+  if (adjustedHistory.length === 0) return MEDIAN_INITIAL
+  return median(adjustedHistory.slice(-MEDIAN_WINDOW))
+}
+
+export function computeFatigueSeries(
+  records: DailyRecord[],
+  params: FatigueParams,
+  baseTargets: BaseTargets,
+): FatigueSnapshot[] {
+  const sorted = sortByDateAscending(records)
+  const snapshots: FatigueSnapshot[] = []
+
+  let F_P = 0
+  let F_S = 0
+  let previous: DailyRecord | null = null
+  const adjustedHistory: number[] = []
+  const weightFactor = computeWeightFactor(params.weight_kg)
+  const ageFactor = computeAgeFactor(params.age)
+
+  for (const record of sorted) {
+    const plankLoad = computeLoad(record.plank.actual_sec, record.plank.target_sec, baseTargets.base_P)
+    const squatLoad = computeLoad(record.squat.actual_reps, record.squat.target_reps, baseTargets.base_S)
+
+    const plankRampPenalty = previous
+      ? computeRampPenalty(previous.plank.target_sec, record.plank.target_sec)
+      : 0
+    const squatRampPenalty = previous
+      ? computeRampPenalty(previous.squat.target_reps, record.squat.target_reps)
+      : 0
+
+    F_P = updateEWMA(ALPHA_P, F_P, plankLoad + plankRampPenalty)
+    F_S = updateEWMA(ALPHA_S, F_S, squatLoad + squatRampPenalty)
+
+    const F_total_raw = computeSharedFatigueRaw(F_P, F_S)
+    const F_total_adj = F_total_raw * weightFactor * ageFactor
+    const median_m = getRecentMedian(adjustedHistory)
+    const fatigue = computeFatigueScore(F_total_adj, median_m)
+
+    adjustedHistory.push(F_total_adj)
+    snapshots.push({ F_P, F_S, F_total_raw, F_total_adj, fatigue, median_m })
+    previous = record
+  }
+
+  return snapshots
+}
+
+export function percentile(values: number[], p: number): number {
+  if (values.length === 0) return 0
+  const sorted = values.toSorted((a, b) => a - b)
+  const rank = (p / 100) * (sorted.length - 1)
+  const lower = Math.floor(rank)
+  const upper = Math.ceil(rank)
+  if (lower === upper) return sorted[lower] ?? 0
+  const lowerValue = sorted[lower] ?? 0
+  const upperValue = sorted[upper] ?? 0
+  const weight = rank - lower
+  return lowerValue * (1 - weight) + upperValue * weight
+}
+
+function hasFailureStreak(records: DailyRecord[], exercise: 'plank' | 'squat'): boolean {
+  if (records.length < FAILURE_STREAK_DAYS) return false
+  const tail = sortByDateAscending(records).slice(-FAILURE_STREAK_DAYS)
+  return tail.every((record) => {
+    if (exercise === 'plank') return !record.plank.success
+    return !record.squat.success
+  })
+}
+
+function computeNextTargetValue(lastTarget: number, fatigue: number, failureStreak: boolean): number {
+  if (failureStreak) return Math.max(1, Math.round(lastTarget * FAILURE_DECREASE_FACTOR))
+  if (fatigue > FATIGUE_HOLD_THRESHOLD) return lastTarget
+  return Math.max(1, Math.round(lastTarget * TARGET_INCREASE_FACTOR))
+}
+
+export function computeTomorrowPlan(
+  records: DailyRecord[],
+  params: FatigueParams,
+  baseTargets: BaseTargets,
+): TomorrowPlan {
+  if (records.length === 0) {
+    return {
+      plank_target_sec: baseTargets.base_P,
+      squat_target_reps: baseTargets.base_S,
+      fatigue: 0,
+      F_P: 0,
+      F_S: 0,
+      F_total_raw: 0,
+      overload_warning: false,
+    }
+  }
+
+  const sorted = sortByDateAscending(records)
+  const snapshots = computeFatigueSeries(sorted, params, baseTargets)
+  const lastRecord = sorted.at(-1)
+  const latest = snapshots.at(-1)
+
+  if (!lastRecord || !latest) {
+    return {
+      plank_target_sec: baseTargets.base_P,
+      squat_target_reps: baseTargets.base_S,
+      fatigue: 0,
+      F_P: 0,
+      F_S: 0,
+      F_total_raw: 0,
+      overload_warning: false,
+    }
+  }
+
+  const plankFailureStreak = hasFailureStreak(sorted, 'plank')
+  const squatFailureStreak = hasFailureStreak(sorted, 'squat')
+
+  const F_total_raw_history = snapshots.map((snapshot) => snapshot.F_total_raw)
+  const previousThreshold = percentile(F_total_raw_history.slice(0, -1), 95)
+
+  return {
+    plank_target_sec: computeNextTargetValue(lastRecord.plank.target_sec, latest.fatigue, plankFailureStreak),
+    squat_target_reps: computeNextTargetValue(lastRecord.squat.target_reps, latest.fatigue, squatFailureStreak),
+    fatigue: latest.fatigue,
+    F_P: latest.F_P,
+    F_S: latest.F_S,
+    F_total_raw: latest.F_total_raw,
+    overload_warning: F_total_raw_history.length > 1 && latest.F_total_raw > previousThreshold,
+  }
+}
+
+export function computeLatestFatigueSnapshot(
+  records: DailyRecord[],
+  params: FatigueParams,
+  baseTargets: BaseTargets,
+): FatigueSnapshot {
+  const latest = computeFatigueSeries(records, params, baseTargets).at(-1)
+  if (latest) return latest
+  return {
+    F_P: 0,
+    F_S: 0,
+    F_total_raw: 0,
+    F_total_adj: 0,
+    fatigue: 0,
+    median_m: MEDIAN_INITIAL,
+  }
+}
+
+// Compatibility wrappers used by existing API call sites.
 export function computeNextTarget(
   baseTarget: number,
   history: ExerciseRecord[],
-  _params: FatigueParams,
-  floor?: number,
-  ceiling?: number,
+  params: FatigueParams,
+  _floor?: number,
+  _ceiling?: number,
 ): number {
-  if (history.length === 0) return baseTarget
+  const synthetic: DailyRecord[] = history.map((record, index) => ({
+    date: `2026-01-${String(index + 1).padStart(2, '0')}`,
+    plank: record,
+    squat: {
+      target_reps: 20,
+      actual_reps: 20,
+      success: true,
+    },
+    fatigue: 0,
+    F_P: 0,
+    F_S: 0,
+    F_total_raw: 0,
+    inactive_time_ratio: 0,
+    flag_suspicious: false,
+  }))
 
-  if (
-    history.length >= FAILURE_STREAK_THRESHOLD
-    && history.slice(-FAILURE_STREAK_THRESHOLD).every((record) => !record.success)
-  ) {
-    return clamp(Math.round(baseTarget * FAILURE_DECREASE_FACTOR), floor, ceiling)
-  }
-
-  let F_P = 0
-  for (const record of history) {
-    const r_e = normalizePerformance(record.actual_sec, record.target_sec)
-    F_P = updateEWMA(ALPHA_P, F_P, computeLoad(r_e))
-  }
-
-  const fatigueScore = computeFatigueScore(F_P)
-  const next = fatigueScore > FATIGUE_HOLD_THRESHOLD
-    ? baseTarget
-    : Math.round(baseTarget * TARGET_INCREASE_FACTOR)
-  return clamp(next, floor, ceiling)
+  return computeTomorrowPlan(synthetic, params, { base_P: baseTarget, base_S: 20 }).plank_target_sec
 }
 
 export function computeSquatTarget(
-  _baseTarget: number,
-  _history: SquatRecord[],
-  _params: FatigueParams,
+  baseTarget: number,
+  history: SquatRecord[],
+  params: FatigueParams,
 ): number {
-  return _baseTarget
+  const synthetic: DailyRecord[] = history.map((record, index) => ({
+    date: `2026-01-${String(index + 1).padStart(2, '0')}`,
+    plank: {
+      target_sec: 60,
+      actual_sec: 60,
+      success: true,
+    },
+    squat: record,
+    fatigue: 0,
+    F_P: 0,
+    F_S: 0,
+    F_total_raw: 0,
+    inactive_time_ratio: 0,
+    flag_suspicious: false,
+  }))
+
+  return computeTomorrowPlan(synthetic, params, { base_P: 60, base_S: baseTarget }).squat_target_reps
 }

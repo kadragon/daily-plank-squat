@@ -9,6 +9,12 @@ export interface WakeLockLike {
   request(type: 'screen'): Promise<WakeLockSentinelLike>
 }
 
+export function getWakeLock(): WakeLockLike | undefined {
+  if (typeof navigator === 'undefined') return undefined
+  const nav = navigator as unknown as { wakeLock?: WakeLockLike }
+  return nav.wakeLock
+}
+
 export async function syncWakeLock(
   plankState: PlankState,
   sentinel: WakeLockSentinelLike | null,

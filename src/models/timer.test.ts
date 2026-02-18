@@ -40,4 +40,23 @@ describe('Timer Model', () => {
     pauseTimer(timer, t0 + 3500)   // 1.5s segment
     expect(getElapsed(timer)).toBeCloseTo(2500)
   })
+
+  test('60-second session keeps computed elapsed within ±1 second tolerance', () => {
+    const timer = createTimer()
+    startTimer(timer, 0)
+    completeTimer(timer, 60_450)
+
+    const elapsedSec = getElapsed(timer) / 1000
+    expect(elapsedSec).toBeGreaterThanOrEqual(59)
+    expect(elapsedSec).toBeLessThanOrEqual(61)
+  })
+
+  test('background-style long gap still preserves cumulative elapsed accuracy', () => {
+    const timer = createTimer()
+    startTimer(timer, 1_000)
+
+    // Simulate hidden/foreground gap without relying on interval ticks.
+    expect(getCurrentElapsed(timer, 6_000)).toBe(5_000)
+    expect(getCurrentElapsed(timer, 16_000)).toBe(15_000)
+  })
 })

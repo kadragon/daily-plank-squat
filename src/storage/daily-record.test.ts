@@ -1,5 +1,5 @@
 import { beforeEach, expect, test } from 'bun:test'
-import { loadHistory, loadTodayRecord, saveRecord } from './daily-record'
+import { loadAllRecords, loadHistory, loadTodayRecord, saveRecord } from './daily-record'
 import type { DailyRecord } from '../types'
 
 const STORAGE_KEY = 'daily-records'
@@ -33,10 +33,13 @@ function sampleRecord(date: string): DailyRecord {
   return {
     date,
     plank: { target_sec: 60, actual_sec: 60, success: true },
-    squat: { target_count: 20, actual_count: 20, success: true },
+    squat: { target_reps: 20, actual_reps: 20, success: true },
     fatigue: 0.4,
     F_P: 0.3,
     F_S: 0.2,
+    F_total_raw: 0.5,
+    inactive_time_ratio: 0,
+    flag_suspicious: false,
   }
 }
 
@@ -82,7 +85,7 @@ test('record matches PRD schema (date, plank, squat, fatigue, F_P, F_S)', () => 
       {
         date: today,
         plank: { target_sec: 60, actual_sec: 60, success: true },
-        squat: { target_count: 20, actual_count: 20, success: true },
+        squat: { target_reps: 20, actual_reps: 20, success: true },
         fatigue: 0.4,
         F_P: 0.3,
       },
@@ -117,4 +120,28 @@ test('malformed JSON in storage does not crash read or write paths', () => {
   const record = sampleRecord('2026-02-18')
   saveRecord(record)
   expect(loadHistory(1)).toEqual([record])
+})
+
+test('legacy squat schema is upgraded to target_reps/actual_reps', () => {
+  localStorage.setItem(
+    STORAGE_KEY,
+    JSON.stringify([
+      {
+        ...sampleRecord('2026-02-18'),
+        squat: {
+          target_count: 20,
+          actual_count: 18,
+          success: false,
+        },
+      },
+    ]),
+  )
+
+  const loaded = loadAllRecords()
+  expect(loaded).toHaveLength(1)
+  expect(loaded[0]?.squat).toEqual({
+    target_reps: 20,
+    actual_reps: 18,
+    success: false,
+  })
 })

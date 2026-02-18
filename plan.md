@@ -1,4 +1,4 @@
-# Daily Plank & Squat — TDD Plan
+# Daily Plank & Squat — PRD v1.1 TDD Plan
 
 ## Plank State Machine
 
@@ -60,7 +60,7 @@
 - [x] Pause freezes elapsed
 - [x] Resume continues timing
 - [x] Complete records actual_sec as floor(elapsed/1000)
-- [x] Cancel marks success=false
+- [x] Cancel stores elapsed-based actual_sec and marks success=false
 
 ## Background Handling
 
@@ -88,7 +88,62 @@
 - [x] Daily summary shows completion status
 - [x] App navigates between plank/squat/summary views
 
+## Fatigue Model v1.1 Core
+
+- [x] Uses inputs weight_kg, age, gender, base_P, base_S
+- [x] Computes r_e[t] = clip(actual/max(target,1), 0, 1.5)
+- [x] Computes g_e[t] = ln(1 + target/base_e)
+- [x] Computes load_e[t] = g_e * (1+0.6*over) * (1+0.3*under)
+- [x] Computes ramp d_e from target deltas and ramp_penalty_e = 1.2*max(0,d_e)
+- [x] Updates both F_P and F_S via EWMA with (load + ramp_penalty)
+- [x] Computes F_total_raw = 0.45*F_P + 0.55*F_S + 0.20*F_P*F_S
+- [x] Applies clipped weight_factor and age_factor exactly per spec
+- [x] Computes fatigue as sigmoid(2.2*(F_total_adj - m))
+- [x] Uses rolling 14-day median m with initial default 0.9
+
+## Plank Timer Core
+
+- [x] Auto-completes when getElapsed() >= target_P without manual Complete 버튼 의존
+- [x] Keeps internal timing in ms and persists actual_sec = floor(elapsed/1000)
+- [x] On cancel, stores elapsed-based actual_sec and sets success=false
+- [x] Uses requestAnimationFrame for UI ticking (not setInterval)
+- [x] Integrates visibilitychange listener in app runtime
+- [x] Integrates Wake Lock acquire/release in app runtime
+- [x] Shows fallback guidance when Wake Lock unsupported
+
+## Anti-Cheat & Reliability Core
+
+- [x] Tracks hidden duration and computes inactive_time_ratio
+- [x] Flags record suspicious when inactive ratio > 0.5
+- [x] Includes suspicious flag in daily result/report pipeline
+
+## Data & Flow Core
+
+- [x] Daily squat schema uses target_reps and actual_reps keys
+- [x] App load reads today target/history from storage
+- [x] Completing plank+squat saves daily record and updates fatigue
+- [x] Tomorrow target is computed from persisted history (not in-memory single-session)
+
+## Safety Rules Core
+
+- [x] If fatigue > 0.85, both plank/squat increase rates are zero
+- [x] If 3-day consecutive failures, applies forced -10% rule per exercise
+- [x] Shows warning when F_total_raw exceeds historical 95th percentile
+
+## Accuracy Core
+
+- [x] 60-second target accuracy is within ±1s in automated timing test
+- [x] Background/foreground transition preserves cumulative elapsed accuracy
+
+## Optional Extensions
+
+- [ ] Supports COUNTDOWN state before RUNNING
+- [x] Adds vibration pattern [300,100,300] on goal reached
+- [x] Adds short AudioContext beep on goal reached
+- [x] Supports squat long-press continuous increment
+- [ ] Executes iOS 17 Safari manual validation checklist
+
 ## PWA
 
-- [ ] Service worker caches assets for offline
-- [ ] Standalone display on iOS (meta tags present)
+- [x] Service worker caches assets for offline
+- [x] Standalone display on iOS (meta tags present)

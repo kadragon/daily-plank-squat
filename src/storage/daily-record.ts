@@ -1,8 +1,96 @@
-import type { DailyRecord } from '../types'
+import type { DailyRecord, ExerciseRecord, SquatRecord } from '../types'
 
 const STORAGE_KEY = 'daily-records'
 
+function hasLocalStorage(): boolean {
+  return typeof localStorage !== 'undefined'
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
+}
+
+function asExerciseRecord(value: unknown): ExerciseRecord | null {
+  if (!isRecord(value)) return null
+  if (
+    typeof value.target_sec !== 'number'
+    || typeof value.actual_sec !== 'number'
+    || typeof value.success !== 'boolean'
+  ) {
+    return null
+  }
+
+  return {
+    target_sec: value.target_sec,
+    actual_sec: value.actual_sec,
+    success: value.success,
+  }
+}
+
+function asSquatRecord(value: unknown): SquatRecord | null {
+  if (!isRecord(value)) return null
+
+  // v1.1 schema
+  if (
+    typeof value.target_reps === 'number'
+    && typeof value.actual_reps === 'number'
+    && typeof value.success === 'boolean'
+  ) {
+    return {
+      target_reps: value.target_reps,
+      actual_reps: value.actual_reps,
+      success: value.success,
+    }
+  }
+
+  // legacy schema compatibility
+  if (
+    typeof value.target_count === 'number'
+    && typeof value.actual_count === 'number'
+    && typeof value.success === 'boolean'
+  ) {
+    return {
+      target_reps: value.target_count,
+      actual_reps: value.actual_count,
+      success: value.success,
+    }
+  }
+
+  return null
+}
+
+function asDailyRecord(value: unknown): DailyRecord | null {
+  if (!isRecord(value)) return null
+
+  const plank = asExerciseRecord(value.plank)
+  const squat = asSquatRecord(value.squat)
+  if (!plank || !squat) return null
+
+  if (
+    typeof value.date !== 'string'
+    || typeof value.fatigue !== 'number'
+    || typeof value.F_P !== 'number'
+    || typeof value.F_S !== 'number'
+  ) {
+    return null
+  }
+
+  return {
+    date: value.date,
+    plank,
+    squat,
+    fatigue: value.fatigue,
+    F_P: value.F_P,
+    F_S: value.F_S,
+    F_total_raw: typeof value.F_total_raw === 'number' ? value.F_total_raw : 0,
+    inactive_time_ratio: typeof value.inactive_time_ratio === 'number' ? value.inactive_time_ratio : 0,
+    flag_suspicious: typeof value.flag_suspicious === 'boolean' ? value.flag_suspicious : false,
+  }
+}
+
 function readAll(): DailyRecord[] {
+  if (!hasLocalStorage()) return []
+
   const raw = localStorage.getItem(STORAGE_KEY)
   if (!raw) return []
 
@@ -14,10 +102,14 @@ function readAll(): DailyRecord[] {
   }
   if (!Array.isArray(parsed)) return []
 
-  return parsed.filter(isDailyRecord)
+  return parsed
+    .map(asDailyRecord)
+    .filter((record): record is DailyRecord => record !== null)
 }
 
 export function saveRecord(record: DailyRecord): void {
+  if (!hasLocalStorage()) return
+
   const records = readAll()
   const existingIndex = records.findIndex((item) => item.date === record.date)
   if (existingIndex >= 0) {
@@ -26,6 +118,10 @@ export function saveRecord(record: DailyRecord): void {
     records.push(record)
   }
   localStorage.setItem(STORAGE_KEY, JSON.stringify(records))
+}
+
+export function loadAllRecords(): DailyRecord[] {
+  return readAll().toSorted((a, b) => a.date.localeCompare(b.date))
 }
 
 export function loadTodayRecord(): DailyRecord | null {
@@ -37,38 +133,4 @@ export function loadHistory(days: number): DailyRecord[] {
   return readAll()
     .toSorted((a, b) => b.date.localeCompare(a.date))
     .slice(0, days)
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null
-}
-
-function isExerciseRecord(value: unknown): boolean {
-  if (!isRecord(value)) return false
-  return (
-    typeof value.target_sec === 'number' &&
-    typeof value.actual_sec === 'number' &&
-    typeof value.success === 'boolean'
-  )
-}
-
-function isSquatRecord(value: unknown): boolean {
-  if (!isRecord(value)) return false
-  return (
-    typeof value.target_count === 'number' &&
-    typeof value.actual_count === 'number' &&
-    typeof value.success === 'boolean'
-  )
-}
-
-function isDailyRecord(value: unknown): value is DailyRecord {
-  if (!isRecord(value)) return false
-  return (
-    typeof value.date === 'string' &&
-    isExerciseRecord(value.plank) &&
-    isSquatRecord(value.squat) &&
-    typeof value.fatigue === 'number' &&
-    typeof value.F_P === 'number' &&
-    typeof value.F_S === 'number'
-  )
 }

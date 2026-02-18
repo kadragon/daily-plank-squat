@@ -1,6 +1,6 @@
 import { createPlankStateMachine } from './plank-state-machine'
 import { createTimer, startTimer, pauseTimer, resumeTimer, completeTimer, getCurrentElapsed } from './timer'
-import type { PlankState, ExerciseRecord } from '../types'
+import type { ExerciseRecord, PlankState } from '../types'
 
 type PlankResult = Pick<ExerciseRecord, 'actual_sec' | 'success'>
 
@@ -11,7 +11,14 @@ export interface PlankTimer {
   pause(now: number): void
   resume(now: number): void
   complete(now: number): PlankResult
-  cancel(): { success: false }
+  cancel(now: number): PlankResult
+}
+
+function toPlankResult(elapsedMs: number, success: boolean): PlankResult {
+  return {
+    actual_sec: Math.max(0, Math.floor(elapsedMs / 1000)),
+    success,
+  }
 }
 
 export function createPlankTimer(): PlankTimer {
@@ -38,15 +45,24 @@ export function createPlankTimer(): PlankTimer {
     },
     complete(now) {
       if (machine.state !== 'RUNNING') {
-        return { actual_sec: Math.floor(getCurrentElapsed(timer, now) / 1000), success: false }
+        return toPlankResult(getCurrentElapsed(timer, now), false)
       }
+
       machine.send('complete')
       completeTimer(timer, now)
-      return { actual_sec: Math.floor(getCurrentElapsed(timer, now) / 1000), success: true }
+      return toPlankResult(getCurrentElapsed(timer, now), true)
     },
-    cancel() {
+    cancel(now) {
+      if (machine.state !== 'RUNNING' && machine.state !== 'PAUSED') {
+        return toPlankResult(getCurrentElapsed(timer, now), false)
+      }
+
+      if (machine.state === 'RUNNING') {
+        pauseTimer(timer, now)
+      }
+
       machine.send('cancel')
-      return { success: false }
+      return toPlankResult(getCurrentElapsed(timer, now), false)
     },
   }
 }
