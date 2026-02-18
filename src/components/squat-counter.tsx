@@ -31,24 +31,31 @@ export default function SquatCounter({
     }, 120)
   }
 
+  const goalReached = targetReps > 0 && count >= targetReps
+
   return (
-    <div>
-      <div>Target reps: {targetReps}</div>
-      <div>Count: {count}</div>
-      <button
-        type="button"
-        onClick={onIncrement}
-        onMouseDown={startLongPress}
-        onMouseUp={stopLongPress}
-        onMouseLeave={stopLongPress}
-        onTouchStart={startLongPress}
-        onTouchEnd={stopLongPress}
-        onTouchCancel={stopLongPress}
-      >
-        +1
-      </button>
-      <button type="button" onClick={onDecrement}>-1</button>
-      <button type="button" onClick={onComplete}>Complete</button>
+    <div className={`squat-counter${goalReached ? ' squat-counter--goal-reached' : ''}`}>
+      <h2>Squat Counter</h2>
+      <div className="squat-target">Target reps: {targetReps}</div>
+      <div className="squat-count" aria-live="polite">Count: {count}</div>
+      <div className="squat-controls">
+        <button
+          type="button"
+          className="btn btn--large"
+          aria-label="Increment"
+          onClick={onIncrement}
+          onMouseDown={startLongPress}
+          onMouseUp={stopLongPress}
+          onMouseLeave={stopLongPress}
+          onTouchStart={startLongPress}
+          onTouchEnd={stopLongPress}
+          onTouchCancel={stopLongPress}
+        >
+          +1
+        </button>
+        <button type="button" className="btn" aria-label="Decrement" onClick={onDecrement}>-1</button>
+        <button type="button" className="btn" aria-label="Complete squats" onClick={onComplete}>Complete</button>
+      </div>
     </div>
   )
 }

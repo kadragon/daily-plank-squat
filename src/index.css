@@ -28,11 +28,310 @@ html, body {
   flex-direction: column;
 }
 
+/* ── Layout ──────────────────────────────────────────── */
+
 .app {
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
   padding: 1rem;
+  max-width: 480px;
+  width: 100%;
+  margin: 0 auto;
+  padding-left: max(1rem, env(safe-area-inset-left));
+  padding-right: max(1rem, env(safe-area-inset-right));
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
+.app-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--text);
+  margin-bottom: 0.75rem;
+  text-align: center;
+}
+
+/* ── Nav ─────────────────────────────────────────────── */
+
+.nav {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  background-color: var(--surface);
+  border-radius: 12px;
+  padding: 0.25rem;
+}
+
+.nav-btn {
+  flex: 1;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.nav-btn:hover {
+  background-color: var(--primary);
+  color: var(--text);
+}
+
+.nav-btn--active {
+  background-color: var(--accent);
+  color: #fff;
+}
+
+/* ── Main content ────────────────────────────────────── */
+
+.main-content {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  animation: fadeIn 0.2s ease;
+}
+
+/* ── Buttons ─────────────────────────────────────────── */
+
+.btn {
+  min-width: 80px;
+  min-height: 48px;
+  padding: 0.6rem 1.25rem;
+  border: none;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  background-color: var(--primary);
+  color: var(--text);
+  transition: transform 0.1s, background-color 0.15s;
+}
+
+.btn:active {
+  transform: scale(0.95);
+}
+
+.btn--primary {
+  background-color: var(--primary);
+  color: var(--text);
+}
+
+.btn--primary:hover {
+  background-color: #1a4a80;
+}
+
+.btn--danger {
+  background-color: #7a1a2a;
+  color: var(--text);
+}
+
+.btn--danger:hover {
+  background-color: var(--accent);
+}
+
+.btn--large {
+  min-width: 120px;
+  min-height: 64px;
+  font-size: 1.5rem;
+  border-radius: 16px;
+}
+
+/* ── Plank Timer ─────────────────────────────────────── */
+
+.plank-timer {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.5rem;
+  background-color: var(--surface);
+  border-radius: 16px;
+}
+
+.plank-timer h2 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.timer-target {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.timer-display {
+  font-size: clamp(3rem, 12vw, 4rem);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--text);
+  font-family: ui-monospace, monospace;
+}
+
+.timer-controls {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+/* State modifiers */
+
+.plank-timer--running .timer-display {
+  color: var(--accent);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.plank-timer--paused .timer-display {
+  color: var(--text-muted);
+}
+
+.plank-timer--completed .timer-display {
+  color: #4caf50;
+}
+
+.plank-timer--cancelled .timer-display {
+  color: var(--text-muted);
+}
+
+/* Progress bar */
+
+.progress-bar {
+  width: 100%;
+  height: 6px;
+  background-color: var(--primary);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background-color: var(--accent);
+  border-radius: 3px;
+  transition: width 0.5s linear;
+}
+
+.plank-timer--completed .progress-fill {
+  background-color: #4caf50;
+}
+
+/* ── Squat Counter ───────────────────────────────────── */
+
+.squat-counter {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.5rem;
+  background-color: var(--surface);
+  border-radius: 16px;
+}
+
+.squat-counter h2 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.squat-target {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.squat-count {
+  font-size: clamp(3rem, 12vw, 4rem);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+.squat-counter--goal-reached .squat-count {
+  color: #4caf50;
+}
+
+.squat-controls {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+/* ── Daily Summary ───────────────────────────────────── */
+
+.daily-summary {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.5rem;
+  background-color: var(--surface);
+  border-radius: 16px;
+}
+
+.daily-summary h2 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.daily-summary section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--primary);
+}
+
+.summary-stat {
+  font-size: 0.95rem;
+  color: var(--text);
+  display: flex;
+  justify-content: space-between;
+}
+
+.summary-warning {
+  padding: 0.6rem 0.9rem;
+  background-color: rgba(233, 69, 96, 0.15);
+  border-left: 3px solid var(--accent);
+  border-radius: 6px;
+  font-size: 0.9rem;
+  color: var(--accent);
+}
+
+/* ── Wake lock notice ────────────────────────────────── */
+
+.wake-lock-notice {
+  margin-top: 0.75rem;
+  padding: 0.5rem 0.9rem;
+  background-color: rgba(15, 52, 96, 0.5);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+/* ── Animations ──────────────────────────────────────── */
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
 }

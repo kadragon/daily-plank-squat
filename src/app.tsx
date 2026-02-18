@@ -25,6 +25,7 @@ type AppView = 'plank' | 'squat' | 'summary'
 interface AppProps {
   initialView?: AppView
   initialPlankState?: PlankState
+  initialWakeLockNotice?: string
 }
 
 interface InitialAppState {
@@ -97,7 +98,7 @@ function createInitialAppState(initialPlankState?: PlankState): InitialAppState 
   }
 }
 
-export default function App({ initialView = 'plank', initialPlankState }: AppProps) {
+export default function App({ initialView = 'plank', initialPlankState, initialWakeLockNotice }: AppProps) {
   const initial = useRef(createInitialAppState(initialPlankState)).current
   const today = useMemo(() => todayKey(), [])
 
@@ -133,7 +134,7 @@ export default function App({ initialView = 'plank', initialPlankState }: AppPro
   const [fatigue, setFatigue] = useState(initial.fatigue)
   const [overloadWarning, setOverloadWarning] = useState(initial.overloadWarning)
   const [suspiciousSession, setSuspiciousSession] = useState(initial.suspiciousSession)
-  const [wakeLockNotice, setWakeLockNotice] = useState('')
+  const [wakeLockNotice, setWakeLockNotice] = useState(initialWakeLockNotice ?? '')
   const [tomorrowTargets, setTomorrowTargets] = useState({
     plank: initial.tomorrowPlankTargetSec,
     squat: initial.tomorrowSquatTargetReps,
@@ -344,7 +345,7 @@ export default function App({ initialView = 'plank', initialPlankState }: AppPro
               onResume={handlePlankResume}
               onCancel={handlePlankCancel}
             />
-            {wakeLockNotice ? <div>{wakeLockNotice}</div> : null}
+            {wakeLockNotice ? <div className="wake-lock-notice">{wakeLockNotice}</div> : null}
           </>
         )
       case 'squat':
@@ -378,13 +379,36 @@ export default function App({ initialView = 'plank', initialPlankState }: AppPro
 
   return (
     <div className="app">
-      <h1>Daily Plank & Squat</h1>
-      <nav>
-        <button type="button" onClick={() => setView('plank')}>Plank</button>
-        <button type="button" onClick={() => setView('squat')}>Squat</button>
-        <button type="button" onClick={() => setView('summary')}>Summary</button>
+      <h1 className="app-title">Daily Plank & Squat</h1>
+      <nav className="nav">
+        <button
+          type="button"
+          className={`nav-btn${view === 'plank' ? ' nav-btn--active' : ''}`}
+          aria-current={view === 'plank' ? 'page' : undefined}
+          onClick={() => setView('plank')}
+        >
+          Plank
+        </button>
+        <button
+          type="button"
+          className={`nav-btn${view === 'squat' ? ' nav-btn--active' : ''}`}
+          aria-current={view === 'squat' ? 'page' : undefined}
+          onClick={() => setView('squat')}
+        >
+          Squat
+        </button>
+        <button
+          type="button"
+          className={`nav-btn${view === 'summary' ? ' nav-btn--active' : ''}`}
+          aria-current={view === 'summary' ? 'page' : undefined}
+          onClick={() => setView('summary')}
+        >
+          Summary
+        </button>
       </nav>
-      {renderView()}
+      <main className="main-content">
+        {renderView()}
+      </main>
     </div>
   )
 }
