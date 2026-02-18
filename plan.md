@@ -2,78 +2,78 @@
 
 ## Plank State Machine
 
-- [ ] Initial state is IDLE
-- [ ] IDLE → RUNNING on start
-- [ ] RUNNING → PAUSED on pause
-- [ ] PAUSED → RUNNING on resume
-- [ ] RUNNING → COMPLETED on complete
-- [ ] RUNNING → CANCELLED on cancel
-- [ ] PAUSED → CANCELLED on cancel
-- [ ] IDLE ignores invalid events (pause, resume, complete, cancel)
-- [ ] Terminal states (COMPLETED, CANCELLED) ignore all events
+- [x] Initial state is IDLE
+- [x] IDLE → RUNNING on start
+- [x] RUNNING → PAUSED on pause
+- [x] PAUSED → RUNNING on resume
+- [x] RUNNING → COMPLETED on complete
+- [x] RUNNING → CANCELLED on cancel
+- [x] PAUSED → CANCELLED on cancel
+- [x] IDLE ignores invalid events (pause, resume, complete, cancel)
+- [x] Terminal states (COMPLETED, CANCELLED) ignore all events
 
 ## Timer Model
 
-- [ ] Elapsed is 0 before start
-- [ ] Elapsed accumulates between start and pause via performance.now()
-- [ ] Elapsed preserves across pause/resume cycles
-- [ ] Elapsed stops after complete
-- [ ] getCurrentElapsed returns live value including current segment
+- [x] Elapsed is 0 before start
+- [x] Elapsed accumulates between start and pause via performance.now()
+- [x] Elapsed preserves across pause/resume cycles
+- [x] Elapsed stops after complete
+- [x] getCurrentElapsed returns live value including current segment
 
 ## Fatigue Model
 
-- [ ] Returns base target with no history
-- [ ] Computes normalized performance ratio r_e clipped to [0, 1.5]
-- [ ] Computes load with over/under penalties
-- [ ] Computes ramp stress with clipped delta
-- [ ] Computes EWMA fatigue per exercise (alpha_P=0.35, alpha_S=0.40)
-- [ ] Computes shared fatigue F_total with weight/age factors
-- [ ] Computes sigmoid fatigue score with median threshold
+- [x] Returns base target with no history
+- [x] Computes normalized performance ratio r_e clipped to [0, 1.5]
+- [x] Computes load with over/under penalties
+- [x] Computes ramp stress with clipped delta
+- [x] Computes EWMA fatigue per exercise (alpha_P=0.35, alpha_S=0.40)
+- [x] Computes shared fatigue F_total with weight/age factors
+- [x] Computes sigmoid fatigue score with median threshold
 
 ## Target Calculation
 
-- [ ] Increases target when fatigue is low
-- [ ] Holds target when fatigue > 0.85
-- [ ] Decreases target by 10% after 3 consecutive failures
-- [ ] Target respects minimum floor
-- [ ] Target respects maximum ceiling
+- [x] Increases target when fatigue is low
+- [x] Holds target when fatigue > 0.85
+- [x] Decreases target by 10% after 3 consecutive failures
+- [x] Target respects minimum floor
+- [x] Target respects maximum ceiling
 
 ## Daily Record Storage
 
-- [ ] Saves record to localStorage as JSON
-- [ ] Loads today's record, null if absent
-- [ ] Loads history for last N days
-- [ ] Record matches PRD schema (date, plank, squat, fatigue, F_P, F_S)
-- [ ] Overwrites existing record for same date
+- [x] Saves record to localStorage as JSON
+- [x] Loads today's record, null if absent
+- [x] Loads history for last N days
+- [x] Record matches PRD schema (date, plank, squat, fatigue, F_P, F_S)
+- [x] Overwrites existing record for same date
 
 ## Squat Counter
 
-- [ ] Count starts at 0
-- [ ] Increment adds 1
-- [ ] Decrement subtracts 1, floor at 0
-- [ ] Cannot go below 0
-- [ ] Complete returns final count
+- [x] Count starts at 0
+- [x] Increment adds 1
+- [x] Decrement subtracts 1, floor at 0
+- [x] Cannot go below 0
+- [x] Complete returns final count
 
 ## Integration: Plank Timer + State Machine
 
-- [ ] Start creates RUNNING and begins timing
-- [ ] Pause freezes elapsed
-- [ ] Resume continues timing
-- [ ] Complete records actual_sec as floor(elapsed/1000)
-- [ ] Cancel marks success=false
+- [x] Start creates RUNNING and begins timing
+- [x] Pause freezes elapsed
+- [x] Resume continues timing
+- [x] Complete records actual_sec as floor(elapsed/1000)
+- [x] Cancel marks success=false
 
 ## Background Handling
 
-- [ ] visibilitychange hidden during RUNNING stores timestamp
-- [ ] visibilitychange visible restores elapsed correctly
-- [ ] Wake Lock requested on timer start
-- [ ] Wake Lock released on complete/cancel
+- [x] visibilitychange hidden during RUNNING stores timestamp
+- [x] visibilitychange visible restores elapsed correctly
+- [x] Wake Lock requested on timer start
+- [x] Wake Lock released on complete/cancel
 
 ## Alerts
 
-- [ ] Sound plays on plank goal reached
-- [ ] Sound plays on squat goal reached
-- [ ] No repeat alert if goal already reached
+- [x] Sound plays on plank goal reached
+- [x] Sound plays on squat goal reached
+- [x] No repeat alert if goal already reached
 
 ## UI Components
 
