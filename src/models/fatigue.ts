@@ -1,11 +1,83 @@
 import type { ExerciseRecord, SquatRecord, FatigueParams } from '../types'
 
+export function normalizePerformance(actual: number, target: number): number {
+  if (target === 0) return 0
+  return Math.min(1.5, Math.max(0, actual / target))
+}
+
+const SIGMOID_K = 5
+export const MEDIAN_THRESHOLD = 0.5
+
+export function computeFatigueScore(F_total: number): number {
+  return 1 / (1 + Math.exp(-SIGMOID_K * (F_total - MEDIAN_THRESHOLD)))
+}
+
+export function computeFTotal(F_P: number, F_S: number, params: FatigueParams): number {
+  const weight_factor = params.weight / 70
+  const age_factor = 1 + Math.max(0, params.age - 30) * 0.01
+  return (F_P * weight_factor + F_S) * age_factor / 2
+}
+
+export const ALPHA_P = 0.35
+export const ALPHA_S = 0.40
+
+export function updateEWMA(alpha: number, prevFatigue: number, load: number): number {
+  return alpha * load + (1 - alpha) * prevFatigue
+}
+
+const MAX_RAMP = 0.3
+
+export function computeRampStress(prevLoad: number, curLoad: number): number {
+  const delta = curLoad - prevLoad
+  return Math.min(MAX_RAMP, Math.max(-MAX_RAMP, delta))
+}
+
+const OVER_PENALTY = 0.5
+const UNDER_PENALTY = 0.2
+const FAILURE_STREAK_THRESHOLD = 3
+const FAILURE_DECREASE_FACTOR = 0.9
+const FATIGUE_HOLD_THRESHOLD = 0.85
+const TARGET_INCREASE_FACTOR = 1.05
+
+export function computeLoad(r_e: number): number {
+  if (r_e >= 1) return r_e + OVER_PENALTY * (r_e - 1)
+  return r_e + UNDER_PENALTY * (1 - r_e)
+}
+
+function clamp(value: number, floor?: number, ceiling?: number): number {
+  let result = value
+  if (floor !== undefined) result = Math.max(floor, result)
+  if (ceiling !== undefined) result = Math.min(ceiling, result)
+  return result
+}
+
 export function computeNextTarget(
-  _baseTarget: number,
-  _history: ExerciseRecord[],
+  baseTarget: number,
+  history: ExerciseRecord[],
   _params: FatigueParams,
+  floor?: number,
+  ceiling?: number,
 ): number {
-  return _baseTarget
+  if (history.length === 0) return baseTarget
+
+  if (
+    history.length >= FAILURE_STREAK_THRESHOLD
+    && history.slice(-FAILURE_STREAK_THRESHOLD).every((record) => !record.success)
+  ) {
+    return clamp(Math.round(baseTarget * FAILURE_DECREASE_FACTOR), floor, ceiling)
+  }
+
+  let F_P = 0
+  for (const record of history) {
+    const r_e = normalizePerformance(record.actual_sec, record.target_sec)
+    F_P = updateEWMA(ALPHA_P, F_P, computeLoad(r_e))
+  }
+
+  const fatigueScore = computeFatigueScore(F_P)
+  const next = fatigueScore > FATIGUE_HOLD_THRESHOLD
+    ? baseTarget
+    : Math.round(baseTarget * TARGET_INCREASE_FACTOR)
+  return clamp(next, floor, ceiling)
 }
 
 export function computeSquatTarget(
