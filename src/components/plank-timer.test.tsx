@@ -14,11 +14,12 @@ test('Plank view shows start button in IDLE', () => {
   expect(html).toContain('Start')
 })
 
-test('Plank view shows pause/cancel in RUNNING', () => {
+test('Plank view shows pause/cancel in RUNNING and no manual complete button', () => {
   const html = renderToStaticMarkup(<PlankTimer state="RUNNING" />)
 
   expect(html).toContain('Pause')
   expect(html).toContain('Cancel')
+  expect(html).not.toContain('Complete')
 })
 
 test('Plank view shows resume/cancel in PAUSED', () => {
