@@ -34,3 +34,9 @@ test('Plank view shows result in COMPLETED', () => {
   expect(html).toContain('Result')
   expect(html).toContain('45s')
 })
+
+test('Plank result clamps negative elapsed time to 0 seconds', () => {
+  const html = renderToStaticMarkup(<PlankTimer state="COMPLETED" elapsedMs={-1000} />)
+
+  expect(html).toContain('Result: 0s')
+})
