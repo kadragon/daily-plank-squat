@@ -42,4 +42,20 @@ describe('PlankTimer integration', () => {
     expect(pt.state()).toBe('CANCELLED')
     expect(record.success).toBe(false)
   })
+
+  test('Ignoring duplicate start does not create overlapping timer segments', () => {
+    const pt = createPlankTimer()
+    pt.start(0)
+    pt.start(100)
+    expect(pt.state()).toBe('RUNNING')
+    expect(pt.getCurrentElapsed(1100)).toBe(1100)
+  })
+
+  test('Complete returns unsuccessful record when transition is invalid', () => {
+    const pt = createPlankTimer()
+    const record = pt.complete(1000)
+    expect(pt.state()).toBe('IDLE')
+    expect(record.success).toBe(false)
+    expect(record.actual_sec).toBe(0)
+  })
 })

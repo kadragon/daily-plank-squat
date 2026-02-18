@@ -34,6 +34,10 @@ export function computeRampStress(prevLoad: number, curLoad: number): number {
 
 const OVER_PENALTY = 0.5
 const UNDER_PENALTY = 0.2
+const FAILURE_STREAK_THRESHOLD = 3
+const FAILURE_DECREASE_FACTOR = 0.9
+const FATIGUE_HOLD_THRESHOLD = 0.85
+const TARGET_INCREASE_FACTOR = 1.05
 
 export function computeLoad(r_e: number): number {
   if (r_e >= 1) return r_e + OVER_PENALTY * (r_e - 1)
@@ -56,8 +60,11 @@ export function computeNextTarget(
 ): number {
   if (history.length === 0) return baseTarget
 
-  if (history.length >= 3 && history.slice(-3).every(r => !r.success)) {
-    return clamp(Math.round(baseTarget * 0.9), floor, ceiling)
+  if (
+    history.length >= FAILURE_STREAK_THRESHOLD
+    && history.slice(-FAILURE_STREAK_THRESHOLD).every((record) => !record.success)
+  ) {
+    return clamp(Math.round(baseTarget * FAILURE_DECREASE_FACTOR), floor, ceiling)
   }
 
   let F_P = 0
@@ -67,7 +74,9 @@ export function computeNextTarget(
   }
 
   const fatigueScore = computeFatigueScore(F_P)
-  const next = fatigueScore > 0.85 ? baseTarget : Math.round(baseTarget * 1.05)
+  const next = fatigueScore > FATIGUE_HOLD_THRESHOLD
+    ? baseTarget
+    : Math.round(baseTarget * TARGET_INCREASE_FACTOR)
   return clamp(next, floor, ceiling)
 }
 

@@ -15,7 +15,7 @@ function createMemoryStorage(): Storage {
       data.clear()
     },
     getItem(key: string) {
-      return data.has(key) ? data.get(key)! : null
+      return data.get(key) ?? null
     },
     key(index: number) {
       return Array.from(data.keys())[index] ?? null
@@ -106,4 +106,15 @@ test('overwrites existing record for same date', () => {
   saveRecord(second)
 
   expect(loadHistory(10)).toEqual([second])
+})
+
+test('malformed JSON in storage does not crash read or write paths', () => {
+  localStorage.setItem(STORAGE_KEY, '{bad-json')
+
+  expect(loadHistory(5)).toEqual([])
+  expect(loadTodayRecord()).toBeNull()
+
+  const record = sampleRecord('2026-02-18')
+  saveRecord(record)
+  expect(loadHistory(1)).toEqual([record])
 })

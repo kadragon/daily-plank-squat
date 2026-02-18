@@ -6,7 +6,12 @@ function readAll(): DailyRecord[] {
   const raw = localStorage.getItem(STORAGE_KEY)
   if (!raw) return []
 
-  const parsed: unknown = JSON.parse(raw)
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(raw)
+  } catch {
+    return []
+  }
   if (!Array.isArray(parsed)) return []
 
   return parsed.filter(isDailyRecord)

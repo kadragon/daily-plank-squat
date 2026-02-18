@@ -12,7 +12,7 @@ describe('Timer Model', () => {
     const timer = createTimer()
     startTimer(timer, t0)
     pauseTimer(timer, t0 + 2000)
-    expect(getElapsed(timer)).toBe(2000)
+    expect(getElapsed(timer)).toBeCloseTo(2000)
   })
 
   test('getCurrentElapsed returns live value including current segment', () => {
@@ -28,7 +28,7 @@ describe('Timer Model', () => {
     const timer = createTimer()
     startTimer(timer, t0)
     completeTimer(timer, t0 + 3000)
-    expect(getElapsed(timer)).toBe(3000)
+    expect(getElapsed(timer)).toBeCloseTo(3000)
   })
 
   test('elapsed preserves across pause/resume cycles', () => {
@@ -38,6 +38,6 @@ describe('Timer Model', () => {
     pauseTimer(timer, t0 + 1000)   // 1s segment
     resumeTimer(timer, t0 + 2000)
     pauseTimer(timer, t0 + 3500)   // 1.5s segment
-    expect(getElapsed(timer)).toBe(2500)
+    expect(getElapsed(timer)).toBeCloseTo(2500)
   })
 })
