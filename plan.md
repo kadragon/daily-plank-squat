@@ -77,16 +77,16 @@
 
 ## UI Components
 
-- [ ] Plank view shows elapsed as MM:SS
-- [ ] Plank view shows start button in IDLE
-- [ ] Plank view shows pause/cancel in RUNNING
-- [ ] Plank view shows resume/cancel in PAUSED
-- [ ] Plank view shows result in COMPLETED
-- [ ] Squat view shows count and +1/-1 buttons
-- [ ] Squat view shows complete button
-- [ ] Daily summary shows targets from fatigue model
-- [ ] Daily summary shows completion status
-- [ ] App navigates between plank/squat/summary views
+- [x] Plank view shows elapsed as MM:SS
+- [x] Plank view shows start button in IDLE
+- [x] Plank view shows pause/cancel in RUNNING
+- [x] Plank view shows resume/cancel in PAUSED
+- [x] Plank view shows result in COMPLETED
+- [x] Squat view shows count and +1/-1 buttons
+- [x] Squat view shows complete button
+- [x] Daily summary shows targets from fatigue model
+- [x] Daily summary shows completion status
+- [x] App navigates between plank/squat/summary views
 
 ## PWA
 
