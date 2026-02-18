@@ -19,13 +19,17 @@ describe('Plank State Machine', () => {
     const completed = createPlankStateMachine()
     completed.send('start')
     completed.send('complete')
-    events.forEach(e => completed.send(e))
+    events.forEach(e => {
+      completed.send(e)
+    })
     expect(completed.state).toBe('COMPLETED')
 
     const cancelled = createPlankStateMachine()
     cancelled.send('start')
     cancelled.send('cancel')
-    events.forEach(e => cancelled.send(e))
+    events.forEach(e => {
+      cancelled.send(e)
+    })
     expect(cancelled.state).toBe('CANCELLED')
   })
 
