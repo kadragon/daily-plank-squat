@@ -1,3 +1,5 @@
+import { useRef } from 'react'
+
 interface SquatCounterProps {
   count?: number
   targetReps?: number
@@ -13,18 +15,18 @@ export default function SquatCounter({
   onDecrement,
   onComplete,
 }: SquatCounterProps) {
-  let intervalId: ReturnType<typeof setInterval> | null = null
+  const intervalIdRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   function stopLongPress() {
-    if (intervalId !== null) {
-      clearInterval(intervalId)
-      intervalId = null
+    if (intervalIdRef.current !== null) {
+      clearInterval(intervalIdRef.current)
+      intervalIdRef.current = null
     }
   }
 
   function startLongPress() {
     stopLongPress()
-    intervalId = setInterval(() => {
+    intervalIdRef.current = setInterval(() => {
       onIncrement?.()
     }, 120)
   }

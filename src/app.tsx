@@ -253,13 +253,19 @@ export default function App({ initialView = 'plank', initialPlankState }: AppPro
     const wakeLock = getWakeLock()
 
     async function sync() {
-      const next = await syncWakeLock(plankState, wakeLockSentinelRef.current, wakeLock)
-      if (!isDisposed) {
-        wakeLockSentinelRef.current = next
-        if (plankState === 'RUNNING' && !wakeLock) {
-          setWakeLockNotice('Wake Lock is not supported on this device. Keep the screen on manually.')
-        } else {
-          setWakeLockNotice('')
+      try {
+        const next = await syncWakeLock(plankState, wakeLockSentinelRef.current, wakeLock)
+        if (!isDisposed) {
+          wakeLockSentinelRef.current = next
+          if (plankState === 'RUNNING' && !wakeLock) {
+            setWakeLockNotice('Wake Lock is not supported on this device. Keep the screen on manually.')
+          } else {
+            setWakeLockNotice('')
+          }
+        }
+      } catch {
+        if (!isDisposed && plankState === 'RUNNING') {
+          setWakeLockNotice('Wake Lock could not be acquired. Keep the screen on manually.')
         }
       }
     }
@@ -378,7 +384,6 @@ export default function App({ initialView = 'plank', initialPlankState }: AppPro
         <button type="button" onClick={() => setView('squat')}>Squat</button>
         <button type="button" onClick={() => setView('summary')}>Summary</button>
       </nav>
-      <div>Records loaded: {records.length}</div>
       {renderView()}
     </div>
   )
