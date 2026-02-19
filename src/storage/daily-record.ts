@@ -1,6 +1,8 @@
-import type { DailyRecord, ExerciseRecord, SquatRecord } from '../types'
+import type { DailyRecord, ExerciseRecord, PushupRecord, SquatRecord } from '../types'
 
 const STORAGE_KEY = 'daily-records'
+
+const NEUTRAL_PUSHUP: PushupRecord = { target_reps: 15, actual_reps: 15, success: true }
 
 function hasLocalStorage(): boolean {
   return typeof localStorage !== 'undefined'
@@ -59,6 +61,24 @@ function asSquatRecord(value: unknown): SquatRecord | null {
   return null
 }
 
+function asPushupRecord(value: unknown): PushupRecord | null {
+  if (!isRecord(value)) return null
+
+  if (
+    typeof value.target_reps === 'number'
+    && typeof value.actual_reps === 'number'
+    && typeof value.success === 'boolean'
+  ) {
+    return {
+      target_reps: value.target_reps,
+      actual_reps: value.actual_reps,
+      success: value.success,
+    }
+  }
+
+  return null
+}
+
 function asDailyRecord(value: unknown): DailyRecord | null {
   if (!isRecord(value)) return null
 
@@ -75,13 +95,17 @@ function asDailyRecord(value: unknown): DailyRecord | null {
     return null
   }
 
+  const pushup = asPushupRecord(value.pushup) ?? NEUTRAL_PUSHUP
+
   return {
     date: value.date,
     plank,
     squat,
+    pushup,
     fatigue: value.fatigue,
     F_P: value.F_P,
     F_S: value.F_S,
+    F_U: typeof value.F_U === 'number' ? value.F_U : 0,
     F_total_raw: typeof value.F_total_raw === 'number' ? value.F_total_raw : 0,
     inactive_time_ratio: typeof value.inactive_time_ratio === 'number' ? value.inactive_time_ratio : 0,
     flag_suspicious: typeof value.flag_suspicious === 'boolean' ? value.flag_suspicious : false,

@@ -34,9 +34,11 @@ function sampleRecord(date: string): DailyRecord {
     date,
     plank: { target_sec: 60, actual_sec: 60, success: true },
     squat: { target_reps: 20, actual_reps: 20, success: true },
+    pushup: { target_reps: 15, actual_reps: 15, success: true },
     fatigue: 0.4,
     F_P: 0.3,
     F_S: 0.2,
+    F_U: 0.1,
     F_total_raw: 0.5,
     inactive_time_ratio: 0,
     flag_suspicious: false,
@@ -144,4 +146,70 @@ test('legacy squat schema is upgraded to target_reps/actual_reps', () => {
     actual_reps: 18,
     success: false,
   })
+})
+
+test('Records without pushup field load with neutral pushup defaults (target=15, actual=15, success=true)', () => {
+  const today = new Date().toISOString().slice(0, 10)
+  localStorage.setItem(
+    STORAGE_KEY,
+    JSON.stringify([
+      {
+        date: today,
+        plank: { target_sec: 60, actual_sec: 60, success: true },
+        squat: { target_reps: 20, actual_reps: 20, success: true },
+        fatigue: 0.4,
+        F_P: 0.3,
+        F_S: 0.2,
+        F_total_raw: 0.5,
+      },
+    ]),
+  )
+
+  const record = loadTodayRecord()
+  expect(record?.pushup).toEqual({ target_reps: 15, actual_reps: 15, success: true })
+})
+
+test('Records without F_U field load with F_U=0', () => {
+  const today = new Date().toISOString().slice(0, 10)
+  localStorage.setItem(
+    STORAGE_KEY,
+    JSON.stringify([
+      {
+        date: today,
+        plank: { target_sec: 60, actual_sec: 60, success: true },
+        squat: { target_reps: 20, actual_reps: 20, success: true },
+        fatigue: 0.4,
+        F_P: 0.3,
+        F_S: 0.2,
+        F_total_raw: 0.5,
+      },
+    ]),
+  )
+
+  const record = loadTodayRecord()
+  expect(record?.F_U).toBe(0)
+})
+
+test('Records with valid pushup field parse correctly', () => {
+  const today = new Date().toISOString().slice(0, 10)
+  localStorage.setItem(
+    STORAGE_KEY,
+    JSON.stringify([
+      {
+        date: today,
+        plank: { target_sec: 60, actual_sec: 60, success: true },
+        squat: { target_reps: 20, actual_reps: 20, success: true },
+        pushup: { target_reps: 15, actual_reps: 12, success: false },
+        fatigue: 0.4,
+        F_P: 0.3,
+        F_S: 0.2,
+        F_U: 0.15,
+        F_total_raw: 0.5,
+      },
+    ]),
+  )
+
+  const record = loadTodayRecord()
+  expect(record?.pushup).toEqual({ target_reps: 15, actual_reps: 12, success: false })
+  expect(record?.F_U).toBe(0.15)
 })

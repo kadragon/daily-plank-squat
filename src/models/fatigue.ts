@@ -4,12 +4,14 @@ import type {
   ExerciseRecord,
   FatigueParams,
   FatigueSnapshot,
+  PushupRecord,
   SquatRecord,
   TomorrowPlan,
 } from '../types'
 
 export const ALPHA_P = 0.35
 export const ALPHA_S = 0.40
+export const ALPHA_U = 0.45
 export const MEDIAN_INITIAL = 0.9
 
 const FATIGUE_SCALE = 2.2
@@ -48,8 +50,15 @@ export function updateEWMA(alpha: number, prevFatigue: number, load: number): nu
   return alpha * load + (1 - alpha) * prevFatigue
 }
 
-export function computeSharedFatigueRaw(F_P: number, F_S: number): number {
-  return 0.45 * F_P + 0.55 * F_S + 0.2 * F_P * F_S
+export function computeSharedFatigueRaw(F_P: number, F_S: number, F_U: number): number {
+  return (
+    0.30 * F_P
+    + 0.35 * F_S
+    + 0.35 * F_U
+    + 0.10 * F_S * F_U
+    + 0.08 * F_P * F_S
+    + 0.08 * F_P * F_U
+  )
 }
 
 export function computeWeightFactor(weight_kg: number): number {
@@ -99,14 +108,18 @@ export function computeFatigueSeries(
 
   let F_P = 0
   let F_S = 0
+  let F_U = 0
   let previous: DailyRecord | null = null
   const adjustedHistory: number[] = []
   const weightFactor = computeWeightFactor(params.weight_kg)
   const ageFactor = computeAgeFactor(params.age)
 
   for (const record of sorted) {
+    const pushup = record.pushup ?? { target_reps: 15, actual_reps: 15, success: true }
+
     const plankLoad = computeLoad(record.plank.actual_sec, record.plank.target_sec, baseTargets.base_P)
     const squatLoad = computeLoad(record.squat.actual_reps, record.squat.target_reps, baseTargets.base_S)
+    const pushupLoad = computeLoad(pushup.actual_reps, pushup.target_reps, baseTargets.base_U)
 
     const plankRampPenalty = previous
       ? computeRampPenalty(previous.plank.target_sec, record.plank.target_sec)
@@ -114,17 +127,21 @@ export function computeFatigueSeries(
     const squatRampPenalty = previous
       ? computeRampPenalty(previous.squat.target_reps, record.squat.target_reps)
       : 0
+    const pushupRampPenalty = previous
+      ? computeRampPenalty((previous.pushup ?? { target_reps: 15 }).target_reps, pushup.target_reps)
+      : 0
 
     F_P = updateEWMA(ALPHA_P, F_P, plankLoad + plankRampPenalty)
     F_S = updateEWMA(ALPHA_S, F_S, squatLoad + squatRampPenalty)
+    F_U = updateEWMA(ALPHA_U, F_U, pushupLoad + pushupRampPenalty)
 
-    const F_total_raw = computeSharedFatigueRaw(F_P, F_S)
+    const F_total_raw = computeSharedFatigueRaw(F_P, F_S, F_U)
     const F_total_adj = F_total_raw * weightFactor * ageFactor
     const median_m = getRecentMedian(adjustedHistory)
     const fatigue = computeFatigueScore(F_total_adj, median_m)
 
     adjustedHistory.push(F_total_adj)
-    snapshots.push({ F_P, F_S, F_total_raw, F_total_adj, fatigue, median_m })
+    snapshots.push({ F_P, F_S, F_U, F_total_raw, F_total_adj, fatigue, median_m })
     previous = record
   }
 
@@ -144,12 +161,13 @@ export function percentile(values: number[], p: number): number {
   return lowerValue * (1 - weight) + upperValue * weight
 }
 
-function hasFailureStreak(records: DailyRecord[], exercise: 'plank' | 'squat'): boolean {
+function hasFailureStreak(records: DailyRecord[], exercise: 'plank' | 'squat' | 'pushup'): boolean {
   if (records.length < FAILURE_STREAK_DAYS) return false
   const tail = sortByDateAscending(records).slice(-FAILURE_STREAK_DAYS)
   return tail.every((record) => {
     if (exercise === 'plank') return !record.plank.success
-    return !record.squat.success
+    if (exercise === 'squat') return !record.squat.success
+    return !(record.pushup ?? { success: true }).success
   })
 }
 
@@ -168,9 +186,11 @@ export function computeTomorrowPlan(
     return {
       plank_target_sec: baseTargets.base_P,
       squat_target_reps: baseTargets.base_S,
+      pushup_target_reps: baseTargets.base_U,
       fatigue: 0,
       F_P: 0,
       F_S: 0,
+      F_U: 0,
       F_total_raw: 0,
       overload_warning: false,
     }
@@ -185,9 +205,11 @@ export function computeTomorrowPlan(
     return {
       plank_target_sec: baseTargets.base_P,
       squat_target_reps: baseTargets.base_S,
+      pushup_target_reps: baseTargets.base_U,
       fatigue: 0,
       F_P: 0,
       F_S: 0,
+      F_U: 0,
       F_total_raw: 0,
       overload_warning: false,
     }
@@ -195,16 +217,21 @@ export function computeTomorrowPlan(
 
   const plankFailureStreak = hasFailureStreak(sorted, 'plank')
   const squatFailureStreak = hasFailureStreak(sorted, 'squat')
+  const pushupFailureStreak = hasFailureStreak(sorted, 'pushup')
 
   const F_total_raw_history = snapshots.map((snapshot) => snapshot.F_total_raw)
   const previousThreshold = percentile(F_total_raw_history.slice(0, -1), 95)
 
+  const lastPushup = lastRecord.pushup ?? { target_reps: baseTargets.base_U }
+
   return {
     plank_target_sec: computeNextTargetValue(lastRecord.plank.target_sec, latest.fatigue, plankFailureStreak),
     squat_target_reps: computeNextTargetValue(lastRecord.squat.target_reps, latest.fatigue, squatFailureStreak),
+    pushup_target_reps: computeNextTargetValue(lastPushup.target_reps, latest.fatigue, pushupFailureStreak),
     fatigue: latest.fatigue,
     F_P: latest.F_P,
     F_S: latest.F_S,
+    F_U: latest.F_U,
     F_total_raw: latest.F_total_raw,
     overload_warning: F_total_raw_history.length > 1 && latest.F_total_raw > previousThreshold,
   }
@@ -220,6 +247,7 @@ export function computeLatestFatigueSnapshot(
   return {
     F_P: 0,
     F_S: 0,
+    F_U: 0,
     F_total_raw: 0,
     F_total_adj: 0,
     fatigue: 0,
@@ -243,15 +271,21 @@ export function computeNextTarget(
       actual_reps: 20,
       success: true,
     },
+    pushup: {
+      target_reps: 15,
+      actual_reps: 15,
+      success: true,
+    },
     fatigue: 0,
     F_P: 0,
     F_S: 0,
+    F_U: 0,
     F_total_raw: 0,
     inactive_time_ratio: 0,
     flag_suspicious: false,
   }))
 
-  return computeTomorrowPlan(synthetic, params, { base_P: baseTarget, base_S: 20 }).plank_target_sec
+  return computeTomorrowPlan(synthetic, params, { base_P: baseTarget, base_S: 20, base_U: 15 }).plank_target_sec
 }
 
 export function computeSquatTarget(
@@ -267,13 +301,49 @@ export function computeSquatTarget(
       success: true,
     },
     squat: record,
+    pushup: {
+      target_reps: 15,
+      actual_reps: 15,
+      success: true,
+    },
     fatigue: 0,
     F_P: 0,
     F_S: 0,
+    F_U: 0,
     F_total_raw: 0,
     inactive_time_ratio: 0,
     flag_suspicious: false,
   }))
 
-  return computeTomorrowPlan(synthetic, params, { base_P: 60, base_S: baseTarget }).squat_target_reps
+  return computeTomorrowPlan(synthetic, params, { base_P: 60, base_S: baseTarget, base_U: 15 }).squat_target_reps
+}
+
+export function computePushupTarget(
+  baseTarget: number,
+  history: PushupRecord[],
+  params: FatigueParams,
+): number {
+  const synthetic: DailyRecord[] = history.map((record, index) => ({
+    date: `2026-01-${String(index + 1).padStart(2, '0')}`,
+    plank: {
+      target_sec: 60,
+      actual_sec: 60,
+      success: true,
+    },
+    squat: {
+      target_reps: 20,
+      actual_reps: 20,
+      success: true,
+    },
+    pushup: record,
+    fatigue: 0,
+    F_P: 0,
+    F_S: 0,
+    F_U: 0,
+    F_total_raw: 0,
+    inactive_time_ratio: 0,
+    flag_suspicious: false,
+  }))
+
+  return computeTomorrowPlan(synthetic, params, { base_P: 60, base_S: 20, base_U: baseTarget }).pushup_target_reps
 }

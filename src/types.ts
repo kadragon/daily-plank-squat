@@ -26,13 +26,21 @@ export interface SquatRecord {
   success: boolean
 }
 
+export interface PushupRecord {
+  target_reps: number
+  actual_reps: number
+  success: boolean
+}
+
 export interface DailyRecord {
   date: string // YYYY-MM-DD
   plank: ExerciseRecord
   squat: SquatRecord
+  pushup: PushupRecord
   fatigue: number // sigmoid fatigue score [0, 1]
   F_P: number // plank EWMA fatigue
   F_S: number // squat EWMA fatigue
+  F_U: number // pushup EWMA fatigue
   F_total_raw: number
   inactive_time_ratio: number
   flag_suspicious: boolean
@@ -50,16 +58,19 @@ export interface FatigueParams {
 export interface FatigueHistory {
   plank: ExerciseRecord[]
   squat: SquatRecord[]
+  pushup: PushupRecord[]
 }
 
 export interface BaseTargets {
   base_P: number
   base_S: number
+  base_U: number
 }
 
 export interface FatigueSnapshot {
   F_P: number
   F_S: number
+  F_U: number
   F_total_raw: number
   F_total_adj: number
   fatigue: number
@@ -69,9 +80,11 @@ export interface FatigueSnapshot {
 export interface TomorrowPlan {
   plank_target_sec: number
   squat_target_reps: number
+  pushup_target_reps: number
   fatigue: number
   F_P: number
   F_S: number
+  F_U: number
   F_total_raw: number
   overload_warning: boolean
 }

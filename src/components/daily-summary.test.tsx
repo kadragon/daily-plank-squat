@@ -42,3 +42,28 @@ test('DailySummary markup has daily-summary and summary-stat class names', () =>
   expect(html).toContain('daily-summary')
   expect(html).toContain('summary-stat')
 })
+
+test('DailySummary shows pushup target and completion status', () => {
+  const html = renderToStaticMarkup(
+    <DailySummary pushupTargetReps={15} pushupSuccess />,
+  )
+
+  expect(html).toContain('Pushup target: 15')
+  expect(html).toContain('Pushup: Complete')
+})
+
+test('DailySummary shows pushup incomplete when not done', () => {
+  const html = renderToStaticMarkup(
+    <DailySummary pushupTargetReps={15} pushupSuccess={false} />,
+  )
+
+  expect(html).toContain('Pushup: Incomplete')
+})
+
+test('DailySummary shows tomorrow pushup target', () => {
+  const html = renderToStaticMarkup(
+    <DailySummary tomorrowPushupTargetReps={16} />,
+  )
+
+  expect(html).toContain('Tomorrow pushup target: 16')
+})

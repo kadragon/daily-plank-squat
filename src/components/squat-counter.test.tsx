@@ -43,16 +43,16 @@ test('SquatCounter has h2 heading', () => {
   expect(html).toContain('<h2')
 })
 
-test('SquatCounter markup has squat-counter, squat-input, and btn class names', () => {
+test('SquatCounter markup has reps-counter, reps-input, and btn class names', () => {
   const html = renderToStaticMarkup(<SquatCounter count={0} />)
 
-  expect(html).toContain('squat-counter')
-  expect(html).toContain('squat-input')
+  expect(html).toContain('reps-counter')
+  expect(html).toContain('reps-input')
   expect(html).toContain('btn')
 })
 
-test('SquatCounter has squat-counter--goal-reached when count meets target', () => {
+test('SquatCounter has reps-counter--goal-reached when count meets target', () => {
   const html = renderToStaticMarkup(<SquatCounter count={20} targetReps={20} />)
 
-  expect(html).toContain('squat-counter--goal-reached')
+  expect(html).toContain('reps-counter--goal-reached')
 })

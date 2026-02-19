@@ -1,10 +1,13 @@
 interface DailySummaryProps {
   plankTargetSec?: number
   squatTargetReps?: number
+  pushupTargetReps?: number
   tomorrowPlankTargetSec?: number
   tomorrowSquatTargetReps?: number
+  tomorrowPushupTargetReps?: number
   plankSuccess?: boolean
   squatSuccess?: boolean
+  pushupSuccess?: boolean
   fatigue?: number
   overloadWarning?: boolean
   suspiciousSession?: boolean
@@ -13,10 +16,13 @@ interface DailySummaryProps {
 export default function DailySummary({
   plankTargetSec = 0,
   squatTargetReps = 0,
+  pushupTargetReps = 0,
   tomorrowPlankTargetSec = 0,
   tomorrowSquatTargetReps = 0,
+  tomorrowPushupTargetReps = 0,
   plankSuccess = false,
   squatSuccess = false,
+  pushupSuccess = false,
   fatigue = 0,
   overloadWarning = false,
   suspiciousSession = false,
@@ -27,13 +33,16 @@ export default function DailySummary({
       <section>
         <div className="summary-stat">Plank target: {plankTargetSec}s</div>
         <div className="summary-stat">Squat target: {squatTargetReps}</div>
+        <div className="summary-stat">Pushup target: {pushupTargetReps}</div>
         <div className="summary-stat">Plank: {plankSuccess ? 'Complete' : 'Incomplete'}</div>
         <div className="summary-stat">Squat: {squatSuccess ? 'Complete' : 'Incomplete'}</div>
+        <div className="summary-stat">Pushup: {pushupSuccess ? 'Complete' : 'Incomplete'}</div>
         <div className="summary-stat">Fatigue: {fatigue.toFixed(3)}</div>
       </section>
       <section>
         <div className="summary-stat">Tomorrow plank target: {tomorrowPlankTargetSec}s</div>
         <div className="summary-stat">Tomorrow squat target: {tomorrowSquatTargetReps}</div>
+        <div className="summary-stat">Tomorrow pushup target: {tomorrowPushupTargetReps}</div>
       </section>
       {overloadWarning ? (
         <div className="summary-warning" role="alert">Warning: load above 95th percentile</div>

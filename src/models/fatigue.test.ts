@@ -3,12 +3,14 @@ import type { BaseTargets, DailyRecord, FatigueParams } from '../types'
 import {
   ALPHA_P,
   ALPHA_S,
+  ALPHA_U,
   MEDIAN_INITIAL,
   computeAgeFactor,
   computeFatigueScore,
   computeFatigueSeries,
   computeLoad,
   computeNextTarget,
+  computePushupTarget,
   computeRampPenalty,
   computeSharedFatigueRaw,
   computeSquatTarget,
@@ -30,6 +32,7 @@ const params: FatigueParams = {
 const baseTargets: BaseTargets = {
   base_P: 60,
   base_S: 20,
+  base_U: 15,
 }
 
 function dailyRecord(
@@ -53,9 +56,15 @@ function dailyRecord(
       actual_reps: squatActual,
       success: squatSuccess,
     },
+    pushup: {
+      target_reps: 15,
+      actual_reps: 15,
+      success: true,
+    },
     fatigue: 0,
     F_P: 0,
     F_S: 0,
+    F_U: 0,
     F_total_raw: 0,
     inactive_time_ratio: 0,
     flag_suspicious: false,
@@ -96,9 +105,17 @@ test('computes EWMA fatigue per exercise with alpha_P=0.35 and alpha_S=0.40', ()
   expect(updateEWMA(ALPHA_S, 0, 1.0)).toBeCloseTo(0.40)
 })
 
-test('computes shared fatigue F_total_raw using interaction term', () => {
-  expect(computeSharedFatigueRaw(1.0, 1.0)).toBeCloseTo(1.2)
-  expect(computeSharedFatigueRaw(0.5, 1.0)).toBeCloseTo(0.45 * 0.5 + 0.55 * 1.0 + 0.2 * 0.5 * 1.0)
+test('ALPHA_U constant equals 0.45', () => {
+  expect(ALPHA_U).toBeCloseTo(0.45)
+  expect(updateEWMA(ALPHA_U, 0, 1.0)).toBeCloseTo(0.45)
+})
+
+test('computeSharedFatigueRaw(F_P, F_S, F_U) returns 3-exercise weighted formula', () => {
+  // F_P=1, F_S=1, F_U=1: 0.30+0.35+0.35+0.10+0.08+0.08 = 1.26
+  expect(computeSharedFatigueRaw(1.0, 1.0, 1.0)).toBeCloseTo(1.26)
+  // F_P=0.5, F_S=1.0, F_U=0: 0.30*0.5+0.35*1.0+0+0+0.08*0.5*1.0+0 = 0.15+0.35+0.04 = 0.54
+  const expected = 0.30 * 0.5 + 0.35 * 1.0 + 0 + 0 + 0.08 * 0.5 * 1.0 + 0
+  expect(computeSharedFatigueRaw(0.5, 1.0, 0)).toBeCloseTo(expected)
 })
 
 test('computes clipped body factors from PRD', () => {
@@ -135,10 +152,29 @@ test('computes fatigue series for both plank and squat dimensions', () => {
   expect(series[1]?.F_S ?? 0).toBeGreaterThan(0)
 })
 
+test('computeFatigueSeries computes F_U via pushup EWMA', () => {
+  const records: DailyRecord[] = [
+    {
+      ...dailyRecord('2026-02-16', 60, 60, true, 20, 20, true),
+      pushup: { target_reps: 15, actual_reps: 15, success: true },
+    },
+    {
+      ...dailyRecord('2026-02-17', 60, 60, true, 20, 20, true),
+      pushup: { target_reps: 15, actual_reps: 15, success: true },
+    },
+  ]
+
+  const series = computeFatigueSeries(records, params, baseTargets)
+  expect(series).toHaveLength(2)
+  expect(series[0]?.F_U ?? 0).toBeGreaterThan(0)
+  expect(series[1]?.F_U ?? 0).toBeGreaterThan(0)
+})
+
 test('returns base targets when there is no history', () => {
   const plan = computeTomorrowPlan([], params, baseTargets)
   expect(plan.plank_target_sec).toBe(60)
   expect(plan.squat_target_reps).toBe(20)
+  expect(plan.pushup_target_reps).toBe(15)
 })
 
 test('increases targets when fatigue is low', () => {
@@ -150,6 +186,15 @@ test('increases targets when fatigue is low', () => {
 
   expect(plan.plank_target_sec).toBeGreaterThan(60)
   expect(plan.squat_target_reps).toBeGreaterThan(20)
+})
+
+test('computeTomorrowPlan increases pushup target when fatigue low', () => {
+  const record: DailyRecord = {
+    ...dailyRecord('2026-02-16', 60, 60, true, 20, 20, true),
+    pushup: { target_reps: 15, actual_reps: 15, success: true },
+  }
+  const plan = computeTomorrowPlan([record], params, baseTargets)
+  expect(plan.pushup_target_reps).toBeGreaterThan(15)
 })
 
 test('holds both targets when fatigue is above threshold 0.85', () => {
@@ -167,6 +212,22 @@ test('holds both targets when fatigue is above threshold 0.85', () => {
   expect(plan.squat_target_reps).toBe(300)
 })
 
+test('computeTomorrowPlan holds pushup target when fatigue > 0.85', () => {
+  const records: DailyRecord[] = [
+    {
+      ...dailyRecord('2026-02-16', 60, 60, true, 20, 20, true),
+      pushup: { target_reps: 15, actual_reps: 30, success: true },
+    },
+    {
+      ...dailyRecord('2026-02-17', 800, 1200, true, 300, 450, true),
+      pushup: { target_reps: 100, actual_reps: 200, success: true },
+    },
+  ]
+  const plan = computeTomorrowPlan(records, params, baseTargets)
+  expect(plan.fatigue).toBeGreaterThan(0.85)
+  expect(plan.pushup_target_reps).toBe(100)
+})
+
 test('decreases targets by 10% after 3-day failure streak per exercise', () => {
   const plan = computeTomorrowPlan(
     [
@@ -180,6 +241,34 @@ test('decreases targets by 10% after 3-day failure streak per exercise', () => {
 
   expect(plan.plank_target_sec).toBe(54)
   expect(plan.squat_target_reps).toBe(18)
+})
+
+test('hasFailureStreak detects pushup 3-day failure streak', () => {
+  const records: DailyRecord[] = [
+    {
+      ...dailyRecord('2026-02-14', 60, 60, true, 20, 20, true),
+      pushup: { target_reps: 15, actual_reps: 5, success: false },
+    },
+    {
+      ...dailyRecord('2026-02-15', 60, 60, true, 20, 20, true),
+      pushup: { target_reps: 15, actual_reps: 5, success: false },
+    },
+    {
+      ...dailyRecord('2026-02-16', 60, 60, true, 20, 20, true),
+      pushup: { target_reps: 15, actual_reps: 5, success: false },
+    },
+  ]
+  const plan = computeTomorrowPlan(records, params, baseTargets)
+  expect(plan.pushup_target_reps).toBe(14) // 15 * 0.9 = 13.5 → 14
+})
+
+test('computeTomorrowPlan decreases pushup target after failure streak', () => {
+  const records: DailyRecord[] = Array.from({ length: 3 }, (_, i) => ({
+    ...dailyRecord(`2026-02-${14 + i}`, 60, 60, true, 20, 20, true),
+    pushup: { target_reps: 20, actual_reps: 5, success: false },
+  }))
+  const plan = computeTomorrowPlan(records, params, baseTargets)
+  expect(plan.pushup_target_reps).toBe(18) // 20 * 0.9 = 18
 })
 
 test('sets overload warning when latest F_total_raw is above historical 95th percentile', () => {
@@ -206,4 +295,9 @@ test('compatibility wrappers still compute next targets', () => {
 
   expect(plankTarget).toBeGreaterThan(60)
   expect(squatTarget).toBeGreaterThan(20)
+})
+
+test('computePushupTarget compatibility wrapper computes next pushup target', () => {
+  const pushupTarget = computePushupTarget(15, [{ target_reps: 15, actual_reps: 15, success: true }], params)
+  expect(pushupTarget).toBeGreaterThan(15)
 })

@@ -28,3 +28,22 @@ test('No repeat alert if goal already reached', () => {
 
   expect(played).toEqual(['plank'])
 })
+
+test('GoalAlerts has onPushupProgress that fires at target', () => {
+  const played: string[] = []
+  const alerts = createGoalAlerts((goal) => played.push(goal))
+
+  alerts.onPushupProgress(15, 15)
+
+  expect(played).toEqual(['pushup'])
+})
+
+test('Pushup goal alert does not repeat after first trigger', () => {
+  const played: string[] = []
+  const alerts = createGoalAlerts((goal) => played.push(goal))
+
+  alerts.onPushupProgress(15, 15)
+  alerts.onPushupProgress(16, 15)
+
+  expect(played).toEqual(['pushup'])
+})
