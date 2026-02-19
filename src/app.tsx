@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import DailySummary from './components/daily-summary'
 import PlankTimer from './components/plank-timer'
+import RepsCounter from './components/reps-counter'
 import SquatCounter from './components/squat-counter'
 import { getInactiveTimeRatio, onVisibilityChange, createVisibilityTracker } from './hooks/use-visibility'
 import { getWakeLock, syncWakeLock, type WakeLockSentinelLike } from './hooks/use-wake-lock'
@@ -20,7 +21,7 @@ import {
 import { loadAllRecords, saveRecord } from './storage/daily-record'
 import type { BaseTargets, DailyRecord, FatigueParams, PlankState } from './types'
 
-type AppView = 'plank' | 'squat' | 'summary'
+type AppView = 'plank' | 'squat' | 'pushup' | 'summary'
 
 interface AppProps {
   initialView?: AppView
@@ -32,15 +33,19 @@ interface InitialAppState {
   records: DailyRecord[]
   plankTargetSec: number
   squatTargetReps: number
+  pushupTargetReps: number
   plankActualSec: number
   plankSuccess: boolean
   squatActualReps: number
   squatSuccess: boolean
+  pushupActualReps: number
+  pushupSuccess: boolean
   fatigue: number
   overloadWarning: boolean
   suspiciousSession: boolean
   tomorrowPlankTargetSec: number
   tomorrowSquatTargetReps: number
+  tomorrowPushupTargetReps: number
   plankState: PlankState
   alreadySavedToday: boolean
 }
@@ -48,6 +53,7 @@ interface InitialAppState {
 const BASE_TARGETS: BaseTargets = {
   base_P: 60,
   base_S: 20,
+  base_U: 15,
 }
 
 const DEFAULT_PARAMS: FatigueParams = {
@@ -78,6 +84,7 @@ function createInitialAppState(initialPlankState?: PlankState): InitialAppState 
     ? {
       plank_target_sec: todayRecord.plank.target_sec,
       squat_target_reps: todayRecord.squat.target_reps,
+      pushup_target_reps: todayRecord.pushup.target_reps,
       fatigue: todayRecord.fatigue,
     }
     : computeTomorrowPlan(historyBeforeToday, DEFAULT_PARAMS, BASE_TARGETS)
@@ -88,15 +95,19 @@ function createInitialAppState(initialPlankState?: PlankState): InitialAppState 
     records,
     plankTargetSec: todayTargets.plank_target_sec,
     squatTargetReps: todayTargets.squat_target_reps,
+    pushupTargetReps: todayTargets.pushup_target_reps,
     plankActualSec: todayRecord?.plank.actual_sec ?? 0,
     plankSuccess: todayRecord?.plank.success ?? false,
     squatActualReps: todayRecord?.squat.actual_reps ?? 0,
     squatSuccess: todayRecord?.squat.success ?? false,
+    pushupActualReps: todayRecord?.pushup.actual_reps ?? 0,
+    pushupSuccess: todayRecord?.pushup.success ?? false,
     fatigue: todayRecord?.fatigue ?? todayTargets.fatigue,
     overloadWarning: todayRecord ? tomorrowPlan.overload_warning : false,
     suspiciousSession: todayRecord?.flag_suspicious ?? false,
     tomorrowPlankTargetSec: tomorrowPlan.plank_target_sec,
     tomorrowSquatTargetReps: tomorrowPlan.squat_target_reps,
+    tomorrowPushupTargetReps: tomorrowPlan.pushup_target_reps,
     plankState: initialPlankState ?? (todayRecord ? (todayRecord.plank.success ? 'COMPLETED' : 'CANCELLED') : 'IDLE'),
     alreadySavedToday: todayRecord !== null,
   }
@@ -108,6 +119,7 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
 
   const plankTimerRef = useRef<DomainPlankTimer | null>(null)
   const squatCounterRef = useRef<DomainSquatCounter | null>(null)
+  const pushupCounterRef = useRef<DomainSquatCounter | null>(null)
   const visibilityTrackerRef = useRef(createVisibilityTracker())
   const wakeLockSentinelRef = useRef<WakeLockSentinelLike | null>(null)
   const goalAlertsRef = useRef(createGoalAlerts(() => playGoalFeedback()))
@@ -121,6 +133,10 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
     squatCounterRef.current = createSquatCounter()
     squatCounterRef.current.count = initial.squatActualReps
   }
+  if (pushupCounterRef.current === null) {
+    pushupCounterRef.current = createSquatCounter()
+    pushupCounterRef.current.count = initial.pushupActualReps
+  }
 
   const [records, setRecords] = useState<DailyRecord[]>(initial.records)
   const [view, setView] = useState<AppView>(initialView)
@@ -133,8 +149,13 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
   const [squatLogged, setSquatLogged] = useState(initial.alreadySavedToday)
   const [squatSuccess, setSquatSuccess] = useState(initial.squatSuccess)
 
+  const [pushupCount, setPushupCount] = useState(initial.pushupActualReps)
+  const [pushupLogged, setPushupLogged] = useState(initial.alreadySavedToday)
+  const [pushupSuccess, setPushupSuccess] = useState(initial.pushupSuccess)
+
   const [plankTargetSec] = useState(initial.plankTargetSec)
   const [squatTargetReps, setSquatTargetReps] = useState(initial.squatTargetReps)
+  const [pushupTargetReps, setPushupTargetReps] = useState(initial.pushupTargetReps)
   const [fatigue, setFatigue] = useState(initial.fatigue)
   const [overloadWarning, setOverloadWarning] = useState(initial.overloadWarning)
   const [suspiciousSession, setSuspiciousSession] = useState(initial.suspiciousSession)
@@ -142,6 +163,7 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
   const [tomorrowTargets, setTomorrowTargets] = useState({
     plank: initial.tomorrowPlankTargetSec,
     squat: initial.tomorrowSquatTargetReps,
+    pushup: initial.tomorrowPushupTargetReps,
   })
 
   const syncPlankState = useCallback((now = nowMs()) => {
@@ -209,6 +231,35 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
     goalAlertsRef.current.onSquatProgress(finalCount, squatTargetReps)
     setSquatSuccess(computeSquatSuccess(finalCount, squatTargetReps))
     setSquatLogged(true)
+  }
+
+  function handlePushupDoneRepsChange(rawValue: string) {
+    const nextCount = sanitizeDoneReps(Number(rawValue))
+    if (pushupCounterRef.current) {
+      pushupCounterRef.current.count = nextCount
+    }
+    setPushupCount(nextCount)
+    if (pushupLogged) {
+      setPushupSuccess(computeSquatSuccess(nextCount, pushupTargetReps))
+    }
+    goalAlertsRef.current.onPushupProgress(nextCount, pushupTargetReps)
+  }
+
+  function handlePushupTargetRepsChange(rawValue: string) {
+    const nextTarget = sanitizeTargetReps(Number(rawValue))
+    setPushupTargetReps(nextTarget)
+    if (pushupLogged) {
+      setPushupSuccess(computeSquatSuccess(pushupCount, nextTarget))
+    }
+    goalAlertsRef.current.onPushupProgress(pushupCount, nextTarget)
+  }
+
+  function handlePushupComplete() {
+    const finalCount = completeSquatCounter(pushupCounterRef.current as DomainSquatCounter)
+    setPushupCount(finalCount)
+    goalAlertsRef.current.onPushupProgress(finalCount, pushupTargetReps)
+    setPushupSuccess(computeSquatSuccess(finalCount, pushupTargetReps))
+    setPushupLogged(true)
   }
 
   useEffect(() => {
@@ -291,7 +342,7 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
   }, [plankState])
 
   useEffect(() => {
-    if (!plankLogged || !squatLogged || savedTodayRef.current) return
+    if (!plankLogged || !squatLogged || !pushupLogged || savedTodayRef.current) return
 
     const sessionElapsedMs = completedElapsedMsRef.current || plankResult.actualSec * 1000
     const inactiveTimeRatio = getInactiveTimeRatio(visibilityTrackerRef.current, sessionElapsedMs, nowMs())
@@ -309,9 +360,15 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
         actual_reps: squatCount,
         success: squatSuccess,
       },
+      pushup: {
+        target_reps: pushupTargetReps,
+        actual_reps: pushupCount,
+        success: pushupSuccess,
+      },
       fatigue: 0,
       F_P: 0,
       F_S: 0,
+      F_U: 0,
       F_total_raw: 0,
       inactive_time_ratio: inactiveTimeRatio,
       flag_suspicious: flagSuspicious,
@@ -325,6 +382,7 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
       fatigue: snapshot.fatigue,
       F_P: snapshot.F_P,
       F_S: snapshot.F_S,
+      F_U: snapshot.F_U,
       F_total_raw: snapshot.F_total_raw,
     }
 
@@ -341,8 +399,9 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
     setTomorrowTargets({
       plank: tomorrowPlan.plank_target_sec,
       squat: tomorrowPlan.squat_target_reps,
+      pushup: tomorrowPlan.pushup_target_reps,
     })
-  }, [plankLogged, squatLogged, records, today, plankTargetSec, squatTargetReps, plankResult, squatCount, squatSuccess])
+  }, [plankLogged, squatLogged, pushupLogged, records, today, plankTargetSec, squatTargetReps, pushupTargetReps, plankResult, squatCount, squatSuccess, pushupCount, pushupSuccess])
 
   function renderView() {
     switch (view) {
@@ -371,15 +430,31 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
             onComplete={handleSquatComplete}
           />
         )
+      case 'pushup':
+        return (
+          <RepsCounter
+            title="Pushup Counter"
+            idPrefix="pushup"
+            exerciseName="pushups"
+            count={pushupCount}
+            targetReps={pushupTargetReps}
+            onDoneRepsChange={handlePushupDoneRepsChange}
+            onTargetRepsChange={handlePushupTargetRepsChange}
+            onComplete={handlePushupComplete}
+          />
+        )
       case 'summary':
         return (
           <DailySummary
             plankTargetSec={plankTargetSec}
             squatTargetReps={squatTargetReps}
+            pushupTargetReps={pushupTargetReps}
             tomorrowPlankTargetSec={tomorrowTargets.plank}
             tomorrowSquatTargetReps={tomorrowTargets.squat}
+            tomorrowPushupTargetReps={tomorrowTargets.pushup}
             plankSuccess={plankResult.success}
             squatSuccess={squatSuccess}
+            pushupSuccess={pushupSuccess}
             fatigue={fatigue}
             overloadWarning={overloadWarning}
             suspiciousSession={suspiciousSession}
@@ -390,11 +465,11 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
     }
   }
 
-  const navViews = ['plank', 'squat', 'summary'] as const
+  const navViews = ['plank', 'squat', 'pushup', 'summary'] as const
 
   return (
     <div className="app">
-      <h1 className="app-title">Daily Plank & Squat</h1>
+      <h1 className="app-title">Daily Plank, Squat &amp; Pushup</h1>
       <nav className="nav">
         {navViews.map((targetView) => (
           <button

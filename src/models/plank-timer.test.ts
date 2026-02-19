@@ -59,4 +59,21 @@ describe('PlankTimer integration', () => {
     expect(record.success).toBe(false)
     expect(record.actual_sec).toBe(0)
   })
+
+  test('Supports COUNTDOWN state before RUNNING', () => {
+    const pt = createPlankTimer()
+    pt.startCountdown(0)
+    expect(pt.state()).toBe('COUNTDOWN')
+    pt.countdownDone(0)
+    expect(pt.state()).toBe('RUNNING')
+  })
+
+  test('Cancel during COUNTDOWN transitions to CANCELLED with 0 elapsed', () => {
+    const pt = createPlankTimer()
+    pt.startCountdown(0)
+    const record = pt.cancel(500)
+    expect(pt.state()).toBe('CANCELLED')
+    expect(record.success).toBe(false)
+    expect(record.actual_sec).toBe(0)
+  })
 })

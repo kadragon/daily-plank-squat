@@ -8,6 +8,8 @@ export interface PlankTimer {
   state(): PlankState
   getCurrentElapsed(now: number): number
   start(now: number): void
+  startCountdown(now: number): void
+  countdownDone(now: number): void
   pause(now: number): void
   resume(now: number): void
   complete(now: number): PlankResult
@@ -33,6 +35,15 @@ export function createPlankTimer(): PlankTimer {
       machine.send('start')
       startTimer(timer, now)
     },
+    startCountdown(_now) {
+      if (machine.state !== 'IDLE') return
+      machine.send('countdown')
+    },
+    countdownDone(now) {
+      if (machine.state !== 'COUNTDOWN') return
+      machine.send('countdown_done')
+      startTimer(timer, now)
+    },
     pause(now) {
       if (machine.state !== 'RUNNING') return
       machine.send('pause')
@@ -53,7 +64,7 @@ export function createPlankTimer(): PlankTimer {
       return toPlankResult(getCurrentElapsed(timer, now), true)
     },
     cancel(now) {
-      if (machine.state !== 'RUNNING' && machine.state !== 'PAUSED') {
+      if (machine.state !== 'RUNNING' && machine.state !== 'PAUSED' && machine.state !== 'COUNTDOWN') {
         return toPlankResult(getCurrentElapsed(timer, now), false)
       }
 

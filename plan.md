@@ -135,15 +135,72 @@
 - [x] 60-second target accuracy is within ±1s in automated timing test
 - [x] Background/foreground transition preserves cumulative elapsed accuracy
 
-- [ ] Squat view renders numeric Target reps and Done reps inputs (no +1/-1 controls)
-- [ ] Squat target input defaults to today target and accepts manual override
-- [ ] Done reps input clamps to integer floor with minimum 0
-- [ ] Target reps input clamps to integer floor with minimum 1
-- [ ] Complete uses entered done reps vs entered target reps to set squat success
+- [x] Squat view renders numeric Target reps and Done reps inputs (no +1/-1 controls)
+- [x] Squat target input defaults to today target and accepts manual override
+- [x] Done reps input clamps to integer floor with minimum 0
+- [x] Target reps input clamps to integer floor with minimum 1
+- [x] Complete uses entered done reps vs entered target reps to set squat success
+
+## Add Pushups as Third Exercise
+
+### Phase 0: Structural Refactoring
+
+- [x] Rename SquatCounter → generic RepsCounter with title/idPrefix/exerciseName props
+- [x] squat-counter.ts re-exports from reps-counter.ts (backward compat)
+- [x] squat-counter.tsx is thin wrapper over RepsCounter with squat defaults
+- [x] CSS class names squat-* → reps-*
+
+### Phase 1: Types
+
+- [x] PushupRecord type has target_reps, actual_reps, success fields
+- [x] DailyRecord includes pushup: PushupRecord and F_U: number
+- [x] BaseTargets includes base_U
+- [x] FatigueSnapshot includes F_U
+- [x] TomorrowPlan includes pushup_target_reps and F_U
+
+### Phase 2: Storage Backwards Compatibility
+
+- [x] Records without pushup field load with neutral pushup defaults (target=15, actual=15, success=true)
+- [x] Records without F_U field load with F_U=0
+- [x] Records with valid pushup field parse correctly
+
+### Phase 3: Fatigue Model
+
+- [x] ALPHA_U constant equals 0.45
+- [x] computeSharedFatigueRaw(F_P, F_S, F_U) returns 3-exercise weighted formula
+- [x] computeFatigueSeries computes F_U via pushup EWMA
+- [x] computeTomorrowPlan returns base_U=15 when no history
+- [x] computeTomorrowPlan increases pushup target when fatigue low
+- [x] computeTomorrowPlan holds pushup target when fatigue > 0.85
+- [x] hasFailureStreak detects pushup 3-day failure streak
+- [x] computeTomorrowPlan decreases pushup target after failure streak
+
+### Phase 4: Goal Alerts
+
+- [x] GoalAlerts has onPushupProgress that fires at target
+- [x] Pushup goal alert does not repeat after first trigger
+
+### Phase 5: RepsCounter for Pushup
+
+- [x] RepsCounter renders "Pushup Counter" heading when title="Pushup Counter"
+- [x] RepsCounter uses pushup-prefixed ids when idPrefix="pushup"
+
+### Phase 6: App Integration
+
+- [x] App nav includes 'pushup' tab between squat and summary
+- [x] App renders RepsCounter for pushup view with correct props
+- [x] App save triggers only when all 3 exercises logged
+- [x] App does NOT save when pushup is not logged
+- [x] computeSquatSuccess (reused) computes pushup success correctly
+
+### Phase 7: Daily Summary
+
+- [x] DailySummary shows pushup target and completion status
+- [x] DailySummary shows tomorrow pushup target
 
 ## Optional Extensions
 
-- [ ] Supports COUNTDOWN state before RUNNING
+- [x] Supports COUNTDOWN state before RUNNING
 - [x] Adds vibration pattern [300,100,300] on goal reached
 - [x] Adds short AudioContext beep on goal reached
 - [x] Supports squat long-press continuous increment
