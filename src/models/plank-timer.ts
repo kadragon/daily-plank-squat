@@ -35,7 +35,7 @@ export function createPlankTimer(): PlankTimer {
       machine.send('start')
       startTimer(timer, now)
     },
-    startCountdown(now) {
+    startCountdown(_now) {
       if (machine.state !== 'IDLE') return
       machine.send('countdown')
     },
