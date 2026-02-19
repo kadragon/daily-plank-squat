@@ -23,6 +23,8 @@
   --radius-md: 14px;
   --shadow-1: 0 14px 32px rgba(2, 6, 23, 0.45);
   --shadow-2: 0 8px 24px rgba(2, 6, 23, 0.28);
+  --safe-top: env(safe-area-inset-top, 0px);
+  --header-top-pad: max(0.9rem, calc(var(--safe-top) + 0.35rem));
 }
 
 html, body {
@@ -61,7 +63,7 @@ body {
 }
 
 .app-header {
-  padding: 1rem 1rem 0.5rem 1rem;
+  padding: var(--header-top-pad) 1rem 0.5rem 1rem;
   padding-left: max(1rem, env(safe-area-inset-left));
   padding-right: max(1rem, env(safe-area-inset-right));
 }
@@ -77,7 +79,7 @@ body {
 .app-subtitle {
   margin-top: 0.1rem;
   color: var(--text-muted);
-  font-size: 0.9rem;
+  font-size: clamp(0.76rem, 2.4vw, 0.9rem);
 }
 
 .main-content {
