@@ -21,3 +21,24 @@ test('Daily summary shows completion status', () => {
   expect(html).toContain('Plank: Complete')
   expect(html).toContain('Squat: Incomplete')
 })
+
+test('DailySummary has h2 heading', () => {
+  const html = renderToStaticMarkup(<DailySummary />)
+
+  expect(html).toContain('<h2')
+})
+
+test('DailySummary warning messages have role="alert"', () => {
+  const html = renderToStaticMarkup(
+    <DailySummary overloadWarning suspiciousSession />,
+  )
+
+  expect(html).toContain('role="alert"')
+})
+
+test('DailySummary markup has daily-summary and summary-stat class names', () => {
+  const html = renderToStaticMarkup(<DailySummary plankTargetSec={60} squatTargetReps={20} />)
+
+  expect(html).toContain('daily-summary')
+  expect(html).toContain('summary-stat')
+})

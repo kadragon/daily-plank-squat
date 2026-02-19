@@ -17,3 +17,13 @@ export function decrement(counter: SquatCounter): void {
 export function complete(counter: SquatCounter): number {
   return counter.count
 }
+
+export function sanitizeDoneReps(value: number): number {
+  if (!Number.isFinite(value)) return 0
+  return Math.max(0, Math.floor(value))
+}
+
+export function sanitizeTargetReps(value: number): number {
+  if (!Number.isFinite(value)) return 1
+  return Math.max(1, Math.floor(value))
+}

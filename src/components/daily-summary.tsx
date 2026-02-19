@@ -22,16 +22,25 @@ export default function DailySummary({
   suspiciousSession = false,
 }: DailySummaryProps) {
   return (
-    <div>
-      <div>Plank target: {plankTargetSec}s</div>
-      <div>Squat target: {squatTargetReps}</div>
-      <div>Plank: {plankSuccess ? 'Complete' : 'Incomplete'}</div>
-      <div>Squat: {squatSuccess ? 'Complete' : 'Incomplete'}</div>
-      <div>Fatigue: {fatigue.toFixed(3)}</div>
-      <div>Tomorrow plank target: {tomorrowPlankTargetSec}s</div>
-      <div>Tomorrow squat target: {tomorrowSquatTargetReps}</div>
-      {overloadWarning ? <div>Warning: load above 95th percentile</div> : null}
-      {suspiciousSession ? <div>Warning: unstable measurement environment</div> : null}
+    <div className="daily-summary">
+      <h2>Daily Summary</h2>
+      <section>
+        <div className="summary-stat">Plank target: {plankTargetSec}s</div>
+        <div className="summary-stat">Squat target: {squatTargetReps}</div>
+        <div className="summary-stat">Plank: {plankSuccess ? 'Complete' : 'Incomplete'}</div>
+        <div className="summary-stat">Squat: {squatSuccess ? 'Complete' : 'Incomplete'}</div>
+        <div className="summary-stat">Fatigue: {fatigue.toFixed(3)}</div>
+      </section>
+      <section>
+        <div className="summary-stat">Tomorrow plank target: {tomorrowPlankTargetSec}s</div>
+        <div className="summary-stat">Tomorrow squat target: {tomorrowSquatTargetReps}</div>
+      </section>
+      {overloadWarning ? (
+        <div className="summary-warning" role="alert">Warning: load above 95th percentile</div>
+      ) : null}
+      {suspiciousSession ? (
+        <div className="summary-warning" role="alert">Warning: unstable measurement environment</div>
+      ) : null}
     </div>
   )
 }

@@ -14,8 +14,8 @@ function toElapsedSeconds(elapsedMs: number): number {
   return Math.max(0, Math.floor(elapsedMs / 1000))
 }
 
-function formatElapsed(elapsedMs: number): string {
-  const totalSeconds = toElapsedSeconds(elapsedMs)
+function formatTime(ms: number): string {
+  const totalSeconds = toElapsedSeconds(ms)
   const minutes = Math.floor(totalSeconds / 60)
   const seconds = totalSeconds % 60
 
@@ -31,37 +31,58 @@ export default function PlankTimer({
   onResume,
   onCancel,
 }: PlankTimerProps) {
+  const progressPercent = targetSec > 0
+    ? Math.min(100, Math.max(0, (elapsedMs / (targetSec * 1000)) * 100))
+    : 0
+  const remainingMs = Math.max(0, targetSec * 1000 - elapsedMs)
+
   function renderControls() {
     switch (state) {
       case 'IDLE':
-        return <button type="button" onClick={onStart}>Start</button>
+        return (
+          <div className="timer-controls">
+            <button type="button" className="btn btn--primary" onClick={onStart}>Start</button>
+          </div>
+        )
       case 'RUNNING':
         return (
-          <>
-            <button type="button" onClick={onPause}>Pause</button>
-            <button type="button" onClick={onCancel}>Cancel</button>
-          </>
+          <div className="timer-controls">
+            <button type="button" className="btn btn--primary" onClick={onPause}>Pause</button>
+            <button type="button" className="btn btn--danger" onClick={onCancel}>Cancel</button>
+          </div>
         )
       case 'PAUSED':
         return (
-          <>
-            <button type="button" onClick={onResume}>Resume</button>
-            <button type="button" onClick={onCancel}>Cancel</button>
-          </>
+          <div className="timer-controls">
+            <button type="button" className="btn btn--primary" onClick={onResume}>Resume</button>
+            <button type="button" className="btn btn--danger" onClick={onCancel}>Cancel</button>
+          </div>
         )
       case 'COMPLETED':
-        return <div>Result: {toElapsedSeconds(elapsedMs)}s</div>
+        return (
+          <div className="timer-controls">
+            <div>Result: {toElapsedSeconds(elapsedMs)}s</div>
+          </div>
+        )
       case 'CANCELLED':
-        return <div>Cancelled: {toElapsedSeconds(elapsedMs)}s</div>
+        return (
+          <div className="timer-controls">
+            <div>Cancelled: {toElapsedSeconds(elapsedMs)}s</div>
+          </div>
+        )
       default:
         return null
     }
   }
 
   return (
-    <div>
-      <div>Target: {targetSec}s</div>
-      <div>{formatElapsed(elapsedMs)}</div>
+    <div className={`plank-timer plank-timer--${state.toLowerCase()}`}>
+      <h2>Plank Timer</h2>
+      <div className="timer-target">Target: {targetSec}s</div>
+      <div className="timer-display" aria-live="polite">{formatTime(remainingMs)}</div>
+      <div className="progress-bar">
+        <div className="progress-fill" style={{ width: `${progressPercent}%` }} />
+      </div>
       {renderControls()}
     </div>
   )

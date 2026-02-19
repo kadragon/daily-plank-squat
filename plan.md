@@ -135,6 +135,12 @@
 - [x] 60-second target accuracy is within ±1s in automated timing test
 - [x] Background/foreground transition preserves cumulative elapsed accuracy
 
+- [ ] Squat view renders numeric Target reps and Done reps inputs (no +1/-1 controls)
+- [ ] Squat target input defaults to today target and accepts manual override
+- [ ] Done reps input clamps to integer floor with minimum 0
+- [ ] Target reps input clamps to integer floor with minimum 1
+- [ ] Complete uses entered done reps vs entered target reps to set squat success
+
 ## Optional Extensions
 
 - [ ] Supports COUNTDOWN state before RUNNING

@@ -13,8 +13,8 @@ import { createPlankTimer, type PlankTimer as DomainPlankTimer } from './models/
 import {
   complete as completeSquatCounter,
   createSquatCounter,
-  decrement as decrementSquatCounter,
-  increment as incrementSquatCounter,
+  sanitizeDoneReps,
+  sanitizeTargetReps,
   type SquatCounter as DomainSquatCounter,
 } from './models/squat-counter'
 import { loadAllRecords, saveRecord } from './storage/daily-record'
@@ -25,6 +25,7 @@ type AppView = 'plank' | 'squat' | 'summary'
 interface AppProps {
   initialView?: AppView
   initialPlankState?: PlankState
+  initialWakeLockNotice?: string
 }
 
 interface InitialAppState {
@@ -63,6 +64,10 @@ function todayKey(): string {
   return new Date().toISOString().slice(0, 10)
 }
 
+export function computeSquatSuccess(actualReps: number, targetReps: number): boolean {
+  return actualReps >= targetReps
+}
+
 function createInitialAppState(initialPlankState?: PlankState): InitialAppState {
   const records = loadAllRecords()
   const today = todayKey()
@@ -97,7 +102,7 @@ function createInitialAppState(initialPlankState?: PlankState): InitialAppState 
   }
 }
 
-export default function App({ initialView = 'plank', initialPlankState }: AppProps) {
+export default function App({ initialView = 'plank', initialPlankState, initialWakeLockNotice }: AppProps) {
   const initial = useRef(createInitialAppState(initialPlankState)).current
   const today = useMemo(() => todayKey(), [])
 
@@ -129,11 +134,11 @@ export default function App({ initialView = 'plank', initialPlankState }: AppPro
   const [squatSuccess, setSquatSuccess] = useState(initial.squatSuccess)
 
   const [plankTargetSec] = useState(initial.plankTargetSec)
-  const [squatTargetReps] = useState(initial.squatTargetReps)
+  const [squatTargetReps, setSquatTargetReps] = useState(initial.squatTargetReps)
   const [fatigue, setFatigue] = useState(initial.fatigue)
   const [overloadWarning, setOverloadWarning] = useState(initial.overloadWarning)
   const [suspiciousSession, setSuspiciousSession] = useState(initial.suspiciousSession)
-  const [wakeLockNotice, setWakeLockNotice] = useState('')
+  const [wakeLockNotice, setWakeLockNotice] = useState(initialWakeLockNotice ?? '')
   const [tomorrowTargets, setTomorrowTargets] = useState({
     plank: initial.tomorrowPlankTargetSec,
     squat: initial.tomorrowSquatTargetReps,
@@ -177,23 +182,32 @@ export default function App({ initialView = 'plank', initialPlankState }: AppPro
     syncPlankState()
   }
 
-  function handleSquatIncrement() {
-    incrementSquatCounter(squatCounterRef.current as DomainSquatCounter)
-    const nextCount = squatCounterRef.current?.count ?? 0
+  function handleSquatDoneRepsChange(rawValue: string) {
+    const nextCount = sanitizeDoneReps(Number(rawValue))
+    if (squatCounterRef.current) {
+      squatCounterRef.current.count = nextCount
+    }
     setSquatCount(nextCount)
+    if (squatLogged) {
+      setSquatSuccess(computeSquatSuccess(nextCount, squatTargetReps))
+    }
     goalAlertsRef.current.onSquatProgress(nextCount, squatTargetReps)
   }
 
-  function handleSquatDecrement() {
-    decrementSquatCounter(squatCounterRef.current as DomainSquatCounter)
-    setSquatCount(squatCounterRef.current?.count ?? 0)
+  function handleSquatTargetRepsChange(rawValue: string) {
+    const nextTarget = sanitizeTargetReps(Number(rawValue))
+    setSquatTargetReps(nextTarget)
+    if (squatLogged) {
+      setSquatSuccess(computeSquatSuccess(squatCount, nextTarget))
+    }
+    goalAlertsRef.current.onSquatProgress(squatCount, nextTarget)
   }
 
   function handleSquatComplete() {
     const finalCount = completeSquatCounter(squatCounterRef.current as DomainSquatCounter)
     setSquatCount(finalCount)
     goalAlertsRef.current.onSquatProgress(finalCount, squatTargetReps)
-    setSquatSuccess(finalCount >= squatTargetReps)
+    setSquatSuccess(computeSquatSuccess(finalCount, squatTargetReps))
     setSquatLogged(true)
   }
 
@@ -344,7 +358,7 @@ export default function App({ initialView = 'plank', initialPlankState }: AppPro
               onResume={handlePlankResume}
               onCancel={handlePlankCancel}
             />
-            {wakeLockNotice ? <div>{wakeLockNotice}</div> : null}
+            {wakeLockNotice ? <div className="wake-lock-notice">{wakeLockNotice}</div> : null}
           </>
         )
       case 'squat':
@@ -352,8 +366,8 @@ export default function App({ initialView = 'plank', initialPlankState }: AppPro
           <SquatCounter
             count={squatCount}
             targetReps={squatTargetReps}
-            onIncrement={handleSquatIncrement}
-            onDecrement={handleSquatDecrement}
+            onDoneRepsChange={handleSquatDoneRepsChange}
+            onTargetRepsChange={handleSquatTargetRepsChange}
             onComplete={handleSquatComplete}
           />
         )
@@ -376,15 +390,27 @@ export default function App({ initialView = 'plank', initialPlankState }: AppPro
     }
   }
 
+  const navViews = ['plank', 'squat', 'summary'] as const
+
   return (
     <div className="app">
-      <h1>Daily Plank & Squat</h1>
-      <nav>
-        <button type="button" onClick={() => setView('plank')}>Plank</button>
-        <button type="button" onClick={() => setView('squat')}>Squat</button>
-        <button type="button" onClick={() => setView('summary')}>Summary</button>
+      <h1 className="app-title">Daily Plank & Squat</h1>
+      <nav className="nav">
+        {navViews.map((targetView) => (
+          <button
+            key={targetView}
+            type="button"
+            className={`nav-btn${view === targetView ? ' nav-btn--active' : ''}`}
+            aria-current={view === targetView ? 'page' : undefined}
+            onClick={() => setView(targetView)}
+          >
+            {targetView.charAt(0).toUpperCase() + targetView.slice(1)}
+          </button>
+        ))}
       </nav>
-      {renderView()}
+      <main className="main-content">
+        {renderView()}
+      </main>
     </div>
   )
 }
