@@ -64,7 +64,7 @@ export function createPlankTimer(): PlankTimer {
       return toPlankResult(getCurrentElapsed(timer, now), true)
     },
     cancel(now) {
-      if (machine.state !== 'RUNNING' && machine.state !== 'PAUSED') {
+      if (machine.state !== 'RUNNING' && machine.state !== 'PAUSED' && machine.state !== 'COUNTDOWN') {
         return toPlankResult(getCurrentElapsed(timer, now), false)
       }
 
