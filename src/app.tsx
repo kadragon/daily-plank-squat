@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import DailySummary from './components/daily-summary'
 import PlankTimer from './components/plank-timer'
 import RepsCounter from './components/reps-counter'
@@ -18,10 +18,16 @@ import {
   sanitizeTargetReps,
   type SquatCounter as DomainSquatCounter,
 } from './models/squat-counter'
+import { detectSwipeDirection, getAdjacentView } from './models/swipe-navigation'
 import { loadAllRecords, saveRecord } from './storage/daily-record'
 import type { BaseTargets, DailyRecord, FatigueParams, PlankState } from './types'
 
 type AppView = 'plank' | 'squat' | 'pushup' | 'summary'
+
+interface NavItemMeta {
+  view: AppView
+  label: string
+}
 
 interface AppProps {
   initialView?: AppView
@@ -60,6 +66,57 @@ const DEFAULT_PARAMS: FatigueParams = {
   age: 30,
   weight_kg: 70,
   gender: 'other',
+}
+
+const NAV_VIEWS = ['plank', 'squat', 'pushup', 'summary'] as const satisfies readonly AppView[]
+
+const NAV_ITEMS: readonly NavItemMeta[] = [
+  { view: 'plank', label: 'Plank' },
+  { view: 'squat', label: 'Squat' },
+  { view: 'pushup', label: 'Pushup' },
+  { view: 'summary', label: 'Summary' },
+]
+
+function isWorkoutView(view: AppView): boolean {
+  return view === 'plank' || view === 'squat' || view === 'pushup'
+}
+
+function isSwipeIgnoredTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof Element)) return false
+  return target.closest('input,button,label,textarea,select,a,[data-swipe-ignore="true"]') !== null
+}
+
+function TabIcon({ view }: { view: AppView }) {
+  switch (view) {
+    case 'plank':
+      return (
+        <svg className="app-tabbar__icon" viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" strokeWidth="2" />
+          <path d="M12 12L12 8M12 12L15 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        </svg>
+      )
+    case 'squat':
+      return (
+        <svg className="app-tabbar__icon" viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="6" r="2" fill="currentColor" />
+          <path d="M8 11H16M8 11L6 16M16 11L18 16M9 16H15M9 16L8 20M15 16L16 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      )
+    case 'pushup':
+      return (
+        <svg className="app-tabbar__icon" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M4 16H20M7 12H17M8 12L10 8H14L16 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      )
+    case 'summary':
+      return (
+        <svg className="app-tabbar__icon" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M6 19V11M12 19V5M18 19V14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        </svg>
+      )
+    default:
+      return null
+  }
 }
 
 function nowMs(): number {
@@ -125,6 +182,7 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
   const goalAlertsRef = useRef(createGoalAlerts(() => playGoalFeedback()))
   const savedTodayRef = useRef(initial.alreadySavedToday)
   const completedElapsedMsRef = useRef(initial.plankActualSec * 1000)
+  const swipeStartRef = useRef<{ x: number, y: number, pointerId: number, ignore: boolean } | null>(null)
 
   if (plankTimerRef.current === null) {
     plankTimerRef.current = createPlankTimer()
@@ -260,6 +318,52 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
     goalAlertsRef.current.onPushupProgress(finalCount, pushupTargetReps)
     setPushupSuccess(computeSquatSuccess(finalCount, pushupTargetReps))
     setPushupLogged(true)
+  }
+
+  function handleMainPointerDown(event: ReactPointerEvent<HTMLElement>) {
+    swipeStartRef.current = {
+      x: event.clientX,
+      y: event.clientY,
+      pointerId: event.pointerId,
+      ignore: isSwipeIgnoredTarget(event.target),
+    }
+  }
+
+  function handleMainPointerUp(event: ReactPointerEvent<HTMLElement>) {
+    const swipeStart = swipeStartRef.current
+    if (!swipeStart) return
+    if (swipeStart.pointerId !== event.pointerId) {
+      swipeStartRef.current = null
+      return
+    }
+
+    swipeStartRef.current = null
+    if (swipeStart.ignore) return
+
+    const direction = detectSwipeDirection({
+      startX: swipeStart.x,
+      startY: swipeStart.y,
+      endX: event.clientX,
+      endY: event.clientY,
+    })
+    if (!direction) return
+
+    const nextView = getAdjacentView(NAV_VIEWS, view, direction)
+    if (nextView) {
+      setView(nextView)
+    }
+  }
+
+  function handleMainPointerCancel() {
+    swipeStartRef.current = null
+  }
+
+  function handleMainPointerLeave() {
+    swipeStartRef.current = null
+  }
+
+  function handleMainLostPointerCapture() {
+    swipeStartRef.current = null
   }
 
   useEffect(() => {
@@ -465,27 +569,40 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
     }
   }
 
-  const navViews = ['plank', 'squat', 'pushup', 'summary'] as const
-
   return (
     <div className="app">
-      <h1 className="app-title">Daily Plank, Squat &amp; Pushup</h1>
-      <nav className="nav">
-        {navViews.map((targetView) => (
-          <button
-            key={targetView}
-            type="button"
-            className={`nav-btn${view === targetView ? ' nav-btn--active' : ''}`}
-            aria-current={view === targetView ? 'page' : undefined}
-            onClick={() => setView(targetView)}
-          >
-            {targetView.charAt(0).toUpperCase() + targetView.slice(1)}
-          </button>
-        ))}
-      </nav>
-      <main className="main-content">
-        {renderView()}
-      </main>
+      <div className="app-shell">
+        <header className="app-header" data-swipe-ignore="true">
+          <h1 className="app-title">Daily Plank, Squat &amp; Pushup</h1>
+          <p className="app-subtitle">Train consistently. Recover intelligently.</p>
+        </header>
+        <main
+          className={`main-content${isWorkoutView(view) ? ' main-content--workout' : ''}`}
+          onPointerDown={handleMainPointerDown}
+          onPointerUp={handleMainPointerUp}
+          onPointerCancel={handleMainPointerCancel}
+          onPointerLeave={handleMainPointerLeave}
+          onLostPointerCapture={handleMainLostPointerCapture}
+        >
+          <div className="view-stage">
+            {renderView()}
+          </div>
+        </main>
+        <nav className="nav app-tabbar" aria-label="Exercise navigation" data-swipe-ignore="true">
+          {NAV_ITEMS.map((item) => (
+            <button
+              key={item.view}
+              type="button"
+              className={`nav-btn app-tabbar__button${view === item.view ? ' app-tabbar__button--active' : ''}`}
+              aria-current={view === item.view ? 'page' : undefined}
+              onClick={() => setView(item.view)}
+            >
+              <TabIcon view={item.view} />
+              <span className="app-tabbar__label">{item.label}</span>
+            </button>
+          ))}
+        </nav>
+      </div>
     </div>
   )
 }

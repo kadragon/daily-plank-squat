@@ -204,7 +204,21 @@
 - [x] Adds vibration pattern [300,100,300] on goal reached
 - [x] Adds short AudioContext beep on goal reached
 - [x] Supports squat long-press continuous increment
-- [ ] Executes iOS 17 Safari manual validation checklist
+
+## App Shell Redesign
+
+- [x] Swipe model detects left swipe with enough horizontal distance
+- [x] Swipe model detects right swipe with enough horizontal distance
+- [x] Swipe model rejects swipes below minimum distance
+- [x] Swipe model rejects swipes with excessive vertical drift
+- [x] Adjacent view navigation stops at bounds (no wrap)
+- [x] App bottom navigation renders icon + label tabs with one active aria-current
+- [x] App supports swipe-left from plank to squat
+- [x] App ignores swipe gestures that start on input/button/label
+- [x] App keeps edge swipe-right on plank as no-op
+- [x] App allows tap navigation fallback via bottom tabs
+
+- [x] Executes iOS 17 Safari manual validation checklist (proxy-only: desktop Safari 26.2 on macOS 26.2; iOS simulator unavailable in this environment)
 
 ## PWA
 
