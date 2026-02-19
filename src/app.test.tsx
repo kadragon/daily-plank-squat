@@ -41,11 +41,19 @@ test('Active nav button has aria-current="page", others do not', () => {
   expect((html.match(/aria-current="page"/g) ?? []).length).toBe(1)
 })
 
-test('Nav has class="nav" and active button has nav-btn--active', () => {
+test('Bottom nav has app-tabbar class and active button has nav-btn--active', () => {
   const html = renderToStaticMarkup(<App initialView="plank" />)
 
-  expect(html).toContain('class="nav"')
+  expect(html).toContain('class="nav app-tabbar"')
   expect(html).toContain('nav-btn--active')
+})
+
+test('Bottom nav exposes exercise navigation semantics', () => {
+  const html = renderToStaticMarkup(<App initialView="plank" />)
+
+  expect(html).toContain('aria-label="Exercise navigation"')
+  expect(html).toContain('app-tabbar__icon')
+  expect(html).toContain('app-tabbar__label')
 })
 
 test('Wake lock notice div has wake-lock-notice class', () => {
