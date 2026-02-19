@@ -576,7 +576,7 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
             <button
               key={item.view}
               type="button"
-              className={`nav-btn app-tabbar__button${view === item.view ? ' nav-btn--active app-tabbar__button--active' : ''}`}
+              className={`nav-btn app-tabbar__button${view === item.view ? ' app-tabbar__button--active' : ''}`}
               aria-current={view === item.view ? 'page' : undefined}
               onClick={() => setView(item.view)}
             >

@@ -368,7 +368,7 @@ body {
 }
 
 .nav-btn.app-tabbar__button--active,
-.nav-btn.nav-btn--active {
+.nav-btn.app-tabbar__button[aria-current='page'] {
   color: var(--text);
   border-color: rgba(249, 115, 22, 0.45);
   background: linear-gradient(180deg, rgba(251, 146, 60, 0.3), rgba(249, 115, 22, 0.16));

@@ -43,5 +43,5 @@ export function getAdjacentView<TView extends string>(
   const nextIndex = direction === 'left' ? index + 1 : index - 1
   if (nextIndex < 0 || nextIndex >= orderedViews.length) return null
 
-  return orderedViews[nextIndex] ?? null
+  return orderedViews[nextIndex]
 }
