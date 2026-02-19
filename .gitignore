@@ -5,3 +5,6 @@ dist/
 .env
 .env.*
 .wrangler/
+.serena/
+.agents/
+.claude/
