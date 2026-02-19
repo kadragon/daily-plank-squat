@@ -1,6 +1,6 @@
 // Plank State Machine
-export type PlankState = 'IDLE' | 'RUNNING' | 'PAUSED' | 'COMPLETED' | 'CANCELLED'
-export type PlankEvent = 'start' | 'pause' | 'resume' | 'complete' | 'cancel'
+export type PlankState = 'IDLE' | 'COUNTDOWN' | 'RUNNING' | 'PAUSED' | 'COMPLETED' | 'CANCELLED'
+export type PlankEvent = 'start' | 'countdown' | 'countdown_done' | 'pause' | 'resume' | 'complete' | 'cancel'
 
 // Timer
 export interface TimerSegment {

@@ -200,7 +200,7 @@
 
 ## Optional Extensions
 
-- [ ] Supports COUNTDOWN state before RUNNING
+- [x] Supports COUNTDOWN state before RUNNING
 - [x] Adds vibration pattern [300,100,300] on goal reached
 - [x] Adds short AudioContext beep on goal reached
 - [x] Supports squat long-press continuous increment

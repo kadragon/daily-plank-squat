@@ -17,6 +17,9 @@ export function createPlankStateMachine(): PlankStateMachine {
 
 export function transition(state: PlankState, event: PlankEvent): PlankState {
   if (state === 'IDLE' && event === 'start') return 'RUNNING'
+  if (state === 'IDLE' && event === 'countdown') return 'COUNTDOWN'
+  if (state === 'COUNTDOWN' && event === 'countdown_done') return 'RUNNING'
+  if (state === 'COUNTDOWN' && event === 'cancel') return 'CANCELLED'
   if (state === 'RUNNING' && event === 'pause') return 'PAUSED'
   if (state === 'PAUSED' && event === 'resume') return 'RUNNING'
   if (state === 'RUNNING' && event === 'complete') return 'COMPLETED'
