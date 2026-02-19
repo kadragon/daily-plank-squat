@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
-import App from './app'
+import App, { computeSquatSuccess } from './app'
 
 test('App navigates between plank/squat/summary views', () => {
   const plankHtml = renderToStaticMarkup(<App initialView="plank" />)
@@ -54,4 +54,9 @@ test('Wake lock notice div has wake-lock-notice class', () => {
   )
 
   expect(html).toContain('wake-lock-notice')
+})
+
+test('computeSquatSuccess recalculates status when target changes', () => {
+  expect(computeSquatSuccess(10, 10)).toBe(true)
+  expect(computeSquatSuccess(10, 20)).toBe(false)
 })

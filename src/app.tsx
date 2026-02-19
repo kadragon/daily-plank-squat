@@ -64,6 +64,10 @@ function todayKey(): string {
   return new Date().toISOString().slice(0, 10)
 }
 
+export function computeSquatSuccess(actualReps: number, targetReps: number): boolean {
+  return actualReps >= targetReps
+}
+
 function createInitialAppState(initialPlankState?: PlankState): InitialAppState {
   const records = loadAllRecords()
   const today = todayKey()
@@ -184,12 +188,18 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
       squatCounterRef.current.count = nextCount
     }
     setSquatCount(nextCount)
+    if (squatLogged) {
+      setSquatSuccess(computeSquatSuccess(nextCount, squatTargetReps))
+    }
     goalAlertsRef.current.onSquatProgress(nextCount, squatTargetReps)
   }
 
   function handleSquatTargetRepsChange(rawValue: string) {
     const nextTarget = sanitizeTargetReps(Number(rawValue))
     setSquatTargetReps(nextTarget)
+    if (squatLogged) {
+      setSquatSuccess(computeSquatSuccess(squatCount, nextTarget))
+    }
     goalAlertsRef.current.onSquatProgress(squatCount, nextTarget)
   }
 
@@ -197,7 +207,7 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
     const finalCount = completeSquatCounter(squatCounterRef.current as DomainSquatCounter)
     setSquatCount(finalCount)
     goalAlertsRef.current.onSquatProgress(finalCount, squatTargetReps)
-    setSquatSuccess(finalCount >= squatTargetReps)
+    setSquatSuccess(computeSquatSuccess(finalCount, squatTargetReps))
     setSquatLogged(true)
   }
 
