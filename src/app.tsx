@@ -182,7 +182,7 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
   const goalAlertsRef = useRef(createGoalAlerts(() => playGoalFeedback()))
   const savedTodayRef = useRef(initial.alreadySavedToday)
   const completedElapsedMsRef = useRef(initial.plankActualSec * 1000)
-  const swipeStartRef = useRef<{ x: number, y: number, ignore: boolean } | null>(null)
+  const swipeStartRef = useRef<{ x: number, y: number, pointerId: number, ignore: boolean } | null>(null)
 
   if (plankTimerRef.current === null) {
     plankTimerRef.current = createPlankTimer()
@@ -324,14 +324,21 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
     swipeStartRef.current = {
       x: event.clientX,
       y: event.clientY,
+      pointerId: event.pointerId,
       ignore: isSwipeIgnoredTarget(event.target),
     }
   }
 
   function handleMainPointerUp(event: ReactPointerEvent<HTMLElement>) {
     const swipeStart = swipeStartRef.current
+    if (!swipeStart) return
+    if (swipeStart.pointerId !== event.pointerId) {
+      swipeStartRef.current = null
+      return
+    }
+
     swipeStartRef.current = null
-    if (!swipeStart || swipeStart.ignore) return
+    if (swipeStart.ignore) return
 
     const direction = detectSwipeDirection({
       startX: swipeStart.x,
@@ -348,6 +355,14 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
   }
 
   function handleMainPointerCancel() {
+    swipeStartRef.current = null
+  }
+
+  function handleMainPointerLeave() {
+    swipeStartRef.current = null
+  }
+
+  function handleMainLostPointerCapture() {
     swipeStartRef.current = null
   }
 
@@ -566,6 +581,8 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
           onPointerDown={handleMainPointerDown}
           onPointerUp={handleMainPointerUp}
           onPointerCancel={handleMainPointerCancel}
+          onPointerLeave={handleMainPointerLeave}
+          onLostPointerCapture={handleMainLostPointerCapture}
         >
           <div className="view-stage">
             {renderView()}

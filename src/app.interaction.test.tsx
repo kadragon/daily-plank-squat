@@ -94,3 +94,24 @@ test('Tap navigation fallback switches tabs and updates active state', () => {
   expect(view.getByText('Pushup Counter')).toBeTruthy()
   expect(pushupTab.getAttribute('aria-current')).toBe('page')
 })
+
+test('Pointer up from a different pointer id does not trigger swipe navigation', () => {
+  const view = render(<App initialView="plank" />)
+  const main = view.container.querySelector('main')
+  if (!main) throw new Error('main element not found')
+
+  fireEvent.pointerDown(main, {
+    clientX: 260,
+    clientY: 220,
+    pointerId: 1,
+    pointerType: 'touch',
+  })
+  fireEvent.pointerUp(main, {
+    clientX: 120,
+    clientY: 220,
+    pointerId: 2,
+    pointerType: 'touch',
+  })
+
+  expect(view.getByText('Plank Timer')).toBeTruthy()
+})
