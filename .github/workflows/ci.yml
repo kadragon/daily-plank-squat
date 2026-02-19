@@ -23,5 +23,17 @@ jobs:
       - name: Install dependencies
         run: HUSKY=0 bun install --frozen-lockfile
 
-      - name: Run pre-commit checks
-        run: bun run precommit
+      - name: Run lint
+        run: bun run lint
+
+      - name: Run typecheck
+        run: bun run typecheck
+
+      - name: Run tests
+        run: bun run test
+
+      - name: Check no focused tests
+        run: bun run check:no-focused-tests
+
+      - name: Check merge conflicts
+        run: bun run check:merge-conflicts
