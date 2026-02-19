@@ -2,6 +2,7 @@ import { afterEach, expect, test } from 'bun:test'
 import { cleanup, fireEvent, render } from '@testing-library/react'
 import { Window } from 'happy-dom'
 import App from './app'
+import type { DailyRecord } from './types'
 
 const happyWindow = new Window({ url: 'https://localhost/' })
 happyWindow.SyntaxError = SyntaxError
@@ -40,6 +41,29 @@ function swipe(main: HTMLElement, startX: number, endX: number, y = 220) {
     pointerId: 1,
     pointerType: 'touch',
   })
+}
+
+function todayKey(): string {
+  return new Date().toISOString().slice(0, 10)
+}
+
+function seedTodayRecord(overrides: Partial<DailyRecord> = {}) {
+  const record: DailyRecord = {
+    date: todayKey(),
+    plank: { target_sec: 60, actual_sec: 63, success: true },
+    squat: { target_reps: 20, actual_reps: 21, success: true },
+    pushup: { target_reps: 15, actual_reps: 16, success: true },
+    fatigue: 0.2,
+    F_P: 0.2,
+    F_S: 0.2,
+    F_U: 0.2,
+    F_total_raw: 0.2,
+    inactive_time_ratio: 0.1,
+    flag_suspicious: false,
+    ...overrides,
+  }
+
+  happyWindow.localStorage.setItem('daily-records', JSON.stringify([record]))
 }
 
 test('Swipe left from plank moves to squat', () => {
@@ -114,4 +138,56 @@ test('Pointer up from a different pointer id does not trigger swipe navigation',
   })
 
   expect(view.getByText('Plank Timer')).toBeTruthy()
+})
+
+test('Summary export button is disabled when there is no today record', () => {
+  const view = render(<App initialView="summary" />)
+  const button = view.getByRole('button', { name: 'Apple 건강에 기록' })
+
+  expect(button.hasAttribute('disabled')).toBe(true)
+})
+
+test('Summary export navigates to shortcuts URL when today record exists', () => {
+  seedTodayRecord()
+  const view = render(<App initialView="summary" />)
+  const button = view.getByRole('button', { name: 'Apple 건강에 기록' })
+
+  fireEvent.click(button)
+
+  expect(happyWindow.location.href.startsWith('shortcuts://x-callback-url/run-shortcut?')).toBe(true)
+  const parsed = new URL(happyWindow.location.href)
+  expect(parsed.searchParams.get('name')).toBe('DailyPlankSquatToHealth')
+  expect(parsed.searchParams.get('input')).toBe('text')
+  expect(parsed.searchParams.get('text')).toBeTruthy()
+})
+
+test('Summary export shows hint when opening Shortcuts throws', () => {
+  seedTodayRecord({ flag_suspicious: true })
+  const originalLocation = happyWindow.location
+
+  Object.defineProperty(happyWindow, 'location', {
+    configurable: true,
+    value: {
+      get href() {
+        return originalLocation.href
+      },
+      set href(_value: string) {
+        throw new Error('blocked')
+      },
+    },
+  })
+
+  try {
+    const view = render(<App initialView="summary" />)
+    const button = view.getByRole('button', { name: 'Apple 건강에 기록' })
+
+    fireEvent.click(button)
+
+    expect(view.getByText('Could not open Shortcuts. Check that Apple Shortcuts is available on this device.')).toBeTruthy()
+  } finally {
+    Object.defineProperty(happyWindow, 'location', {
+      configurable: true,
+      value: originalLocation,
+    })
+  }
 })

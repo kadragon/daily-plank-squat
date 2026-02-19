@@ -20,6 +20,7 @@ import {
 } from './models/squat-counter'
 import { detectSwipeDirection, getAdjacentView } from './models/swipe-navigation'
 import { loadAllRecords, saveRecord } from './storage/daily-record'
+import { buildHealthPayload, buildShortcutRunUrl } from './integrations/apple-health-shortcut'
 import type { BaseTargets, DailyRecord, FatigueParams, PlankState } from './types'
 
 type AppView = 'plank' | 'squat' | 'pushup' | 'summary'
@@ -76,6 +77,10 @@ const NAV_ITEMS: readonly NavItemMeta[] = [
   { view: 'pushup', label: 'Pushup' },
   { view: 'summary', label: 'Summary' },
 ]
+
+const APPLE_HEALTH_SHORTCUT_NAME = 'DailyPlankSquatToHealth'
+const HEALTH_EXPORT_ERROR_HINT = 'Could not open Shortcuts. Check that Apple Shortcuts is available on this device.'
+const SUSPICIOUS_EXPORT_HINT = '기록은 가능하지만 측정 환경 경고'
 
 function isWorkoutView(view: AppView): boolean {
   return view === 'plank' || view === 'squat' || view === 'pushup'
@@ -218,11 +223,32 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
   const [overloadWarning, setOverloadWarning] = useState(initial.overloadWarning)
   const [suspiciousSession, setSuspiciousSession] = useState(initial.suspiciousSession)
   const [wakeLockNotice, setWakeLockNotice] = useState(initialWakeLockNotice ?? '')
+  const [healthExportHint, setHealthExportHint] = useState('')
   const [tomorrowTargets, setTomorrowTargets] = useState({
     plank: initial.tomorrowPlankTargetSec,
     squat: initial.tomorrowSquatTargetReps,
     pushup: initial.tomorrowPushupTargetReps,
   })
+  const todayRecord = useMemo(() => records.find((record) => record.date === today) ?? null, [records, today])
+  const summaryHealthHint = healthExportHint || (todayRecord?.flag_suspicious ? SUSPICIOUS_EXPORT_HINT : '')
+
+  const handleExportToHealth = useCallback(() => {
+    if (!todayRecord) return
+
+    try {
+      const payload = buildHealthPayload(todayRecord)
+      const shortcutUrl = buildShortcutRunUrl(payload, APPLE_HEALTH_SHORTCUT_NAME)
+
+      if (typeof window === 'undefined') {
+        throw new Error('window is unavailable')
+      }
+
+      window.location.href = shortcutUrl
+      setHealthExportHint('')
+    } catch {
+      setHealthExportHint(HEALTH_EXPORT_ERROR_HINT)
+    }
+  }, [todayRecord])
 
   const syncPlankState = useCallback((now = nowMs()) => {
     setPlankState(plankTimerRef.current?.state() ?? 'IDLE')
@@ -562,6 +588,9 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
             fatigue={fatigue}
             overloadWarning={overloadWarning}
             suspiciousSession={suspiciousSession}
+            onExportToHealth={handleExportToHealth}
+            healthExportEnabled={todayRecord !== null}
+            healthExportHint={summaryHealthHint}
           />
         )
       default:

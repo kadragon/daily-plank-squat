@@ -46,6 +46,19 @@ export interface DailyRecord {
   flag_suspicious: boolean
 }
 
+export interface HealthShortcutPayload {
+  schema_version: string
+  date: string
+  workout_type: string
+  duration_sec: number
+  plank_actual_sec: number
+  squat_actual_reps: number
+  pushup_actual_reps: number
+  fatigue: number
+  flag_suspicious: boolean
+  source: string
+}
+
 export type Gender = 'male' | 'female' | 'other'
 
 // Fatigue Model Inputs

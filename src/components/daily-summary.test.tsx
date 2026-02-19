@@ -67,3 +67,27 @@ test('DailySummary shows tomorrow pushup target', () => {
 
   expect(html).toContain('Tomorrow pushup target: 16')
 })
+
+test('DailySummary renders Apple Health export button', () => {
+  const html = renderToStaticMarkup(
+    <DailySummary healthExportEnabled onExportToHealth={() => {}} />,
+  )
+
+  expect(html).toContain('Apple 건강에 기록')
+  expect(html).not.toContain('disabled')
+})
+
+test('DailySummary disables Apple Health export button when export is unavailable', () => {
+  const html = renderToStaticMarkup(<DailySummary healthExportEnabled={false} />)
+
+  expect(html).toContain('Apple 건강에 기록')
+  expect(html).toContain('disabled')
+})
+
+test('DailySummary renders health export hint when provided', () => {
+  const html = renderToStaticMarkup(
+    <DailySummary healthExportHint="기록은 가능하지만 측정 환경 경고" />,
+  )
+
+  expect(html).toContain('기록은 가능하지만 측정 환경 경고')
+})
