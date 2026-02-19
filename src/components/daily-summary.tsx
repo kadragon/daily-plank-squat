@@ -11,6 +11,9 @@ interface DailySummaryProps {
   fatigue?: number
   overloadWarning?: boolean
   suspiciousSession?: boolean
+  onExportToHealth?: () => void
+  healthExportEnabled?: boolean
+  healthExportHint?: string
 }
 
 export default function DailySummary({
@@ -26,7 +29,12 @@ export default function DailySummary({
   fatigue = 0,
   overloadWarning = false,
   suspiciousSession = false,
+  onExportToHealth,
+  healthExportEnabled = false,
+  healthExportHint = '',
 }: DailySummaryProps) {
+  const canExportToHealth = healthExportEnabled && typeof onExportToHealth === 'function'
+
   return (
     <div className="daily-summary">
       <h2>Daily Summary</h2>
@@ -43,6 +51,17 @@ export default function DailySummary({
         <div className="summary-stat">Tomorrow plank target: {tomorrowPlankTargetSec}s</div>
         <div className="summary-stat">Tomorrow squat target: {tomorrowSquatTargetReps}</div>
         <div className="summary-stat">Tomorrow pushup target: {tomorrowPushupTargetReps}</div>
+      </section>
+      <section>
+        <button
+          type="button"
+          className="btn"
+          onClick={onExportToHealth}
+          disabled={!canExportToHealth}
+        >
+          Apple 건강에 기록
+        </button>
+        {healthExportHint ? <div className="summary-stat">{healthExportHint}</div> : null}
       </section>
       {overloadWarning ? (
         <div className="summary-warning" role="alert">Warning: load above 95th percentile</div>
