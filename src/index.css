@@ -7,8 +7,9 @@
 }
 
 :root {
+  --app-chrome-color: #0f172a;
   --bg: #1f2937;
-  --bg-top: #0f172a;
+  --bg-top: var(--app-chrome-color);
   --surface: #111827;
   --surface-raised: #1f2a3a;
   --line: rgba(248, 250, 252, 0.12);
@@ -23,6 +24,9 @@
   --radius-md: 14px;
   --shadow-1: 0 14px 32px rgba(2, 6, 23, 0.45);
   --shadow-2: 0 8px 24px rgba(2, 6, 23, 0.28);
+  --app-shell-background:
+    linear-gradient(180deg, rgba(31, 42, 58, 0.92), rgba(17, 24, 39, 0.96)),
+    repeating-linear-gradient(130deg, rgba(248, 250, 252, 0.02) 0 2px, transparent 2px 10px);
   --safe-top: env(safe-area-inset-top, 0px);
   --header-top-pad: max(0.9rem, calc(var(--safe-top) + 0.35rem));
 }
@@ -30,6 +34,7 @@
 html, body {
   width: 100%;
   min-height: 100%;
+  background-color: var(--app-chrome-color);
 }
 
 body {
@@ -57,15 +62,14 @@ body {
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
-  background:
-    linear-gradient(180deg, rgba(31, 42, 58, 0.92), rgba(17, 24, 39, 0.96)),
-    repeating-linear-gradient(130deg, rgba(248, 250, 252, 0.02) 0 2px, transparent 2px 10px);
+  background: var(--app-shell-background);
 }
 
 .app-header {
   padding: var(--header-top-pad) 1rem 0.5rem 1rem;
   padding-left: max(1rem, env(safe-area-inset-left));
   padding-right: max(1rem, env(safe-area-inset-right));
+  background: var(--app-shell-background);
 }
 
 .app-title {

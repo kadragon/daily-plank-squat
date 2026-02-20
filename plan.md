@@ -224,3 +224,8 @@
 
 - [x] Service worker caches assets for offline
 - [x] Standalone display on iOS (meta tags present)
+
+## iOS Notch Background Integration
+
+- [x] iOS 노치 상단 safe-area가 app-shell 배경과 시각적으로 일치한다
+- [x] iOS 상단바 관련 theme/background 색상이 앱 상단 배경 톤과 일치한다
