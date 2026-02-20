@@ -1,6 +1,7 @@
 import { beforeEach, expect, test } from 'bun:test'
 import { loadAllRecords, loadHistory, loadTodayRecord, saveRecord } from './daily-record'
 import type { DailyRecord } from '../types'
+import { getTodayDateKey } from '../utils/date-key'
 
 const STORAGE_KEY = 'daily-records'
 
@@ -60,7 +61,7 @@ test('saves record to localStorage as JSON', () => {
 test("loads today's record, null if absent", () => {
   expect(loadTodayRecord()).toBeNull()
 
-  const today = new Date().toISOString().slice(0, 10)
+  const today = getTodayDateKey()
   const record = sampleRecord(today)
   saveRecord(record)
 
@@ -79,7 +80,7 @@ test('loads history for last N days', () => {
 })
 
 test('record matches PRD schema (date, plank, squat, fatigue, F_P, F_S)', () => {
-  const today = new Date().toISOString().slice(0, 10)
+  const today = getTodayDateKey()
 
   localStorage.setItem(
     STORAGE_KEY,
@@ -149,7 +150,7 @@ test('legacy squat schema is upgraded to target_reps/actual_reps', () => {
 })
 
 test('Records without pushup field load with neutral pushup defaults (target=15, actual=15, success=true)', () => {
-  const today = new Date().toISOString().slice(0, 10)
+  const today = getTodayDateKey()
   localStorage.setItem(
     STORAGE_KEY,
     JSON.stringify([
@@ -170,7 +171,7 @@ test('Records without pushup field load with neutral pushup defaults (target=15,
 })
 
 test('Records without F_U field load with F_U=0', () => {
-  const today = new Date().toISOString().slice(0, 10)
+  const today = getTodayDateKey()
   localStorage.setItem(
     STORAGE_KEY,
     JSON.stringify([
@@ -191,7 +192,7 @@ test('Records without F_U field load with F_U=0', () => {
 })
 
 test('Records with valid pushup field parse correctly', () => {
-  const today = new Date().toISOString().slice(0, 10)
+  const today = getTodayDateKey()
   localStorage.setItem(
     STORAGE_KEY,
     JSON.stringify([

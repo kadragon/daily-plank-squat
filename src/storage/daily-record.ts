@@ -1,4 +1,5 @@
 import type { DailyRecord, ExerciseRecord, PushupRecord, SquatRecord } from '../types'
+import { getTodayDateKey } from '../utils/date-key'
 
 const STORAGE_KEY = 'daily-records'
 
@@ -149,7 +150,7 @@ export function loadAllRecords(): DailyRecord[] {
 }
 
 export function loadTodayRecord(): DailyRecord | null {
-  const today = new Date().toISOString().slice(0, 10)
+  const today = getTodayDateKey()
   return readAll().find((record) => record.date === today) ?? null
 }
 
