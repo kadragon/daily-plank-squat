@@ -3,6 +3,7 @@ import DailySummary from './components/daily-summary'
 import PlankTimer from './components/plank-timer'
 import RepsCounter from './components/reps-counter'
 import SquatCounter from './components/squat-counter'
+import WorkoutStats from './components/workout-stats'
 import { getInactiveTimeRatio, onVisibilityChange, createVisibilityTracker } from './hooks/use-visibility'
 import { getWakeLock, syncWakeLock, type WakeLockSentinelLike } from './hooks/use-wake-lock'
 import {
@@ -22,8 +23,9 @@ import { detectSwipeDirection, getAdjacentView } from './models/swipe-navigation
 import { loadAllRecords, saveRecord } from './storage/daily-record'
 import { buildHealthPayload, buildShortcutRunUrl } from './integrations/apple-health-shortcut'
 import type { BaseTargets, DailyRecord, FatigueParams, PlankState } from './types'
+import { getTodayDateKey } from './utils/date-key'
 
-type AppView = 'plank' | 'squat' | 'pushup' | 'summary'
+type AppView = 'plank' | 'squat' | 'pushup' | 'summary' | 'stats'
 
 interface NavItemMeta {
   view: AppView
@@ -54,7 +56,7 @@ interface InitialAppState {
   tomorrowSquatTargetReps: number
   tomorrowPushupTargetReps: number
   plankState: PlankState
-  alreadySavedToday: boolean
+  alreadyLoggedToday: boolean
 }
 
 const BASE_TARGETS: BaseTargets = {
@@ -69,13 +71,14 @@ const DEFAULT_PARAMS: FatigueParams = {
   gender: 'other',
 }
 
-const NAV_VIEWS = ['plank', 'squat', 'pushup', 'summary'] as const satisfies readonly AppView[]
+const NAV_VIEWS = ['plank', 'squat', 'pushup', 'summary', 'stats'] as const satisfies readonly AppView[]
 
 const NAV_ITEMS: readonly NavItemMeta[] = [
   { view: 'plank', label: 'Plank' },
   { view: 'squat', label: 'Squat' },
   { view: 'pushup', label: 'Pushup' },
   { view: 'summary', label: 'Summary' },
+  { view: 'stats', label: 'Stats' },
 ]
 
 const APPLE_HEALTH_SHORTCUT_NAME = 'DailyPlankSquatToHealth'
@@ -119,6 +122,12 @@ function TabIcon({ view }: { view: AppView }) {
           <path d="M6 19V11M12 19V5M18 19V14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
         </svg>
       )
+    case 'stats':
+      return (
+        <svg className="app-tabbar__icon" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M5 19V13M10 19V9M15 19V5M20 19V11" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        </svg>
+      )
     default:
       return null
   }
@@ -129,7 +138,7 @@ function nowMs(): number {
 }
 
 function todayKey(): string {
-  return new Date().toISOString().slice(0, 10)
+  return getTodayDateKey()
 }
 
 export function computeSquatSuccess(actualReps: number, targetReps: number): boolean {
@@ -171,7 +180,7 @@ function createInitialAppState(initialPlankState?: PlankState): InitialAppState 
     tomorrowSquatTargetReps: tomorrowPlan.squat_target_reps,
     tomorrowPushupTargetReps: tomorrowPlan.pushup_target_reps,
     plankState: initialPlankState ?? (todayRecord ? (todayRecord.plank.success ? 'COMPLETED' : 'CANCELLED') : 'IDLE'),
-    alreadySavedToday: todayRecord !== null,
+    alreadyLoggedToday: todayRecord !== null,
   }
 }
 
@@ -185,7 +194,7 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
   const visibilityTrackerRef = useRef(createVisibilityTracker())
   const wakeLockSentinelRef = useRef<WakeLockSentinelLike | null>(null)
   const goalAlertsRef = useRef(createGoalAlerts(() => playGoalFeedback()))
-  const savedTodayRef = useRef(initial.alreadySavedToday)
+  const lastSavedSnapshotRef = useRef('')
   const completedElapsedMsRef = useRef(initial.plankActualSec * 1000)
   const swipeStartRef = useRef<{ x: number, y: number, pointerId: number, ignore: boolean } | null>(null)
 
@@ -206,14 +215,12 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
   const [plankState, setPlankState] = useState<PlankState>(initial.plankState)
   const [elapsedMs, setElapsedMs] = useState(initial.plankActualSec * 1000)
   const [plankResult, setPlankResult] = useState({ actualSec: initial.plankActualSec, success: initial.plankSuccess })
-  const [plankLogged, setPlankLogged] = useState(initial.alreadySavedToday)
+  const [plankLogged, setPlankLogged] = useState(initial.alreadyLoggedToday)
 
   const [squatCount, setSquatCount] = useState(initial.squatActualReps)
-  const [squatLogged, setSquatLogged] = useState(initial.alreadySavedToday)
   const [squatSuccess, setSquatSuccess] = useState(initial.squatSuccess)
 
   const [pushupCount, setPushupCount] = useState(initial.pushupActualReps)
-  const [pushupLogged, setPushupLogged] = useState(initial.alreadySavedToday)
   const [pushupSuccess, setPushupSuccess] = useState(initial.pushupSuccess)
 
   const [plankTargetSec] = useState(initial.plankTargetSec)
@@ -231,6 +238,12 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
   })
   const todayRecord = useMemo(() => records.find((record) => record.date === today) ?? null, [records, today])
   const summaryHealthHint = healthExportHint || (todayRecord?.flag_suspicious ? SUSPICIOUS_EXPORT_HINT : '')
+
+  const [persistRequestId, setPersistRequestId] = useState(0)
+
+  const requestPersist = useCallback(() => {
+    setPersistRequestId((current) => current + 1)
+  }, [])
 
   const handleExportToHealth = useCallback(() => {
     if (!todayRecord) return
@@ -257,7 +270,6 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
 
   function handlePlankStart() {
     visibilityTrackerRef.current = createVisibilityTracker()
-    savedTodayRef.current = false
     plankTimerRef.current?.start(nowMs())
     setPlankResult({ actualSec: 0, success: false })
     setPlankLogged(false)
@@ -284,6 +296,7 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
       completedElapsedMsRef.current = elapsed
       setPlankResult({ actualSec: result.actual_sec, success: false })
       setPlankLogged(true)
+      requestPersist()
     }
     syncPlankState()
   }
@@ -294,19 +307,17 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
       squatCounterRef.current.count = nextCount
     }
     setSquatCount(nextCount)
-    if (squatLogged) {
-      setSquatSuccess(computeSquatSuccess(nextCount, squatTargetReps))
-    }
+    setSquatSuccess(computeSquatSuccess(nextCount, squatTargetReps))
     goalAlertsRef.current.onSquatProgress(nextCount, squatTargetReps)
+    requestPersist()
   }
 
   function handleSquatTargetRepsChange(rawValue: string) {
     const nextTarget = sanitizeTargetReps(Number(rawValue))
     setSquatTargetReps(nextTarget)
-    if (squatLogged) {
-      setSquatSuccess(computeSquatSuccess(squatCount, nextTarget))
-    }
+    setSquatSuccess(computeSquatSuccess(squatCount, nextTarget))
     goalAlertsRef.current.onSquatProgress(squatCount, nextTarget)
+    requestPersist()
   }
 
   function handleSquatComplete() {
@@ -314,7 +325,7 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
     setSquatCount(finalCount)
     goalAlertsRef.current.onSquatProgress(finalCount, squatTargetReps)
     setSquatSuccess(computeSquatSuccess(finalCount, squatTargetReps))
-    setSquatLogged(true)
+    requestPersist()
   }
 
   function handlePushupDoneRepsChange(rawValue: string) {
@@ -323,19 +334,17 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
       pushupCounterRef.current.count = nextCount
     }
     setPushupCount(nextCount)
-    if (pushupLogged) {
-      setPushupSuccess(computeSquatSuccess(nextCount, pushupTargetReps))
-    }
+    setPushupSuccess(computeSquatSuccess(nextCount, pushupTargetReps))
     goalAlertsRef.current.onPushupProgress(nextCount, pushupTargetReps)
+    requestPersist()
   }
 
   function handlePushupTargetRepsChange(rawValue: string) {
     const nextTarget = sanitizeTargetReps(Number(rawValue))
     setPushupTargetReps(nextTarget)
-    if (pushupLogged) {
-      setPushupSuccess(computeSquatSuccess(pushupCount, nextTarget))
-    }
+    setPushupSuccess(computeSquatSuccess(pushupCount, nextTarget))
     goalAlertsRef.current.onPushupProgress(pushupCount, nextTarget)
+    requestPersist()
   }
 
   function handlePushupComplete() {
@@ -343,7 +352,7 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
     setPushupCount(finalCount)
     goalAlertsRef.current.onPushupProgress(finalCount, pushupTargetReps)
     setPushupSuccess(computeSquatSuccess(finalCount, pushupTargetReps))
-    setPushupLogged(true)
+    requestPersist()
   }
 
   function handleMainPointerDown(event: ReactPointerEvent<HTMLElement>) {
@@ -409,6 +418,7 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
           completedElapsedMsRef.current = plankTimerRef.current?.getCurrentElapsed(now) ?? currentElapsed
           setPlankResult({ actualSec: result.actual_sec, success: true })
           setPlankLogged(true)
+          requestPersist()
         }
         syncPlankState(now)
         return
@@ -419,7 +429,7 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
 
     frameId = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(frameId)
-  }, [plankState, plankTargetSec, syncPlankState])
+  }, [plankState, plankTargetSec, syncPlankState, requestPersist])
 
   useEffect(() => {
     if (typeof document === 'undefined') return undefined
@@ -472,11 +482,13 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
   }, [plankState])
 
   useEffect(() => {
-    if (!plankLogged || !squatLogged || !pushupLogged || savedTodayRef.current) return
+    if (persistRequestId === 0) return
 
-    const sessionElapsedMs = completedElapsedMsRef.current || plankResult.actualSec * 1000
-    const inactiveTimeRatio = getInactiveTimeRatio(visibilityTrackerRef.current, sessionElapsedMs, nowMs())
-    const flagSuspicious = inactiveTimeRatio > 0.5
+    const sessionElapsedMs = plankLogged ? (completedElapsedMsRef.current || plankResult.actualSec * 1000) : 0
+    const inactiveTimeRatio = plankLogged
+      ? getInactiveTimeRatio(visibilityTrackerRef.current, sessionElapsedMs, nowMs())
+      : 0
+    const flagSuspicious = plankLogged ? inactiveTimeRatio > 0.5 : false
 
     const draftRecord: DailyRecord = {
       date: today,
@@ -516,12 +528,15 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
       F_total_raw: snapshot.F_total_raw,
     }
 
+    const snapshotKey = JSON.stringify(finalRecord)
+    if (snapshotKey === lastSavedSnapshotRef.current) return
+    lastSavedSnapshotRef.current = snapshotKey
+
     saveRecord(finalRecord)
 
     const nextRecords = [...withoutToday, finalRecord].toSorted((a, b) => a.date.localeCompare(b.date))
     const tomorrowPlan = computeTomorrowPlan(nextRecords, DEFAULT_PARAMS, BASE_TARGETS)
 
-    savedTodayRef.current = true
     setRecords(nextRecords)
     setFatigue(finalRecord.fatigue)
     setOverloadWarning(tomorrowPlan.overload_warning)
@@ -531,7 +546,7 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
       squat: tomorrowPlan.squat_target_reps,
       pushup: tomorrowPlan.pushup_target_reps,
     })
-  }, [plankLogged, squatLogged, pushupLogged, records, today, plankTargetSec, squatTargetReps, pushupTargetReps, plankResult, squatCount, squatSuccess, pushupCount, pushupSuccess])
+  }, [persistRequestId, plankLogged, records, today, plankTargetSec, squatTargetReps, pushupTargetReps, plankResult, squatCount, squatSuccess, pushupCount, pushupSuccess])
 
   function renderView() {
     switch (view) {
@@ -593,6 +608,8 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
             healthExportHint={summaryHealthHint}
           />
         )
+      case 'stats':
+        return <WorkoutStats records={records} />
       default:
         return null
     }

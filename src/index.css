@@ -161,7 +161,8 @@ body {
 
 .plank-timer,
 .reps-counter,
-.daily-summary {
+.daily-summary,
+.workout-stats {
   width: 100%;
   border-radius: var(--radius-lg);
   background: linear-gradient(180deg, rgba(31, 42, 58, 0.95), rgba(17, 24, 39, 0.95));
@@ -185,7 +186,8 @@ body {
 
 .plank-timer h2,
 .reps-counter h2,
-.daily-summary h2 {
+.daily-summary h2,
+.workout-stats h2 {
   font-family: 'Barlow Condensed', 'Barlow', sans-serif;
   font-size: 1.2rem;
   font-weight: 600;
@@ -298,6 +300,116 @@ body {
   padding: 1.1rem;
 }
 
+.workout-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  padding: 1.1rem;
+}
+
+.workout-stats__range {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.workout-stats__range-btn {
+  min-height: 38px;
+  min-width: 62px;
+  border: 1px solid rgba(248, 250, 252, 0.2);
+  border-radius: 10px;
+  background: rgba(2, 6, 23, 0.3);
+  color: var(--text-muted);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.workout-stats__range-btn--active {
+  color: var(--text);
+  border-color: rgba(249, 115, 22, 0.5);
+  background: rgba(249, 115, 22, 0.2);
+}
+
+.workout-stats__totals {
+  display: grid;
+  gap: 0.6rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.workout-stats__total-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  border: 1px solid rgba(248, 250, 252, 0.14);
+  border-radius: 12px;
+  background: rgba(2, 6, 23, 0.28);
+  padding: 0.6rem;
+}
+
+.workout-stats__total-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.workout-stats__total-value {
+  font-size: 1.02rem;
+  font-weight: 700;
+}
+
+.workout-stats__chart {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.workout-stats__chart h3 {
+  font-size: 0.94rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.workout-stats__chart-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.38rem;
+}
+
+.workout-stats__chart-row {
+  display: grid;
+  grid-template-columns: 46px 1fr auto;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.workout-stats__chart-date {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.workout-stats__chart-track {
+  height: 10px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(248, 250, 252, 0.08);
+}
+
+.workout-stats__chart-bar {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--secondary), var(--primary));
+}
+
+.workout-stats__chart-value {
+  font-size: 0.78rem;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.workout-stats__empty {
+  color: var(--text-muted);
+  font-size: 0.92rem;
+}
+
 .daily-summary section {
   display: flex;
   flex-direction: column;
@@ -336,7 +448,7 @@ body {
 .nav.app-tabbar {
   margin-top: auto;
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 0.45rem;
   width: 100%;
   padding: 0.55rem 1rem;

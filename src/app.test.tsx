@@ -2,14 +2,16 @@ import { expect, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
 import App, { computeSquatSuccess } from './app'
 
-test('App navigates between plank/squat/summary views', () => {
+test('App navigates between plank/squat/summary/stats views', () => {
   const plankHtml = renderToStaticMarkup(<App initialView="plank" />)
   const squatHtml = renderToStaticMarkup(<App initialView="squat" />)
   const summaryHtml = renderToStaticMarkup(<App initialView="summary" />)
+  const statsHtml = renderToStaticMarkup(<App initialView="stats" />)
 
   expect(plankHtml).toContain('Start')
   expect(squatHtml).toContain('Done reps')
   expect(summaryHtml).toContain('Plank target:')
+  expect(statsHtml).toContain('Workout Stats')
 })
 
 test('App drives plank view from live plank state', () => {
@@ -84,6 +86,15 @@ test('App nav includes pushup tab between squat and summary', () => {
   expect(pushupIdx).toBeLessThan(summaryIdx)
 })
 
+test('App nav includes stats tab after summary', () => {
+  const html = renderToStaticMarkup(<App initialView="plank" />)
+
+  const summaryIdx = html.indexOf('Summary')
+  const statsIdx = html.indexOf('Stats')
+
+  expect(summaryIdx).toBeLessThan(statsIdx)
+})
+
 test('App renders RepsCounter for pushup view with correct props', () => {
   const html = renderToStaticMarkup(<App initialView="pushup" />)
 
@@ -92,12 +103,10 @@ test('App renders RepsCounter for pushup view with correct props', () => {
   expect(html).toContain('id="pushup-done-reps"')
 })
 
-test('App does NOT save when pushup is not logged (3-way gate)', () => {
-  // Render pushup view — pushupLogged starts as false when no today record
-  // The auto-save effect won't fire when pushupLogged=false
-  // We verify by checking the pushup view renders with done reps=0 (not logged)
+test('App renders pushup view with editable reps inputs before completion', () => {
   const html = renderToStaticMarkup(<App initialView="pushup" />)
   expect(html).toContain('Pushup Counter')
+  expect(html).toContain('id="pushup-done-reps"')
 })
 
 test('computeSquatSuccess (reused) computes pushup success correctly', () => {

@@ -35,7 +35,7 @@ export default function RepsCounter({
           inputMode="numeric"
           aria-label="Target reps"
           value={targetReps}
-          onChange={(event) => onTargetRepsChange?.(event.currentTarget.value)}
+          onInput={(event) => onTargetRepsChange?.((event.currentTarget as HTMLInputElement).value)}
         />
       </div>
       <div className="reps-input-row">
@@ -49,7 +49,7 @@ export default function RepsCounter({
           inputMode="numeric"
           aria-label="Done reps"
           value={count}
-          onChange={(event) => onDoneRepsChange?.(event.currentTarget.value)}
+          onInput={(event) => onDoneRepsChange?.((event.currentTarget as HTMLInputElement).value)}
         />
       </div>
       <div className="reps-controls">

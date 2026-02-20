@@ -1,8 +1,9 @@
 import { afterEach, expect, test } from 'bun:test'
-import { cleanup, fireEvent, render } from '@testing-library/react'
+import { cleanup, fireEvent, render, waitFor } from '@testing-library/react'
 import { Window } from 'happy-dom'
 import App from './app'
 import type { DailyRecord } from './types'
+import { getTodayDateKey } from './utils/date-key'
 
 const happyWindow = new Window({ url: 'https://localhost/' })
 happyWindow.SyntaxError = SyntaxError
@@ -44,7 +45,20 @@ function swipe(main: HTMLElement, startX: number, endX: number, y = 220) {
 }
 
 function todayKey(): string {
-  return new Date().toISOString().slice(0, 10)
+  return getTodayDateKey()
+}
+
+function readStoredRecords(): DailyRecord[] {
+  const raw = happyWindow.localStorage.getItem('daily-records')
+  if (!raw) return []
+  return JSON.parse(raw) as DailyRecord[]
+}
+
+function setNumberInputValue(input: Element, value: string) {
+  const field = input as HTMLInputElement
+  field.value = value
+  fireEvent.input(field)
+  fireEvent.change(field)
 }
 
 function seedTodayRecord(overrides: Partial<DailyRecord> = {}) {
@@ -119,6 +133,18 @@ test('Tap navigation fallback switches tabs and updates active state', () => {
   expect(pushupTab.getAttribute('aria-current')).toBe('page')
 })
 
+test('Tap navigation can open stats tab', () => {
+  const view = render(<App initialView="plank" />)
+  const statsTab = Array.from(view.container.querySelectorAll('button'))
+    .find((button) => button.textContent?.trim() === 'Stats')
+  if (!statsTab) throw new Error('stats tab button not found')
+
+  fireEvent.click(statsTab)
+
+  expect(view.getByText('Workout Stats')).toBeTruthy()
+  expect(statsTab.getAttribute('aria-current')).toBe('page')
+})
+
 test('Pointer up from a different pointer id does not trigger swipe navigation', () => {
   const view = render(<App initialView="plank" />)
   const main = view.container.querySelector('main')
@@ -145,6 +171,40 @@ test('Summary export button is disabled when there is no today record', () => {
   const button = view.getByRole('button', { name: 'Apple 건강에 기록' })
 
   expect(button.hasAttribute('disabled')).toBe(true)
+})
+
+test('Changing squat done reps immediately saves today record', async () => {
+  const view = render(<App initialView="squat" />)
+  const doneInput = view.container.querySelector('#squat-done-reps')
+  if (!doneInput) throw new Error('squat done reps input not found')
+
+  setNumberInputValue(doneInput, '12')
+  await waitFor(() => {
+    const stored = readStoredRecords()
+    expect(stored).toHaveLength(1)
+    expect(stored[0]?.date).toBe(todayKey())
+    expect(stored[0]?.squat.actual_reps).toBe(12)
+  })
+})
+
+test('Changing pushup done reps updates existing today record instead of appending', async () => {
+  const view = render(<App initialView="pushup" />)
+  const doneInput = view.container.querySelector('#pushup-done-reps')
+  if (!doneInput) throw new Error('pushup done reps input not found')
+
+  setNumberInputValue(doneInput, '10')
+  await waitFor(() => {
+    const stored = readStoredRecords()
+    expect(stored).toHaveLength(1)
+    expect(stored[0]?.pushup.actual_reps).toBe(10)
+  })
+  setNumberInputValue(doneInput, '13')
+  await waitFor(() => {
+    const stored = readStoredRecords()
+    expect(stored).toHaveLength(1)
+    expect(stored[0]?.date).toBe(todayKey())
+    expect(stored[0]?.pushup.actual_reps).toBe(13)
+  })
 })
 
 test('Summary export navigates to shortcuts URL when today record exists', () => {
