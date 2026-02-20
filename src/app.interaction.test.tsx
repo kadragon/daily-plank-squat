@@ -120,7 +120,7 @@ test('Swipe started from input does not navigate', () => {
 test('Tap navigation fallback switches tabs and updates active state', () => {
   const view = render(<App initialView="plank" />)
   const pushupTab = Array.from(view.container.querySelectorAll('button'))
-    .find((button) => button.textContent?.trim() === 'Pushup')
+    .find((button) => button.querySelector('.app-tabbar__label')?.textContent?.trim() === 'Pushup')
   if (!pushupTab) throw new Error('pushup tab button not found')
 
   fireEvent.click(pushupTab)
@@ -132,7 +132,7 @@ test('Tap navigation fallback switches tabs and updates active state', () => {
 test('Tap navigation can open stats tab', () => {
   const view = render(<App initialView="plank" />)
   const statsTab = Array.from(view.container.querySelectorAll('button'))
-    .find((button) => button.textContent?.trim() === 'Stats')
+    .find((button) => button.querySelector('.app-tabbar__label')?.textContent?.trim() === 'Stats')
   if (!statsTab) throw new Error('stats tab button not found')
 
   fireEvent.click(statsTab)

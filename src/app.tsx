@@ -110,96 +110,15 @@ function getCompleteSaveFeedbackTarget(reason: PersistReason): CompleteSaveFeedb
 function TabIcon({ view }: { view: AppView }) {
   switch (view) {
     case 'plank':
-      return (
-        <svg
-          className="app-tabbar__icon"
-          viewBox="0 0 24 24"
-          aria-hidden="true"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.9"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <circle cx="9.2" cy="7.4" r="1.7" />
-          <path d="M5 16.5H10L12.8 10.8H17.6L20 16.5" />
-          <path d="M2.5 18.5H21.5" />
-        </svg>
-      )
+      return <span className="app-tabbar__icon" aria-hidden="true">🧘</span>
     case 'squat':
-      return (
-        <svg
-          className="app-tabbar__icon"
-          viewBox="0 0 24 24"
-          aria-hidden="true"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.9"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <circle cx="12" cy="5.5" r="1.7" />
-          <path d="M8 10.8H16" />
-          <path d="M8.5 10.8L6.5 14.5L8.5 18.5" />
-          <path d="M15.5 10.8L17.5 14.5L15.5 18.5" />
-          <path d="M9 14.5H15" />
-        </svg>
-      )
+      return <span className="app-tabbar__icon" aria-hidden="true">🏋️</span>
     case 'pushup':
-      return (
-        <svg
-          className="app-tabbar__icon"
-          viewBox="0 0 24 24"
-          aria-hidden="true"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.9"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <circle cx="8.4" cy="9.2" r="1.6" />
-          <path d="M4 14.2H20" />
-          <path d="M10 10L13.8 10.6L16.4 14.2" />
-          <path d="M6.5 14.2V17.8" />
-          <path d="M17.5 14.2V17.8" />
-        </svg>
-      )
+      return <span className="app-tabbar__icon" aria-hidden="true">💪</span>
     case 'summary':
-      return (
-        <svg
-          className="app-tabbar__icon"
-          viewBox="0 0 24 24"
-          aria-hidden="true"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.9"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <rect x="5" y="4.5" width="14" height="15" rx="2.4" />
-          <path d="M8 9H16" />
-          <path d="M8 12.5H16" />
-          <path d="M8 16H13.5" />
-        </svg>
-      )
+      return <span className="app-tabbar__icon" aria-hidden="true">📝</span>
     case 'stats':
-      return (
-        <svg
-          className="app-tabbar__icon"
-          viewBox="0 0 24 24"
-          aria-hidden="true"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.9"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M4.5 18.5H20.5" />
-          <path d="M7.2 16.2L11 12.2L14.2 13.8L18.5 8.4" />
-          <path d="M18.5 8.4H15.8" />
-          <path d="M18.5 8.4V11.2" />
-        </svg>
-      )
+      return <span className="app-tabbar__icon" aria-hidden="true">📈</span>
     default:
       return null
   }
