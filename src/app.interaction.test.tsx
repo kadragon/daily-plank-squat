@@ -209,6 +209,75 @@ test('Changing pushup done reps updates existing today record instead of appendi
   })
 })
 
+test('Complete click shows save feedback lifecycle for squat', async () => {
+  const view = render(<App initialView="squat" />)
+  const completeButton = view.getByRole('button', { name: 'Complete squats' })
+
+  expect(view.queryByText('Saving...')).toBeNull()
+  expect(view.queryByText('Saved just now')).toBeNull()
+
+  fireEvent.click(completeButton)
+
+  expect(view.getByText('Saving...')).toBeTruthy()
+  await waitFor(() => {
+    expect(view.getByText('Saved just now')).toBeTruthy()
+  })
+})
+
+test('Input change save path does not show complete save feedback', async () => {
+  const view = render(<App initialView="squat" />)
+  const doneInput = view.container.querySelector('#squat-done-reps')
+  if (!doneInput) throw new Error('squat done reps input not found')
+
+  setNumberInputValue(doneInput, '8')
+
+  await waitFor(() => {
+    const stored = readStoredRecords()
+    expect(stored).toHaveLength(1)
+    expect(stored[0]?.squat.actual_reps).toBe(8)
+  })
+  expect(view.queryByText('Saving...')).toBeNull()
+  expect(view.queryByText('Saved just now')).toBeNull()
+})
+
+test('Pushup complete click also shows save feedback lifecycle', async () => {
+  const view = render(<App initialView="pushup" />)
+  const completeButton = view.getByRole('button', { name: 'Complete pushups' })
+
+  fireEvent.click(completeButton)
+
+  expect(view.getByText('Saving...')).toBeTruthy()
+  await waitFor(() => {
+    expect(view.getByText('Saved just now')).toBeTruthy()
+  })
+})
+
+test('Save failure on complete shows inline error feedback', async () => {
+  const originalSetItem = happyWindow.localStorage.setItem
+  Object.defineProperty(happyWindow.localStorage, 'setItem', {
+    configurable: true,
+    value: () => {
+      throw new Error('storage failed')
+    },
+  })
+
+  try {
+    const view = render(<App initialView="squat" />)
+    const completeButton = view.getByRole('button', { name: 'Complete squats' })
+
+    fireEvent.click(completeButton)
+
+    await waitFor(() => {
+      expect(view.getByText('Save failed. Try again.')).toBeTruthy()
+    })
+  } finally {
+    Object.defineProperty(happyWindow.localStorage, 'setItem', {
+      configurable: true,
+      value: originalSetItem,
+    })
+  }
+})
+
 test('Partial today record without plank log keeps plank view in IDLE', () => {
   seedTodayRecord({
     plank: { target_sec: 60, actual_sec: 0, success: false },

@@ -109,6 +109,16 @@ test('App renders pushup view with editable reps inputs before completion', () =
   expect(html).toContain('id="pushup-done-reps"')
 })
 
+test('App applies swipe-priority main classes for workout views and scrollable stage for summary', () => {
+  const workoutHtml = renderToStaticMarkup(<App initialView="squat" />)
+  const summaryHtml = renderToStaticMarkup(<App initialView="summary" />)
+
+  expect(workoutHtml).toContain('main-content--swipe')
+  expect(workoutHtml).not.toContain('view-stage--scrollable')
+  expect(summaryHtml).toContain('view-stage--scrollable')
+  expect(summaryHtml).not.toContain('main-content--swipe')
+})
+
 test('computeSquatSuccess (reused) computes pushup success correctly', () => {
   expect(computeSquatSuccess(15, 15)).toBe(true)
   expect(computeSquatSuccess(10, 15)).toBe(false)
