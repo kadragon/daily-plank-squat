@@ -124,3 +124,13 @@ test('computeSquatSuccess (reused) computes pushup success correctly', () => {
   expect(computeSquatSuccess(10, 15)).toBe(false)
   expect(computeSquatSuccess(20, 15)).toBe(true)
 })
+
+test('App workout views render recommendation reason text', () => {
+  const plankHtml = renderToStaticMarkup(<App initialView="plank" />)
+  const squatHtml = renderToStaticMarkup(<App initialView="squat" />)
+  const pushupHtml = renderToStaticMarkup(<App initialView="pushup" />)
+
+  expect(plankHtml).toContain('중립 강도(5~6)로 기본 증량')
+  expect(squatHtml).toContain('중립 강도(5~6)로 기본 증량')
+  expect(pushupHtml).toContain('중립 강도(5~6)로 기본 증량')
+})

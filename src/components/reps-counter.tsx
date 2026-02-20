@@ -4,10 +4,15 @@ interface RepsCounterProps {
   exerciseName?: string
   count?: number
   targetReps?: number
+  rpe?: number
+  tomorrowTargetReps?: number
+  tomorrowDeltaReps?: number
+  recommendationReasonText?: string
   saveFeedbackText?: string
   saveFeedbackTone?: 'info' | 'success' | 'error'
   onTargetRepsChange?: (rawValue: string) => void
   onDoneRepsChange?: (rawValue: string) => void
+  onRpeChange?: (rawValue: string) => void
   onComplete?: () => void
 }
 
@@ -17,10 +22,15 @@ export default function RepsCounter({
   exerciseName = 'squats',
   count = 0,
   targetReps = 0,
+  rpe = 5,
+  tomorrowTargetReps = 0,
+  tomorrowDeltaReps = 0,
+  recommendationReasonText = '',
   saveFeedbackText = '',
   saveFeedbackTone = 'info',
   onTargetRepsChange,
   onDoneRepsChange,
+  onRpeChange,
   onComplete,
 }: RepsCounterProps) {
   const goalReached = targetReps > 0 && count >= targetReps
@@ -55,6 +65,27 @@ export default function RepsCounter({
           value={count}
           onInput={(event) => onDoneRepsChange?.((event.currentTarget as HTMLInputElement).value)}
         />
+      </div>
+      <div className="reps-input-row">
+        <label className="reps-input-label" htmlFor={`${idPrefix}-rpe`}>RPE (1-10)</label>
+        <input
+          id={`${idPrefix}-rpe`}
+          className="reps-input"
+          type="number"
+          min={1}
+          max={10}
+          step={1}
+          inputMode="numeric"
+          aria-label="RPE"
+          value={rpe}
+          onInput={(event) => onRpeChange?.((event.currentTarget as HTMLInputElement).value)}
+        />
+      </div>
+      <div className="recommendation-note">
+        <div className="recommendation-note__target">
+          Tomorrow recommendation: {tomorrowTargetReps} ({tomorrowDeltaReps > 0 ? '+' : ''}{tomorrowDeltaReps})
+        </div>
+        <div className="recommendation-note__reason">{recommendationReasonText}</div>
       </div>
       <div className="reps-controls">
         <button type="button" className="btn" aria-label={`Complete ${exerciseName}`} onClick={onComplete}>Complete</button>

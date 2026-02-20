@@ -33,9 +33,9 @@ function createMemoryStorage(): Storage {
 function sampleRecord(date: string): DailyRecord {
   return {
     date,
-    plank: { target_sec: 60, actual_sec: 60, success: true },
-    squat: { target_reps: 20, actual_reps: 20, success: true },
-    pushup: { target_reps: 15, actual_reps: 15, success: true },
+    plank: { target_sec: 60, actual_sec: 60, success: true, rpe: 5 },
+    squat: { target_reps: 20, actual_reps: 20, success: true, rpe: 5 },
+    pushup: { target_reps: 15, actual_reps: 15, success: true, rpe: 5 },
     fatigue: 0.4,
     F_P: 0.3,
     F_S: 0.2,
@@ -104,7 +104,7 @@ test('overwrites existing record for same date', () => {
   const first = sampleRecord(date)
   const second: DailyRecord = {
     ...sampleRecord(date),
-    plank: { target_sec: 60, actual_sec: 45, success: false },
+    plank: { target_sec: 60, actual_sec: 45, success: false, rpe: 5 },
     fatigue: 0.8,
   }
 
@@ -146,6 +146,7 @@ test('legacy squat schema is upgraded to target_reps/actual_reps', () => {
     target_reps: 20,
     actual_reps: 18,
     success: false,
+    rpe: 5,
   })
 })
 
@@ -167,7 +168,7 @@ test('Records without pushup field load with neutral pushup defaults (target=15,
   )
 
   const record = loadTodayRecord()
-  expect(record?.pushup).toEqual({ target_reps: 15, actual_reps: 15, success: true })
+  expect(record?.pushup).toEqual({ target_reps: 15, actual_reps: 15, success: true, rpe: 5 })
 })
 
 test('Records without F_U field load with F_U=0', () => {
@@ -211,6 +212,56 @@ test('Records with valid pushup field parse correctly', () => {
   )
 
   const record = loadTodayRecord()
-  expect(record?.pushup).toEqual({ target_reps: 15, actual_reps: 12, success: false })
+  expect(record?.pushup).toEqual({ target_reps: 15, actual_reps: 12, success: false, rpe: 5 })
   expect(record?.F_U).toBe(0.15)
+})
+
+test('Records without rpe field load with neutral rpe=5 for all exercises', () => {
+  const today = getTodayDateKey()
+  localStorage.setItem(
+    STORAGE_KEY,
+    JSON.stringify([
+      {
+        date: today,
+        plank: { target_sec: 60, actual_sec: 50, success: false },
+        squat: { target_reps: 20, actual_reps: 16, success: false },
+        pushup: { target_reps: 15, actual_reps: 12, success: false },
+        fatigue: 0.4,
+        F_P: 0.3,
+        F_S: 0.2,
+        F_U: 0.15,
+        F_total_raw: 0.5,
+      },
+    ]),
+  )
+
+  const record = loadTodayRecord()
+  expect(record?.plank.rpe).toBe(5)
+  expect(record?.squat.rpe).toBe(5)
+  expect(record?.pushup.rpe).toBe(5)
+})
+
+test('Invalid rpe values load as neutral rpe=5', () => {
+  const today = getTodayDateKey()
+  localStorage.setItem(
+    STORAGE_KEY,
+    JSON.stringify([
+      {
+        date: today,
+        plank: { target_sec: 60, actual_sec: 50, success: false, rpe: 0 },
+        squat: { target_reps: 20, actual_reps: 16, success: false, rpe: 11 },
+        pushup: { target_reps: 15, actual_reps: 12, success: false, rpe: 'bad' },
+        fatigue: 0.4,
+        F_P: 0.3,
+        F_S: 0.2,
+        F_U: 0.15,
+        F_total_raw: 0.5,
+      },
+    ]),
+  )
+
+  const record = loadTodayRecord()
+  expect(record?.plank.rpe).toBe(5)
+  expect(record?.squat.rpe).toBe(5)
+  expect(record?.pushup.rpe).toBe(5)
 })

@@ -2,8 +2,9 @@ import type { DailyRecord, ExerciseRecord, PushupRecord, SquatRecord } from '../
 import { getTodayDateKey } from '../utils/date-key'
 
 const STORAGE_KEY = 'daily-records'
+const NEUTRAL_RPE = 5
 
-const NEUTRAL_PUSHUP: PushupRecord = { target_reps: 15, actual_reps: 15, success: true }
+const NEUTRAL_PUSHUP: PushupRecord = { target_reps: 15, actual_reps: 15, success: true, rpe: NEUTRAL_RPE }
 
 function hasLocalStorage(): boolean {
   return typeof localStorage !== 'undefined'
@@ -11,6 +12,13 @@ function hasLocalStorage(): boolean {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
+}
+
+function normalizeRpe(value: unknown): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return NEUTRAL_RPE
+  const integer = Math.floor(value)
+  if (integer < 1 || integer > 10) return NEUTRAL_RPE
+  return integer
 }
 
 function asExerciseRecord(value: unknown): ExerciseRecord | null {
@@ -27,6 +35,7 @@ function asExerciseRecord(value: unknown): ExerciseRecord | null {
     target_sec: value.target_sec,
     actual_sec: value.actual_sec,
     success: value.success,
+    rpe: normalizeRpe(value.rpe),
   }
 }
 
@@ -43,6 +52,7 @@ function asSquatRecord(value: unknown): SquatRecord | null {
       target_reps: value.target_reps,
       actual_reps: value.actual_reps,
       success: value.success,
+      rpe: normalizeRpe(value.rpe),
     }
   }
 
@@ -56,6 +66,7 @@ function asSquatRecord(value: unknown): SquatRecord | null {
       target_reps: value.target_count,
       actual_reps: value.actual_count,
       success: value.success,
+      rpe: normalizeRpe(value.rpe),
     }
   }
 
@@ -74,6 +85,7 @@ function asPushupRecord(value: unknown): PushupRecord | null {
       target_reps: value.target_reps,
       actual_reps: value.actual_reps,
       success: value.success,
+      rpe: normalizeRpe(value.rpe),
     }
   }
 

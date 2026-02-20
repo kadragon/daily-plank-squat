@@ -5,6 +5,7 @@ import type {
   FatigueParams,
   FatigueSnapshot,
   PushupRecord,
+  RecommendationReason,
   SquatRecord,
   TomorrowPlan,
 } from '../types'
@@ -17,9 +18,12 @@ export const MEDIAN_INITIAL = 0.9
 const FATIGUE_SCALE = 2.2
 const FATIGUE_HOLD_THRESHOLD = 0.85
 const TARGET_INCREASE_FACTOR = 1.05
+const LOW_RPE_INCREASE_FACTOR = 1.08
+const VERY_HIGH_RPE_DECREASE_FACTOR = 0.95
 const FAILURE_DECREASE_FACTOR = 0.9
 const FAILURE_STREAK_DAYS = 3
 const MEDIAN_WINDOW = 14
+const NEUTRAL_RPE = 5
 
 function clip(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value))
@@ -98,6 +102,21 @@ function getRecentMedian(adjustedHistory: number[]): number {
   return median(adjustedHistory.slice(-MEDIAN_WINDOW))
 }
 
+function normalizeRpe(rpe: number): number {
+  if (!Number.isFinite(rpe)) return NEUTRAL_RPE
+  const integer = Math.floor(rpe)
+  if (integer < 1 || integer > 10) return NEUTRAL_RPE
+  return integer
+}
+
+function getRpeAdjustment(rpe: number): { factor: number, reason: RecommendationReason } {
+  const normalized = normalizeRpe(rpe)
+  if (normalized <= 4) return { factor: LOW_RPE_INCREASE_FACTOR, reason: 'rpe_low_boost' }
+  if (normalized <= 6) return { factor: TARGET_INCREASE_FACTOR, reason: 'neutral_progression' }
+  if (normalized <= 8) return { factor: 1, reason: 'rpe_high_hold' }
+  return { factor: VERY_HIGH_RPE_DECREASE_FACTOR, reason: 'rpe_very_high_reduce' }
+}
+
 export function computeFatigueSeries(
   records: DailyRecord[],
   params: FatigueParams,
@@ -115,7 +134,7 @@ export function computeFatigueSeries(
   const ageFactor = computeAgeFactor(params.age)
 
   for (const record of sorted) {
-    const pushup = record.pushup ?? { target_reps: 15, actual_reps: 15, success: true }
+    const pushup = record.pushup ?? { target_reps: 15, actual_reps: 15, success: true, rpe: NEUTRAL_RPE }
 
     const plankLoad = computeLoad(record.plank.actual_sec, record.plank.target_sec, baseTargets.base_P)
     const squatLoad = computeLoad(record.squat.actual_reps, record.squat.target_reps, baseTargets.base_S)
@@ -128,7 +147,7 @@ export function computeFatigueSeries(
       ? computeRampPenalty(previous.squat.target_reps, record.squat.target_reps)
       : 0
     const pushupRampPenalty = previous
-      ? computeRampPenalty((previous.pushup ?? { target_reps: 15 }).target_reps, pushup.target_reps)
+      ? computeRampPenalty((previous.pushup ?? { target_reps: 15, rpe: NEUTRAL_RPE }).target_reps, pushup.target_reps)
       : 0
 
     F_P = updateEWMA(ALPHA_P, F_P, plankLoad + plankRampPenalty)
@@ -171,10 +190,28 @@ function hasFailureStreak(records: DailyRecord[], exercise: 'plank' | 'squat' | 
   })
 }
 
-function computeNextTargetValue(lastTarget: number, fatigue: number, failureStreak: boolean): number {
-  if (failureStreak) return Math.max(1, Math.round(lastTarget * FAILURE_DECREASE_FACTOR))
-  if (fatigue > FATIGUE_HOLD_THRESHOLD) return lastTarget
-  return Math.max(1, Math.round(lastTarget * TARGET_INCREASE_FACTOR))
+function computeNextTargetValue(
+  lastTarget: number,
+  fatigue: number,
+  failureStreak: boolean,
+  rpe: number,
+): { target: number, reason: RecommendationReason } {
+  if (failureStreak) {
+    return {
+      target: Math.max(1, Math.round(lastTarget * FAILURE_DECREASE_FACTOR)),
+      reason: 'failure_streak',
+    }
+  }
+
+  if (fatigue > FATIGUE_HOLD_THRESHOLD) {
+    return { target: lastTarget, reason: 'high_fatigue_hold' }
+  }
+
+  const adjustment = getRpeAdjustment(rpe)
+  return {
+    target: Math.max(1, Math.round(lastTarget * adjustment.factor)),
+    reason: adjustment.reason,
+  }
 }
 
 export function computeTomorrowPlan(
@@ -187,6 +224,9 @@ export function computeTomorrowPlan(
       plank_target_sec: baseTargets.base_P,
       squat_target_reps: baseTargets.base_S,
       pushup_target_reps: baseTargets.base_U,
+      plank_reason: 'neutral_progression',
+      squat_reason: 'neutral_progression',
+      pushup_reason: 'neutral_progression',
       fatigue: 0,
       F_P: 0,
       F_S: 0,
@@ -206,6 +246,9 @@ export function computeTomorrowPlan(
       plank_target_sec: baseTargets.base_P,
       squat_target_reps: baseTargets.base_S,
       pushup_target_reps: baseTargets.base_U,
+      plank_reason: 'neutral_progression',
+      squat_reason: 'neutral_progression',
+      pushup_reason: 'neutral_progression',
       fatigue: 0,
       F_P: 0,
       F_S: 0,
@@ -222,12 +265,33 @@ export function computeTomorrowPlan(
   const F_total_raw_history = snapshots.map((snapshot) => snapshot.F_total_raw)
   const previousThreshold = percentile(F_total_raw_history.slice(0, -1), 95)
 
-  const lastPushup = lastRecord.pushup ?? { target_reps: baseTargets.base_U }
+  const lastPushup = lastRecord.pushup ?? { target_reps: baseTargets.base_U, actual_reps: baseTargets.base_U, success: true, rpe: NEUTRAL_RPE }
+  const plankRecommendation = computeNextTargetValue(
+    lastRecord.plank.target_sec,
+    latest.fatigue,
+    plankFailureStreak,
+    lastRecord.plank.rpe,
+  )
+  const squatRecommendation = computeNextTargetValue(
+    lastRecord.squat.target_reps,
+    latest.fatigue,
+    squatFailureStreak,
+    lastRecord.squat.rpe,
+  )
+  const pushupRecommendation = computeNextTargetValue(
+    lastPushup.target_reps,
+    latest.fatigue,
+    pushupFailureStreak,
+    lastPushup.rpe,
+  )
 
   return {
-    plank_target_sec: computeNextTargetValue(lastRecord.plank.target_sec, latest.fatigue, plankFailureStreak),
-    squat_target_reps: computeNextTargetValue(lastRecord.squat.target_reps, latest.fatigue, squatFailureStreak),
-    pushup_target_reps: computeNextTargetValue(lastPushup.target_reps, latest.fatigue, pushupFailureStreak),
+    plank_target_sec: plankRecommendation.target,
+    squat_target_reps: squatRecommendation.target,
+    pushup_target_reps: pushupRecommendation.target,
+    plank_reason: plankRecommendation.reason,
+    squat_reason: squatRecommendation.reason,
+    pushup_reason: pushupRecommendation.reason,
     fatigue: latest.fatigue,
     F_P: latest.F_P,
     F_S: latest.F_S,
@@ -270,11 +334,13 @@ export function computeNextTarget(
       target_reps: 20,
       actual_reps: 20,
       success: true,
+      rpe: NEUTRAL_RPE,
     },
     pushup: {
       target_reps: 15,
       actual_reps: 15,
       success: true,
+      rpe: NEUTRAL_RPE,
     },
     fatigue: 0,
     F_P: 0,
@@ -299,12 +365,14 @@ export function computeSquatTarget(
       target_sec: 60,
       actual_sec: 60,
       success: true,
+      rpe: NEUTRAL_RPE,
     },
     squat: record,
     pushup: {
       target_reps: 15,
       actual_reps: 15,
       success: true,
+      rpe: NEUTRAL_RPE,
     },
     fatigue: 0,
     F_P: 0,
@@ -329,11 +397,13 @@ export function computePushupTarget(
       target_sec: 60,
       actual_sec: 60,
       success: true,
+      rpe: NEUTRAL_RPE,
     },
     squat: {
       target_reps: 20,
       actual_reps: 20,
       success: true,
+      rpe: NEUTRAL_RPE,
     },
     pushup: record,
     fatigue: 0,
