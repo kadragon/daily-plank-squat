@@ -56,7 +56,7 @@ interface InitialAppState {
   tomorrowSquatTargetReps: number
   tomorrowPushupTargetReps: number
   plankState: PlankState
-  alreadyLoggedToday: boolean
+  alreadyLoggedPlankToday: boolean
 }
 
 const BASE_TARGETS: BaseTargets = {
@@ -145,6 +145,11 @@ export function computeSquatSuccess(actualReps: number, targetReps: number): boo
   return actualReps >= targetReps
 }
 
+function isPlankLogged(record: DailyRecord | null): boolean {
+  if (!record) return false
+  return record.plank.success || record.plank.actual_sec > 0
+}
+
 function createInitialAppState(initialPlankState?: PlankState): InitialAppState {
   const records = loadAllRecords()
   const today = todayKey()
@@ -161,6 +166,7 @@ function createInitialAppState(initialPlankState?: PlankState): InitialAppState 
     : computeTomorrowPlan(historyBeforeToday, DEFAULT_PARAMS, BASE_TARGETS)
 
   const tomorrowPlan = computeTomorrowPlan(records, DEFAULT_PARAMS, BASE_TARGETS)
+  const plankLoggedToday = isPlankLogged(todayRecord)
 
   return {
     records,
@@ -179,8 +185,8 @@ function createInitialAppState(initialPlankState?: PlankState): InitialAppState 
     tomorrowPlankTargetSec: tomorrowPlan.plank_target_sec,
     tomorrowSquatTargetReps: tomorrowPlan.squat_target_reps,
     tomorrowPushupTargetReps: tomorrowPlan.pushup_target_reps,
-    plankState: initialPlankState ?? (todayRecord ? (todayRecord.plank.success ? 'COMPLETED' : 'CANCELLED') : 'IDLE'),
-    alreadyLoggedToday: todayRecord !== null,
+    plankState: initialPlankState ?? (plankLoggedToday ? (todayRecord?.plank.success ? 'COMPLETED' : 'CANCELLED') : 'IDLE'),
+    alreadyLoggedPlankToday: plankLoggedToday,
   }
 }
 
@@ -215,7 +221,7 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
   const [plankState, setPlankState] = useState<PlankState>(initial.plankState)
   const [elapsedMs, setElapsedMs] = useState(initial.plankActualSec * 1000)
   const [plankResult, setPlankResult] = useState({ actualSec: initial.plankActualSec, success: initial.plankSuccess })
-  const [plankLogged, setPlankLogged] = useState(initial.alreadyLoggedToday)
+  const [plankLogged, setPlankLogged] = useState(initial.alreadyLoggedPlankToday)
 
   const [squatCount, setSquatCount] = useState(initial.squatActualReps)
   const [squatSuccess, setSquatSuccess] = useState(initial.squatSuccess)

@@ -44,10 +44,6 @@ function swipe(main: HTMLElement, startX: number, endX: number, y = 220) {
   })
 }
 
-function todayKey(): string {
-  return getTodayDateKey()
-}
-
 function readStoredRecords(): DailyRecord[] {
   const raw = happyWindow.localStorage.getItem('daily-records')
   if (!raw) return []
@@ -63,7 +59,7 @@ function setNumberInputValue(input: Element, value: string) {
 
 function seedTodayRecord(overrides: Partial<DailyRecord> = {}) {
   const record: DailyRecord = {
-    date: todayKey(),
+    date: getTodayDateKey(),
     plank: { target_sec: 60, actual_sec: 63, success: true },
     squat: { target_reps: 20, actual_reps: 21, success: true },
     pushup: { target_reps: 15, actual_reps: 16, success: true },
@@ -173,6 +169,12 @@ test('Summary export button is disabled when there is no today record', () => {
   expect(button.hasAttribute('disabled')).toBe(true)
 })
 
+test('App does not persist any record on initial render without interaction', () => {
+  render(<App initialView="squat" />)
+
+  expect(readStoredRecords()).toHaveLength(0)
+})
+
 test('Changing squat done reps immediately saves today record', async () => {
   const view = render(<App initialView="squat" />)
   const doneInput = view.container.querySelector('#squat-done-reps')
@@ -182,7 +184,7 @@ test('Changing squat done reps immediately saves today record', async () => {
   await waitFor(() => {
     const stored = readStoredRecords()
     expect(stored).toHaveLength(1)
-    expect(stored[0]?.date).toBe(todayKey())
+    expect(stored[0]?.date).toBe(getTodayDateKey())
     expect(stored[0]?.squat.actual_reps).toBe(12)
   })
 })
@@ -202,9 +204,22 @@ test('Changing pushup done reps updates existing today record instead of appendi
   await waitFor(() => {
     const stored = readStoredRecords()
     expect(stored).toHaveLength(1)
-    expect(stored[0]?.date).toBe(todayKey())
+    expect(stored[0]?.date).toBe(getTodayDateKey())
     expect(stored[0]?.pushup.actual_reps).toBe(13)
   })
+})
+
+test('Partial today record without plank log keeps plank view in IDLE', () => {
+  seedTodayRecord({
+    plank: { target_sec: 60, actual_sec: 0, success: false },
+    squat: { target_reps: 20, actual_reps: 12, success: false },
+    pushup: { target_reps: 15, actual_reps: 0, success: false },
+  })
+
+  const view = render(<App initialView="plank" />)
+
+  expect(view.getByText('Start')).toBeTruthy()
+  expect(view.queryByText('Cancel')).toBeNull()
 })
 
 test('Summary export navigates to shortcuts URL when today record exists', () => {
