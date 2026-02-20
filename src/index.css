@@ -69,7 +69,6 @@ body {
   padding: var(--header-top-pad) 1rem 0.5rem 1rem;
   padding-left: max(1rem, env(safe-area-inset-left));
   padding-right: max(1rem, env(safe-area-inset-right));
-  background: var(--app-shell-background);
 }
 
 .app-title {
