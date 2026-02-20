@@ -30,3 +30,24 @@ test('safe-area header region inherits shell background with root fallback color
   expect(appHeaderBlock).not.toContain('background: var(--app-shell-background);')
   expect(htmlBodyBlock).toContain('background-color: var(--app-chrome-color);')
 })
+
+test('index.css separates content and tabbar visual tokens', async () => {
+  const css = await readIndexCss()
+
+  expect(css).toContain('--content-surface:')
+  expect(css).toContain('--tabbar-surface:')
+  expect(css).toContain('--tabbar-border:')
+})
+
+test('main scroll policy disables page vertical scroll and enables horizontal swipe priority', async () => {
+  const css = await readIndexCss()
+  const mainContentBlock = css.match(/\.main-content\s*\{([\s\S]*?)\}/)?.[1] ?? ''
+  const swipeBlock = css.match(/\.main-content--swipe\s*\{([\s\S]*?)\}/)?.[1] ?? ''
+  const scrollableStageBlock = css.match(/\.view-stage--scrollable\s*\{([\s\S]*?)\}/)?.[1] ?? ''
+  const htmlBodyBlock = css.match(/html,\s*body\s*\{([\s\S]*?)\}/)?.[1] ?? ''
+
+  expect(mainContentBlock).toContain('overflow: hidden;')
+  expect(swipeBlock).toContain('touch-action: pan-x;')
+  expect(scrollableStageBlock).toContain('overflow-y: auto;')
+  expect(htmlBodyBlock).toContain('overscroll-behavior-y: none;')
+})

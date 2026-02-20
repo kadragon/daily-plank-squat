@@ -33,3 +33,19 @@ test('RepsCounter renders reps-counter--goal-reached when count meets target', (
 
   expect(html).toContain('reps-counter--goal-reached')
 })
+
+test('RepsCounter renders inline save feedback with polite live region when provided', () => {
+  const html = renderToStaticMarkup(
+    <RepsCounter
+      count={12}
+      targetReps={15}
+      saveFeedbackText="Saved just now"
+      saveFeedbackTone="success"
+    />,
+  )
+
+  expect(html).toContain('Saved just now')
+  expect(html).toContain('reps-save-feedback')
+  expect(html).toContain('reps-save-feedback--success')
+  expect(html).toContain('aria-live="polite"')
+})

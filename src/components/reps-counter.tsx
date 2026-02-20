@@ -4,6 +4,8 @@ interface RepsCounterProps {
   exerciseName?: string
   count?: number
   targetReps?: number
+  saveFeedbackText?: string
+  saveFeedbackTone?: 'info' | 'success' | 'error'
   onTargetRepsChange?: (rawValue: string) => void
   onDoneRepsChange?: (rawValue: string) => void
   onComplete?: () => void
@@ -15,6 +17,8 @@ export default function RepsCounter({
   exerciseName = 'squats',
   count = 0,
   targetReps = 0,
+  saveFeedbackText = '',
+  saveFeedbackTone = 'info',
   onTargetRepsChange,
   onDoneRepsChange,
   onComplete,
@@ -55,6 +59,17 @@ export default function RepsCounter({
       <div className="reps-controls">
         <button type="button" className="btn" aria-label={`Complete ${exerciseName}`} onClick={onComplete}>Complete</button>
       </div>
+      {saveFeedbackText
+        ? (
+          <p
+            className={`reps-save-feedback reps-save-feedback--${saveFeedbackTone}`}
+            role={saveFeedbackTone === 'error' ? 'alert' : 'status'}
+            aria-live="polite"
+          >
+            {saveFeedbackText}
+          </p>
+        )
+        : null}
     </div>
   )
 }

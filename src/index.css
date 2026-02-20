@@ -24,6 +24,9 @@
   --radius-md: 14px;
   --shadow-1: 0 14px 32px rgba(2, 6, 23, 0.45);
   --shadow-2: 0 8px 24px rgba(2, 6, 23, 0.28);
+  --content-surface: linear-gradient(180deg, rgba(17, 24, 39, 0.66), rgba(2, 6, 23, 0.2));
+  --tabbar-surface: linear-gradient(180deg, rgba(15, 23, 42, 0.95), rgba(2, 6, 23, 0.98));
+  --tabbar-border: rgba(248, 250, 252, 0.24);
   --app-shell-background:
     linear-gradient(180deg, rgba(31, 42, 58, 0.92), rgba(17, 24, 39, 0.96)),
     repeating-linear-gradient(130deg, rgba(248, 250, 252, 0.02) 0 2px, transparent 2px 10px);
@@ -35,6 +38,7 @@ html, body {
   width: 100%;
   min-height: 100%;
   background-color: var(--app-chrome-color);
+  overscroll-behavior-y: none;
 }
 
 body {
@@ -90,10 +94,11 @@ body {
   min-height: 0;
   width: 100%;
   display: flex;
-  overflow: auto;
+  overflow: hidden;
   padding: 0.5rem 1rem 1rem 1rem;
   padding-left: max(1rem, env(safe-area-inset-left));
   padding-right: max(1rem, env(safe-area-inset-right));
+  background: var(--content-surface);
   animation: fadeIn 200ms ease;
 }
 
@@ -101,10 +106,22 @@ body {
   align-items: stretch;
 }
 
+.main-content--swipe {
+  touch-action: pan-x;
+}
+
 .view-stage {
   width: 100%;
+  min-height: 0;
   display: flex;
   align-items: stretch;
+}
+
+.view-stage--scrollable {
+  display: block;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .main-content--workout .view-stage {
@@ -293,6 +310,25 @@ body {
   justify-content: flex-end;
 }
 
+.reps-save-feedback {
+  min-height: 1.25rem;
+  font-size: 0.84rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.reps-save-feedback--info {
+  color: var(--text-muted);
+}
+
+.reps-save-feedback--success {
+  color: #86efac;
+}
+
+.reps-save-feedback--error {
+  color: #fecaca;
+}
+
 .daily-summary {
   display: flex;
   flex-direction: column;
@@ -455,9 +491,12 @@ body {
   padding-left: max(1rem, env(safe-area-inset-left));
   padding-right: max(1rem, env(safe-area-inset-right));
   padding-bottom: max(0.65rem, env(safe-area-inset-bottom));
-  border-top: 1px solid var(--line);
-  background: linear-gradient(180deg, rgba(17, 24, 39, 0.86), rgba(2, 6, 23, 0.96));
-  backdrop-filter: blur(8px);
+  border-top: 1px solid var(--tabbar-border);
+  background: var(--tabbar-surface);
+  box-shadow:
+    0 -10px 24px rgba(2, 6, 23, 0.5),
+    inset 0 1px 0 rgba(248, 250, 252, 0.08);
+  backdrop-filter: blur(12px);
 }
 
 .nav-btn.app-tabbar__button {
@@ -495,6 +534,13 @@ body {
 .app-tabbar__icon {
   width: 20px;
   height: 20px;
+  opacity: 0.95;
+}
+
+.nav-btn.app-tabbar__button--active .app-tabbar__icon,
+.nav-btn.app-tabbar__button[aria-current='page'] .app-tabbar__icon {
+  opacity: 1;
+  filter: drop-shadow(0 2px 4px rgba(2, 6, 23, 0.45));
 }
 
 .app-tabbar__label {

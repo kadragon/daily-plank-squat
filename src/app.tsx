@@ -26,6 +26,9 @@ import type { BaseTargets, DailyRecord, FatigueParams, PlankState } from './type
 import { getTodayDateKey } from './utils/date-key'
 
 type AppView = 'plank' | 'squat' | 'pushup' | 'summary' | 'stats'
+type PersistReason = 'general' | 'squat-complete' | 'pushup-complete'
+type CompleteSaveFeedbackTarget = 'squat' | 'pushup'
+type SaveFeedbackTone = 'info' | 'success' | 'error'
 
 interface NavItemMeta {
   view: AppView
@@ -89,43 +92,112 @@ function isWorkoutView(view: AppView): boolean {
   return view === 'plank' || view === 'squat' || view === 'pushup'
 }
 
+function isScrollableView(view: AppView): boolean {
+  return view === 'summary' || view === 'stats'
+}
+
 function isSwipeIgnoredTarget(target: EventTarget | null): boolean {
   if (!(target instanceof Element)) return false
   return target.closest('input,button,label,textarea,select,a,[data-swipe-ignore="true"]') !== null
+}
+
+function getCompleteSaveFeedbackTarget(reason: PersistReason): CompleteSaveFeedbackTarget | null {
+  if (reason === 'squat-complete') return 'squat'
+  if (reason === 'pushup-complete') return 'pushup'
+  return null
 }
 
 function TabIcon({ view }: { view: AppView }) {
   switch (view) {
     case 'plank':
       return (
-        <svg className="app-tabbar__icon" viewBox="0 0 24 24" aria-hidden="true">
-          <circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" strokeWidth="2" />
-          <path d="M12 12L12 8M12 12L15 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        <svg
+          className="app-tabbar__icon"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.9"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <circle cx="9.2" cy="7.4" r="1.7" />
+          <path d="M5 16.5H10L12.8 10.8H17.6L20 16.5" />
+          <path d="M2.5 18.5H21.5" />
         </svg>
       )
     case 'squat':
       return (
-        <svg className="app-tabbar__icon" viewBox="0 0 24 24" aria-hidden="true">
-          <circle cx="12" cy="6" r="2" fill="currentColor" />
-          <path d="M8 11H16M8 11L6 16M16 11L18 16M9 16H15M9 16L8 20M15 16L16 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        <svg
+          className="app-tabbar__icon"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.9"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <circle cx="12" cy="5.5" r="1.7" />
+          <path d="M8 10.8H16" />
+          <path d="M8.5 10.8L6.5 14.5L8.5 18.5" />
+          <path d="M15.5 10.8L17.5 14.5L15.5 18.5" />
+          <path d="M9 14.5H15" />
         </svg>
       )
     case 'pushup':
       return (
-        <svg className="app-tabbar__icon" viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M4 16H20M7 12H17M8 12L10 8H14L16 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        <svg
+          className="app-tabbar__icon"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.9"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <circle cx="8.4" cy="9.2" r="1.6" />
+          <path d="M4 14.2H20" />
+          <path d="M10 10L13.8 10.6L16.4 14.2" />
+          <path d="M6.5 14.2V17.8" />
+          <path d="M17.5 14.2V17.8" />
         </svg>
       )
     case 'summary':
       return (
-        <svg className="app-tabbar__icon" viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M6 19V11M12 19V5M18 19V14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        <svg
+          className="app-tabbar__icon"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.9"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <rect x="5" y="4.5" width="14" height="15" rx="2.4" />
+          <path d="M8 9H16" />
+          <path d="M8 12.5H16" />
+          <path d="M8 16H13.5" />
         </svg>
       )
     case 'stats':
       return (
-        <svg className="app-tabbar__icon" viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M5 19V13M10 19V9M15 19V5M20 19V11" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        <svg
+          className="app-tabbar__icon"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.9"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M4.5 18.5H20.5" />
+          <path d="M7.2 16.2L11 12.2L14.2 13.8L18.5 8.4" />
+          <path d="M18.5 8.4H15.8" />
+          <path d="M18.5 8.4V11.2" />
         </svg>
       )
     default:
@@ -245,10 +317,23 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
   const todayRecord = useMemo(() => records.find((record) => record.date === today) ?? null, [records, today])
   const summaryHealthHint = healthExportHint || (todayRecord?.flag_suspicious ? SUSPICIOUS_EXPORT_HINT : '')
 
-  const [persistRequestId, setPersistRequestId] = useState(0)
+  const [persistRequest, setPersistRequest] = useState<{ id: number, reason: PersistReason }>({ id: 0, reason: 'general' })
+  const [completeSaveFeedback, setCompleteSaveFeedback] = useState<{
+    target: CompleteSaveFeedbackTarget
+    text: string
+    tone: SaveFeedbackTone
+  } | null>(null)
+  const completeSaveFeedbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const requestPersist = useCallback(() => {
-    setPersistRequestId((current) => current + 1)
+  const clearCompleteSaveFeedbackTimer = useCallback(() => {
+    if (completeSaveFeedbackTimerRef.current !== null) {
+      clearTimeout(completeSaveFeedbackTimerRef.current)
+      completeSaveFeedbackTimerRef.current = null
+    }
+  }, [])
+
+  const requestPersist = useCallback((reason: PersistReason = 'general') => {
+    setPersistRequest((current) => ({ id: current.id + 1, reason }))
   }, [])
 
   const handleExportToHealth = useCallback(() => {
@@ -331,7 +416,9 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
     setSquatCount(finalCount)
     goalAlertsRef.current.onSquatProgress(finalCount, squatTargetReps)
     setSquatSuccess(computeSquatSuccess(finalCount, squatTargetReps))
-    requestPersist()
+    clearCompleteSaveFeedbackTimer()
+    setCompleteSaveFeedback({ target: 'squat', text: 'Saving...', tone: 'info' })
+    requestPersist('squat-complete')
   }
 
   function handlePushupDoneRepsChange(rawValue: string) {
@@ -358,7 +445,9 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
     setPushupCount(finalCount)
     goalAlertsRef.current.onPushupProgress(finalCount, pushupTargetReps)
     setPushupSuccess(computeSquatSuccess(finalCount, pushupTargetReps))
-    requestPersist()
+    clearCompleteSaveFeedbackTimer()
+    setCompleteSaveFeedback({ target: 'pushup', text: 'Saving...', tone: 'info' })
+    requestPersist('pushup-complete')
   }
 
   function handleMainPointerDown(event: ReactPointerEvent<HTMLElement>) {
@@ -488,7 +577,18 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
   }, [plankState])
 
   useEffect(() => {
-    if (persistRequestId === 0) return
+    if (persistRequest.id === 0) return
+    const feedbackTarget = getCompleteSaveFeedbackTarget(persistRequest.reason)
+    const scheduleCompleteSaveFeedbackSuccess = (target: CompleteSaveFeedbackTarget) => {
+      clearCompleteSaveFeedbackTimer()
+      completeSaveFeedbackTimerRef.current = setTimeout(() => {
+        setCompleteSaveFeedback({ target, text: 'Saved just now', tone: 'success' })
+        completeSaveFeedbackTimerRef.current = setTimeout(() => {
+          setCompleteSaveFeedback((current) => (current?.target === target ? null : current))
+          completeSaveFeedbackTimerRef.current = null
+        }, 2500)
+      }, 120)
+    }
 
     const sessionElapsedMs = plankLogged ? (completedElapsedMsRef.current || plankResult.actualSec * 1000) : 0
     const inactiveTimeRatio = plankLogged
@@ -535,10 +635,23 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
     }
 
     const snapshotKey = JSON.stringify(finalRecord)
-    if (snapshotKey === lastSavedSnapshotRef.current) return
-    lastSavedSnapshotRef.current = snapshotKey
+    if (snapshotKey === lastSavedSnapshotRef.current) {
+      if (feedbackTarget) {
+        scheduleCompleteSaveFeedbackSuccess(feedbackTarget)
+      }
+      return
+    }
 
-    saveRecord(finalRecord)
+    try {
+      saveRecord(finalRecord)
+    } catch {
+      if (feedbackTarget) {
+        clearCompleteSaveFeedbackTimer()
+        setCompleteSaveFeedback({ target: feedbackTarget, text: 'Save failed. Try again.', tone: 'error' })
+      }
+      return
+    }
+    lastSavedSnapshotRef.current = snapshotKey
 
     const nextRecords = [...withoutToday, finalRecord].toSorted((a, b) => a.date.localeCompare(b.date))
     const tomorrowPlan = computeTomorrowPlan(nextRecords, DEFAULT_PARAMS, BASE_TARGETS)
@@ -552,7 +665,14 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
       squat: tomorrowPlan.squat_target_reps,
       pushup: tomorrowPlan.pushup_target_reps,
     })
-  }, [persistRequestId, plankLogged, records, today, plankTargetSec, squatTargetReps, pushupTargetReps, plankResult, squatCount, squatSuccess, pushupCount, pushupSuccess])
+    if (feedbackTarget) {
+      scheduleCompleteSaveFeedbackSuccess(feedbackTarget)
+    }
+  }, [persistRequest, plankLogged, records, today, plankTargetSec, squatTargetReps, pushupTargetReps, plankResult, squatCount, squatSuccess, pushupCount, pushupSuccess, clearCompleteSaveFeedbackTimer])
+
+  useEffect(() => () => {
+    clearCompleteSaveFeedbackTimer()
+  }, [clearCompleteSaveFeedbackTimer])
 
   function renderView() {
     switch (view) {
@@ -572,28 +692,38 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
           </>
         )
       case 'squat':
-        return (
-          <SquatCounter
-            count={squatCount}
-            targetReps={squatTargetReps}
-            onDoneRepsChange={handleSquatDoneRepsChange}
-            onTargetRepsChange={handleSquatTargetRepsChange}
-            onComplete={handleSquatComplete}
-          />
-        )
+        {
+          const squatSaveFeedback = completeSaveFeedback?.target === 'squat' ? completeSaveFeedback : null
+          return (
+            <SquatCounter
+              count={squatCount}
+              targetReps={squatTargetReps}
+              saveFeedbackText={squatSaveFeedback?.text}
+              saveFeedbackTone={squatSaveFeedback?.tone}
+              onDoneRepsChange={handleSquatDoneRepsChange}
+              onTargetRepsChange={handleSquatTargetRepsChange}
+              onComplete={handleSquatComplete}
+            />
+          )
+        }
       case 'pushup':
-        return (
-          <RepsCounter
-            title="Pushup Counter"
-            idPrefix="pushup"
-            exerciseName="pushups"
-            count={pushupCount}
-            targetReps={pushupTargetReps}
-            onDoneRepsChange={handlePushupDoneRepsChange}
-            onTargetRepsChange={handlePushupTargetRepsChange}
-            onComplete={handlePushupComplete}
-          />
-        )
+        {
+          const pushupSaveFeedback = completeSaveFeedback?.target === 'pushup' ? completeSaveFeedback : null
+          return (
+            <RepsCounter
+              title="Pushup Counter"
+              idPrefix="pushup"
+              exerciseName="pushups"
+              count={pushupCount}
+              targetReps={pushupTargetReps}
+              saveFeedbackText={pushupSaveFeedback?.text}
+              saveFeedbackTone={pushupSaveFeedback?.tone}
+              onDoneRepsChange={handlePushupDoneRepsChange}
+              onTargetRepsChange={handlePushupTargetRepsChange}
+              onComplete={handlePushupComplete}
+            />
+          )
+        }
       case 'summary':
         return (
           <DailySummary
@@ -629,14 +759,14 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
           <p className="app-subtitle">Train consistently. Recover intelligently.</p>
         </header>
         <main
-          className={`main-content${isWorkoutView(view) ? ' main-content--workout' : ''}`}
+          className={`main-content${isWorkoutView(view) ? ' main-content--workout main-content--swipe' : ''}`}
           onPointerDown={handleMainPointerDown}
           onPointerUp={handleMainPointerUp}
           onPointerCancel={handleMainPointerCancel}
           onPointerLeave={handleMainPointerLeave}
           onLostPointerCapture={handleMainLostPointerCapture}
         >
-          <div className="view-stage">
+          <div className={`view-stage${isScrollableView(view) ? ' view-stage--scrollable' : ''}`}>
             {renderView()}
           </div>
         </main>
