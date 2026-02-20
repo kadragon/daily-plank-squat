@@ -332,17 +332,6 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
     }
   }, [])
 
-  const scheduleCompleteSaveFeedbackSuccess = useCallback((target: CompleteSaveFeedbackTarget) => {
-    clearCompleteSaveFeedbackTimer()
-    completeSaveFeedbackTimerRef.current = setTimeout(() => {
-      setCompleteSaveFeedback({ target, text: 'Saved just now', tone: 'success' })
-      completeSaveFeedbackTimerRef.current = setTimeout(() => {
-        setCompleteSaveFeedback((current) => (current?.target === target ? null : current))
-        completeSaveFeedbackTimerRef.current = null
-      }, 2500)
-    }, 120)
-  }, [clearCompleteSaveFeedbackTimer])
-
   const requestPersist = useCallback((reason: PersistReason = 'general') => {
     setPersistRequest((current) => ({ id: current.id + 1, reason }))
   }, [])
@@ -590,6 +579,16 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
   useEffect(() => {
     if (persistRequest.id === 0) return
     const feedbackTarget = getCompleteSaveFeedbackTarget(persistRequest.reason)
+    const scheduleCompleteSaveFeedbackSuccess = (target: CompleteSaveFeedbackTarget) => {
+      clearCompleteSaveFeedbackTimer()
+      completeSaveFeedbackTimerRef.current = setTimeout(() => {
+        setCompleteSaveFeedback({ target, text: 'Saved just now', tone: 'success' })
+        completeSaveFeedbackTimerRef.current = setTimeout(() => {
+          setCompleteSaveFeedback((current) => (current?.target === target ? null : current))
+          completeSaveFeedbackTimerRef.current = null
+        }, 2500)
+      }, 120)
+    }
 
     const sessionElapsedMs = plankLogged ? (completedElapsedMsRef.current || plankResult.actualSec * 1000) : 0
     const inactiveTimeRatio = plankLogged
@@ -669,7 +668,7 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
     if (feedbackTarget) {
       scheduleCompleteSaveFeedbackSuccess(feedbackTarget)
     }
-  }, [persistRequest, plankLogged, records, today, plankTargetSec, squatTargetReps, pushupTargetReps, plankResult, squatCount, squatSuccess, pushupCount, pushupSuccess, clearCompleteSaveFeedbackTimer, scheduleCompleteSaveFeedbackSuccess])
+  }, [persistRequest, plankLogged, records, today, plankTargetSec, squatTargetReps, pushupTargetReps, plankResult, squatCount, squatSuccess, pushupCount, pushupSuccess, clearCompleteSaveFeedbackTimer])
 
   useEffect(() => () => {
     clearCompleteSaveFeedbackTimer()
