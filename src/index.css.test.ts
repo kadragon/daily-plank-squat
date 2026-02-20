@@ -19,3 +19,14 @@ test('app-header applies top safe-area padding while keeping horizontal insets',
   expect(appHeaderBlock).toContain('padding-left: max(1rem, env(safe-area-inset-left));')
   expect(appHeaderBlock).toContain('padding-right: max(1rem, env(safe-area-inset-right));')
 })
+
+test('safe-area header region inherits shell background with root fallback color', async () => {
+  const css = await readIndexCss()
+  const appShellBlock = css.match(/\.app-shell\s*\{([\s\S]*?)\}/)?.[1] ?? ''
+  const appHeaderBlock = css.match(/\.app-header\s*\{([\s\S]*?)\}/)?.[1] ?? ''
+  const htmlBodyBlock = css.match(/html,\s*body\s*\{([\s\S]*?)\}/)?.[1] ?? ''
+
+  expect(appShellBlock).toContain('background: var(--app-shell-background);')
+  expect(appHeaderBlock).not.toContain('background: var(--app-shell-background);')
+  expect(htmlBodyBlock).toContain('background-color: var(--app-chrome-color);')
+})
