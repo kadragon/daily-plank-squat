@@ -305,6 +305,14 @@ body {
   border-color: var(--success);
 }
 
+.rpe-slider {
+  width: 100%;
+  min-height: 44px;
+  accent-color: var(--primary);
+  cursor: pointer;
+  padding: 0.5rem 0;
+}
+
 .reps-controls {
   display: flex;
   justify-content: flex-end;
