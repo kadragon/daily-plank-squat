@@ -57,3 +57,46 @@ test('WorkoutStats shows empty message when no records exist', () => {
 
   expect(html).toContain('No records yet. Complete a workout to see stats.')
 })
+
+test('WorkoutStats shows all/7d/30d range filters', () => {
+  const html = renderToStaticMarkup(
+    <WorkoutStats records={[record('2026-02-20', 60, 20, 15)]} />,
+  )
+
+  expect(html).toContain('>All<')
+  expect(html).toContain('>7D<')
+  expect(html).toContain('>30D<')
+})
+
+test('WorkoutStats shows cumulative totals for plank seconds, squat reps, and pushup reps', () => {
+  const html = renderToStaticMarkup(
+    <WorkoutStats
+      records={[
+        record('2026-02-18', 40, 10, 8),
+        record('2026-02-19', 35, 9, 7),
+      ]}
+    />,
+  )
+
+  expect(html).toContain('Total plank')
+  expect(html).toContain('75s')
+  expect(html).toContain('Total squat')
+  expect(html).toContain('19')
+  expect(html).toContain('Total pushup')
+  expect(html).toContain('15')
+})
+
+test('WorkoutStats shows separate visual daily charts for plank, squat, and pushup', () => {
+  const html = renderToStaticMarkup(
+    <WorkoutStats
+      records={[
+        record('2026-02-18', 50, 15, 11),
+        record('2026-02-19', 62, 22, 16),
+      ]}
+    />,
+  )
+
+  expect(html).toContain('aria-label="Plank chart"')
+  expect(html).toContain('aria-label="Squat chart"')
+  expect(html).toContain('aria-label="Pushup chart"')
+})
