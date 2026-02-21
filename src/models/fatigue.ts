@@ -9,6 +9,7 @@ import type {
   SquatRecord,
   TomorrowPlan,
 } from '../types'
+import { NEUTRAL_RPE, normalizeRpe } from '../utils/rpe'
 
 export const ALPHA_P = 0.35
 export const ALPHA_S = 0.40
@@ -23,7 +24,6 @@ const VERY_HIGH_RPE_DECREASE_FACTOR = 0.95
 const FAILURE_DECREASE_FACTOR = 0.9
 const FAILURE_STREAK_DAYS = 3
 const MEDIAN_WINDOW = 14
-const NEUTRAL_RPE = 5
 
 function clip(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value))
@@ -100,13 +100,6 @@ function sortByDateAscending(records: DailyRecord[]): DailyRecord[] {
 function getRecentMedian(adjustedHistory: number[]): number {
   if (adjustedHistory.length === 0) return MEDIAN_INITIAL
   return median(adjustedHistory.slice(-MEDIAN_WINDOW))
-}
-
-function normalizeRpe(rpe: number): number {
-  if (!Number.isFinite(rpe)) return NEUTRAL_RPE
-  const integer = Math.floor(rpe)
-  if (integer < 1 || integer > 10) return NEUTRAL_RPE
-  return integer
 }
 
 function getRpeAdjustment(rpe: number): { factor: number, reason: RecommendationReason } {

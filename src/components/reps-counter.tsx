@@ -83,7 +83,7 @@ export default function RepsCounter({
       </div>
       <div className="recommendation-note">
         <div className="recommendation-note__target">
-          Tomorrow recommendation: {tomorrowTargetReps} ({tomorrowDeltaReps > 0 ? '+' : ''}{tomorrowDeltaReps})
+          내일 추천: {tomorrowTargetReps} ({tomorrowDeltaReps > 0 ? '+' : ''}{tomorrowDeltaReps})
         </div>
         <div className="recommendation-note__reason">{recommendationReasonText}</div>
       </div>

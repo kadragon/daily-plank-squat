@@ -60,6 +60,6 @@ test('RepsCounter renders tomorrow recommendation target, delta, and reason', ()
     />,
   )
 
-  expect(html).toContain('Tomorrow recommendation: 21 (+1)')
+  expect(html).toContain('내일 추천: 21 (+1)')
   expect(html).toContain('오늘 RPE 낮음(1~4)으로 내일 소폭 증량')
 })

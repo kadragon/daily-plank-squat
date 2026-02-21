@@ -1,8 +1,8 @@
 import type { DailyRecord, ExerciseRecord, PushupRecord, SquatRecord } from '../types'
 import { getTodayDateKey } from '../utils/date-key'
+import { NEUTRAL_RPE, normalizeRpe } from '../utils/rpe'
 
 const STORAGE_KEY = 'daily-records'
-const NEUTRAL_RPE = 5
 
 const NEUTRAL_PUSHUP: PushupRecord = { target_reps: 15, actual_reps: 15, success: true, rpe: NEUTRAL_RPE }
 
@@ -12,13 +12,6 @@ function hasLocalStorage(): boolean {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
-}
-
-function normalizeRpe(value: unknown): number {
-  if (typeof value !== 'number' || !Number.isFinite(value)) return NEUTRAL_RPE
-  const integer = Math.floor(value)
-  if (integer < 1 || integer > 10) return NEUTRAL_RPE
-  return integer
 }
 
 function asExerciseRecord(value: unknown): ExerciseRecord | null {

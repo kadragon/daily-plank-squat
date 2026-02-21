@@ -22,8 +22,10 @@ import {
 import { detectSwipeDirection, getAdjacentView } from './models/swipe-navigation'
 import { loadAllRecords, saveRecord } from './storage/daily-record'
 import { buildHealthPayload, buildShortcutRunUrl } from './integrations/apple-health-shortcut'
+import { getRecommendationReasonText } from './locales/ko'
 import type { BaseTargets, DailyRecord, FatigueParams, PlankState, RecommendationReason } from './types'
 import { getTodayDateKey } from './utils/date-key'
+import { NEUTRAL_RPE, normalizeRpe } from './utils/rpe'
 
 type AppView = 'plank' | 'squat' | 'pushup' | 'summary' | 'stats'
 type PersistReason = 'general' | 'squat-complete' | 'pushup-complete'
@@ -93,7 +95,6 @@ const NAV_ITEMS: readonly NavItemMeta[] = [
 const APPLE_HEALTH_SHORTCUT_NAME = 'DailyPlankSquatToHealth'
 const HEALTH_EXPORT_ERROR_HINT = 'Could not open Shortcuts. Check that Apple Shortcuts is available on this device.'
 const SUSPICIOUS_EXPORT_HINT = '기록은 가능하지만 측정 환경 경고'
-const NEUTRAL_RPE = 5
 
 function isWorkoutView(view: AppView): boolean {
   return view === 'plank' || view === 'squat' || view === 'pushup'
@@ -137,30 +138,6 @@ function nowMs(): number {
 
 function todayKey(): string {
   return getTodayDateKey()
-}
-
-function sanitizeRpe(rawValue: number): number {
-  if (!Number.isFinite(rawValue)) return NEUTRAL_RPE
-  const integer = Math.floor(rawValue)
-  if (integer < 1 || integer > 10) return NEUTRAL_RPE
-  return integer
-}
-
-function getRecommendationReasonText(reason: RecommendationReason): string {
-  switch (reason) {
-    case 'failure_streak':
-      return '최근 3일 미달성으로 회복을 위해 감량'
-    case 'high_fatigue_hold':
-      return '피로도 높음(>0.85)으로 목표 유지'
-    case 'rpe_very_high_reduce':
-      return '오늘 RPE 높음(9~10)으로 내일 소폭 감량'
-    case 'rpe_high_hold':
-      return '오늘 RPE 높음(7~8)으로 내일 목표 유지'
-    case 'rpe_low_boost':
-      return '오늘 RPE 낮음(1~4)으로 내일 소폭 증량'
-    default:
-      return '중립 강도(5~6)로 기본 증량'
-  }
 }
 
 export function computeSquatSuccess(actualReps: number, targetReps: number): boolean {
@@ -366,17 +343,17 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
   }
 
   function handlePlankRpeChange(rawValue: string) {
-    setPlankRpe(sanitizeRpe(Number(rawValue)))
+    setPlankRpe(normalizeRpe(Number(rawValue)))
     requestPersist()
   }
 
   function handleSquatRpeChange(rawValue: string) {
-    setSquatRpe(sanitizeRpe(Number(rawValue)))
+    setSquatRpe(normalizeRpe(Number(rawValue)))
     requestPersist()
   }
 
   function handlePushupRpeChange(rawValue: string) {
-    setPushupRpe(sanitizeRpe(Number(rawValue)))
+    setPushupRpe(normalizeRpe(Number(rawValue)))
     requestPersist()
   }
 

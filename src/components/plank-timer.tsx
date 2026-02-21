@@ -89,8 +89,8 @@ export default function PlankTimer({
     <div className={`plank-timer plank-timer--${state.toLowerCase()}`}>
       <h2>Plank Timer</h2>
       <div className="timer-target">Target: {targetSec}s</div>
-      <div className="plank-rpe-row">
-        <label className="plank-rpe-label" htmlFor="plank-rpe">RPE (1-10)</label>
+      <div className="reps-input-row">
+        <label className="reps-input-label" htmlFor="plank-rpe">RPE (1-10)</label>
         <input
           id="plank-rpe"
           className="reps-input"

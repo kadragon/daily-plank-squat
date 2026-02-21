@@ -201,18 +201,6 @@ body {
   padding: 1.25rem;
 }
 
-.plank-rpe-row {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-}
-
-.plank-rpe-label {
-  color: var(--text-muted);
-  font-size: 0.95rem;
-}
-
 .plank-timer h2,
 .reps-counter h2,
 .daily-summary h2,
