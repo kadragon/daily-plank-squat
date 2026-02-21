@@ -176,6 +176,18 @@ test('Pointer up from a different pointer id does not trigger swipe navigation',
   expect(view.getByText('Plank Timer')).toBeTruthy()
 })
 
+test('Swipe order includes stats after summary', () => {
+  const view = render(<App initialView="summary" />)
+  const main = view.container.querySelector('main')
+  if (!main) throw new Error('main element not found')
+
+  swipe(main, 260, 120)
+  expect(view.getByText('Workout Stats')).toBeTruthy()
+
+  swipe(main, 120, 260)
+  expect(view.getByText('Daily Summary')).toBeTruthy()
+})
+
 test('Summary export button is disabled when there is no today record', () => {
   const view = render(<App initialView="summary" />)
   const button = view.getByRole('button', { name: 'Apple 건강에 기록' })
@@ -203,6 +215,20 @@ test('Changing squat done reps immediately saves today record', async () => {
   })
 })
 
+test('Changing squat target reps immediately saves today record', async () => {
+  const view = render(<App initialView="squat" />)
+  const targetInput = view.container.querySelector('#squat-target-reps')
+  if (!targetInput) throw new Error('squat target reps input not found')
+
+  setNumberInputValue(targetInput, '24')
+  await waitFor(() => {
+    const stored = readStoredRecords()
+    expect(stored).toHaveLength(1)
+    expect(stored[0]?.date).toBe(getTodayDateKey())
+    expect(stored[0]?.squat.target_reps).toBe(24)
+  })
+})
+
 test('Changing pushup done reps updates existing today record instead of appending', async () => {
   const view = render(<App initialView="pushup" />)
   const doneInput = view.container.querySelector('#pushup-done-reps')
@@ -220,6 +246,20 @@ test('Changing pushup done reps updates existing today record instead of appendi
     expect(stored).toHaveLength(1)
     expect(stored[0]?.date).toBe(getTodayDateKey())
     expect(stored[0]?.pushup.actual_reps).toBe(13)
+  })
+})
+
+test('Changing pushup target reps immediately saves today record', async () => {
+  const view = render(<App initialView="pushup" />)
+  const targetInput = view.container.querySelector('#pushup-target-reps')
+  if (!targetInput) throw new Error('pushup target reps input not found')
+
+  setNumberInputValue(targetInput, '19')
+  await waitFor(() => {
+    const stored = readStoredRecords()
+    expect(stored).toHaveLength(1)
+    expect(stored[0]?.date).toBe(getTodayDateKey())
+    expect(stored[0]?.pushup.target_reps).toBe(19)
   })
 })
 
@@ -279,6 +319,39 @@ test('Changing deadhang rpe immediately saves today record', async () => {
     const stored = readStoredRecords()
     expect(stored).toHaveLength(1)
     expect(stored[0]?.deadhang.rpe).toBe(6)
+  })
+})
+
+test('Plank complete and cancel both save/update today record', async () => {
+  const cancelView = render(<App initialView="plank" />)
+  fireEvent.click(cancelView.getByRole('button', { name: 'Start' }))
+  fireEvent.click(cancelView.getByRole('button', { name: 'Cancel' }))
+
+  await waitFor(() => {
+    const stored = readStoredRecords()
+    expect(stored).toHaveLength(1)
+    expect(stored[0]?.date).toBe(getTodayDateKey())
+    expect(stored[0]?.plank.success).toBe(false)
+  })
+
+  cleanup()
+  happyWindow.localStorage.clear()
+
+  seedTodayRecord({
+    plank: { target_sec: 0, actual_sec: 0, success: false },
+    squat: { target_reps: 20, actual_reps: 12, success: false },
+    pushup: { target_reps: 15, actual_reps: 10, success: false },
+    deadhang: { target_sec: 30, actual_sec: 0, success: false },
+  })
+
+  const completeView = render(<App initialView="plank" />)
+  fireEvent.click(completeView.getByRole('button', { name: 'Start' }))
+
+  await waitFor(() => {
+    const stored = readStoredRecords()
+    expect(stored).toHaveLength(1)
+    expect(stored[0]?.date).toBe(getTodayDateKey())
+    expect(stored[0]?.plank.success).toBe(true)
   })
 })
 

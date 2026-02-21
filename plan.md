@@ -272,10 +272,10 @@
 > Prevent record loss and provide visual history for plank, squat, and pushup performance.
 
 - [x] Uses local date key (YYYY-MM-DD) for today record lookup
-- [ ] Saves/updates today record when squat inputs change
-- [ ] Saves/updates today record when pushup inputs change
-- [ ] Saves/updates today record when plank completes or cancels
-- [ ] Adds Stats tab to app navigation and swipe order
-- [ ] Shows all/7d/30d range filters in stats view
-- [ ] Shows cumulative totals for plank seconds, squat reps, and pushup reps
-- [ ] Shows separate visual daily charts for plank, squat, and pushup
+- [x] Saves/updates today record when squat inputs change
+- [x] Saves/updates today record when pushup inputs change
+- [x] Saves/updates today record when plank completes or cancels
+- [x] Adds Stats tab to app navigation and swipe order
+- [x] Shows all/7d/30d range filters in stats view
+- [x] Shows cumulative totals for plank seconds, squat reps, and pushup reps
+- [x] Shows separate visual daily charts for plank, squat, and pushup
