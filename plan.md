@@ -271,7 +271,7 @@
 
 > Prevent record loss and provide visual history for plank, squat, and pushup performance.
 
-- [ ] Uses local date key (YYYY-MM-DD) for today record lookup
+- [x] Uses local date key (YYYY-MM-DD) for today record lookup
 - [ ] Saves/updates today record when squat inputs change
 - [ ] Saves/updates today record when pushup inputs change
 - [ ] Saves/updates today record when plank completes or cancels
