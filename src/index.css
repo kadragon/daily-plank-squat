@@ -512,7 +512,7 @@ body {
   padding: 0.55rem 1rem;
   padding-left: max(1rem, env(safe-area-inset-left));
   padding-right: max(1rem, env(safe-area-inset-right));
-  padding-bottom: 0;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
   border-top: 1px solid var(--tabbar-border);
   background: var(--tabbar-surface);
   box-shadow:
