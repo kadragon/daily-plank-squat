@@ -2,14 +2,16 @@ import { expect, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
 import App, { computeSquatSuccess } from './app'
 
-test('App navigates between plank/squat/summary/stats views', () => {
+test('App navigates between plank/squat/deadhang/summary/stats views', () => {
   const plankHtml = renderToStaticMarkup(<App initialView="plank" />)
   const squatHtml = renderToStaticMarkup(<App initialView="squat" />)
+  const deadhangHtml = renderToStaticMarkup(<App initialView="deadhang" />)
   const summaryHtml = renderToStaticMarkup(<App initialView="summary" />)
   const statsHtml = renderToStaticMarkup(<App initialView="stats" />)
 
   expect(plankHtml).toContain('Start')
   expect(squatHtml).toContain('Done reps')
+  expect(deadhangHtml).toContain('Deadhang Timer')
   expect(summaryHtml).toContain('Plank target:')
   expect(statsHtml).toContain('Workout Stats')
 })
@@ -71,19 +73,22 @@ test('computeSquatSuccess recalculates status when target changes', () => {
   expect(computeSquatSuccess(10, 20)).toBe(false)
 })
 
-test('App nav includes pushup tab between squat and summary', () => {
+test('App nav includes pushup and deadhang tabs between squat and summary', () => {
   const html = renderToStaticMarkup(<App initialView="plank" />)
 
   expect(html).toContain('Pushup')
+  expect(html).toContain('Deadhang')
   // Nav order: Plank, Squat, Pushup, Summary
   const plankIdx = html.indexOf('Plank')
   const squatIdx = html.indexOf('Squat')
   const pushupIdx = html.indexOf('Pushup')
+  const deadhangIdx = html.indexOf('Deadhang')
   const summaryIdx = html.indexOf('Summary')
 
   expect(plankIdx).toBeLessThan(squatIdx)
   expect(squatIdx).toBeLessThan(pushupIdx)
-  expect(pushupIdx).toBeLessThan(summaryIdx)
+  expect(pushupIdx).toBeLessThan(deadhangIdx)
+  expect(deadhangIdx).toBeLessThan(summaryIdx)
 })
 
 test('App nav includes stats tab after summary', () => {
@@ -107,6 +112,13 @@ test('App renders pushup view with editable reps inputs before completion', () =
   const html = renderToStaticMarkup(<App initialView="pushup" />)
   expect(html).toContain('Pushup Counter')
   expect(html).toContain('id="pushup-done-reps"')
+})
+
+test('App renders deadhang timer view with prefixed rpe input id', () => {
+  const html = renderToStaticMarkup(<App initialView="deadhang" />)
+
+  expect(html).toContain('Deadhang Timer')
+  expect(html).toContain('id="deadhang-rpe"')
 })
 
 test('App applies swipe-priority main classes for workout views and scrollable stage for summary', () => {

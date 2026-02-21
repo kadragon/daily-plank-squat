@@ -36,10 +36,12 @@ function sampleRecord(date: string): DailyRecord {
     plank: { target_sec: 60, actual_sec: 60, success: true, rpe: 5 },
     squat: { target_reps: 20, actual_reps: 20, success: true, rpe: 5 },
     pushup: { target_reps: 15, actual_reps: 15, success: true, rpe: 5 },
+    deadhang: { target_sec: 30, actual_sec: 30, success: true, rpe: 5 },
     fatigue: 0.4,
     F_P: 0.3,
     F_S: 0.2,
     F_U: 0.1,
+    F_D: 0.05,
     F_total_raw: 0.5,
     inactive_time_ratio: 0,
     flag_suspicious: false,
@@ -66,6 +68,31 @@ test("loads today's record, null if absent", () => {
   saveRecord(record)
 
   expect(loadTodayRecord()).toEqual(record)
+})
+
+test('loadTodayRecord uses local YYYY-MM-DD key instead of UTC ISO date', () => {
+  const originalGetFullYear = Date.prototype.getFullYear
+  const originalGetMonth = Date.prototype.getMonth
+  const originalGetDate = Date.prototype.getDate
+  const originalToISOString = Date.prototype.toISOString
+
+  Date.prototype.getFullYear = () => 2026
+  Date.prototype.getMonth = () => 1
+  Date.prototype.getDate = () => 21
+  Date.prototype.toISOString = () => '1999-01-01T00:00:00.000Z'
+
+  try {
+    const localToday = '2026-02-21'
+    const record = sampleRecord(localToday)
+    saveRecord(record)
+
+    expect(loadTodayRecord()).toEqual(record)
+  } finally {
+    Date.prototype.getFullYear = originalGetFullYear
+    Date.prototype.getMonth = originalGetMonth
+    Date.prototype.getDate = originalGetDate
+    Date.prototype.toISOString = originalToISOString
+  }
 })
 
 test('loads history for last N days', () => {
@@ -264,4 +291,68 @@ test('Invalid rpe values load as neutral rpe=5', () => {
   expect(record?.plank.rpe).toBe(5)
   expect(record?.squat.rpe).toBe(5)
   expect(record?.pushup.rpe).toBe(5)
+})
+
+test('Records without deadhang field load with neutral deadhang defaults (target=30, actual=30, success=true)', () => {
+  const today = getTodayDateKey()
+  localStorage.setItem(
+    STORAGE_KEY,
+    JSON.stringify([
+      {
+        date: today,
+        plank: { target_sec: 60, actual_sec: 60, success: true },
+        squat: { target_reps: 20, actual_reps: 20, success: true },
+        fatigue: 0.4,
+        F_P: 0.3,
+        F_S: 0.2,
+        F_total_raw: 0.5,
+      },
+    ]),
+  )
+
+  const record = loadTodayRecord()
+  expect(record?.deadhang).toEqual({ target_sec: 30, actual_sec: 30, success: true, rpe: 5 })
+})
+
+test('asDailyRecord parses valid deadhang ExerciseRecord', () => {
+  const today = getTodayDateKey()
+  localStorage.setItem(
+    STORAGE_KEY,
+    JSON.stringify([
+      {
+        date: today,
+        plank: { target_sec: 60, actual_sec: 60, success: true },
+        squat: { target_reps: 20, actual_reps: 20, success: true },
+        deadhang: { target_sec: 30, actual_sec: 25, success: false, rpe: 7 },
+        fatigue: 0.4,
+        F_P: 0.3,
+        F_S: 0.2,
+        F_total_raw: 0.5,
+      },
+    ]),
+  )
+
+  const record = loadTodayRecord()
+  expect(record?.deadhang).toEqual({ target_sec: 30, actual_sec: 25, success: false, rpe: 7 })
+})
+
+test('Records without F_D field load with F_D=0', () => {
+  const today = getTodayDateKey()
+  localStorage.setItem(
+    STORAGE_KEY,
+    JSON.stringify([
+      {
+        date: today,
+        plank: { target_sec: 60, actual_sec: 60, success: true },
+        squat: { target_reps: 20, actual_reps: 20, success: true },
+        fatigue: 0.4,
+        F_P: 0.3,
+        F_S: 0.2,
+        F_total_raw: 0.5,
+      },
+    ]),
+  )
+
+  const record = loadTodayRecord()
+  expect(record?.F_D).toBe(0)
 })

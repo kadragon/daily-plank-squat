@@ -47,3 +47,22 @@ test('Pushup goal alert does not repeat after first trigger', () => {
 
   expect(played).toEqual(['pushup'])
 })
+
+test('GoalAlerts has onDeadhangProgress that fires at target', () => {
+  const played: string[] = []
+  const alerts = createGoalAlerts((goal) => played.push(goal))
+
+  alerts.onDeadhangProgress(30, 30)
+
+  expect(played).toEqual(['deadhang'])
+})
+
+test('Deadhang goal alert does not repeat after first trigger', () => {
+  const played: string[] = []
+  const alerts = createGoalAlerts((goal) => played.push(goal))
+
+  alerts.onDeadhangProgress(30, 30)
+  alerts.onDeadhangProgress(31, 30)
+
+  expect(played).toEqual(['deadhang'])
+})

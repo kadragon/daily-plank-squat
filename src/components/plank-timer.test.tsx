@@ -100,6 +100,38 @@ test('PlankTimer renders RPE input with 1~10 bounds', () => {
   expect(html).toContain('max="10"')
 })
 
+test('PlankTimer renders custom title via title prop', () => {
+  const html = renderToStaticMarkup(<PlankTimer title="Deadhang Timer" />)
+
+  expect(html).toContain('<h2>Deadhang Timer</h2>')
+})
+
+test('PlankTimer defaults to "Plank Timer" when title prop is omitted', () => {
+  const html = renderToStaticMarkup(<PlankTimer />)
+
+  expect(html).toContain('<h2>Plank Timer</h2>')
+})
+
+test('PlankTimer idPrefix prop sets RPE input id and htmlFor', () => {
+  const html = renderToStaticMarkup(<PlankTimer idPrefix="deadhang" />)
+
+  expect(html).toContain('id="deadhang-rpe"')
+  expect(html).toContain('for="deadhang-rpe"')
+})
+
+test('PlankTimer defaults to "plank" idPrefix when prop is omitted', () => {
+  const html = renderToStaticMarkup(<PlankTimer />)
+
+  expect(html).toContain('id="plank-rpe"')
+})
+
+test('PlankTimer disables Start button when startDisabled=true', () => {
+  const html = renderToStaticMarkup(<PlankTimer state="IDLE" startDisabled />)
+
+  expect(html).toContain('Start')
+  expect(html).toContain('disabled')
+})
+
 test('PlankTimer renders tomorrow recommendation target, delta, and reason', () => {
   const html = renderToStaticMarkup(
     <PlankTimer tomorrowTargetSec={63} tomorrowDeltaSec={3} recommendationReasonText="중립 강도(5~6)로 기본 증량" />,

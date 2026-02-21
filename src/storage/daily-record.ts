@@ -5,6 +5,7 @@ import { NEUTRAL_RPE, normalizeRpe } from '../utils/rpe'
 const STORAGE_KEY = 'daily-records'
 
 const NEUTRAL_PUSHUP: PushupRecord = { target_reps: 15, actual_reps: 15, success: true, rpe: NEUTRAL_RPE }
+const NEUTRAL_DEADHANG: ExerciseRecord = { target_sec: 30, actual_sec: 30, success: true, rpe: NEUTRAL_RPE }
 
 function hasLocalStorage(): boolean {
   return typeof localStorage !== 'undefined'
@@ -102,16 +103,19 @@ function asDailyRecord(value: unknown): DailyRecord | null {
   }
 
   const pushup = asPushupRecord(value.pushup) ?? NEUTRAL_PUSHUP
+  const deadhang = asExerciseRecord(value.deadhang) ?? NEUTRAL_DEADHANG
 
   return {
     date: value.date,
     plank,
     squat,
     pushup,
+    deadhang,
     fatigue: value.fatigue,
     F_P: value.F_P,
     F_S: value.F_S,
     F_U: typeof value.F_U === 'number' ? value.F_U : 0,
+    F_D: typeof value.F_D === 'number' ? value.F_D : 0,
     F_total_raw: typeof value.F_total_raw === 'number' ? value.F_total_raw : 0,
     inactive_time_ratio: typeof value.inactive_time_ratio === 'number' ? value.inactive_time_ratio : 0,
     flag_suspicious: typeof value.flag_suspicious === 'boolean' ? value.flag_suspicious : false,

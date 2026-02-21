@@ -52,6 +52,15 @@ test('DailySummary shows pushup target and completion status', () => {
   expect(html).toContain('Pushup: Complete')
 })
 
+test('DailySummary shows deadhang target and completion status', () => {
+  const html = renderToStaticMarkup(
+    <DailySummary deadhangTargetSec={30} deadhangSuccess />,
+  )
+
+  expect(html).toContain('Deadhang target: 30s')
+  expect(html).toContain('Deadhang: Complete')
+})
+
 test('DailySummary shows pushup incomplete when not done', () => {
   const html = renderToStaticMarkup(
     <DailySummary pushupTargetReps={15} pushupSuccess={false} />,
@@ -66,6 +75,14 @@ test('DailySummary shows tomorrow pushup target', () => {
   )
 
   expect(html).toContain('Tomorrow pushup target: 16')
+})
+
+test('DailySummary shows tomorrow deadhang target', () => {
+  const html = renderToStaticMarkup(
+    <DailySummary tomorrowDeadhangTargetSec={33} />,
+  )
+
+  expect(html).toContain('Tomorrow deadhang target: 33s')
 })
 
 test('DailySummary renders Apple Health export button', () => {
