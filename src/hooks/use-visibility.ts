@@ -15,15 +15,15 @@ export function createVisibilityTracker(): VisibilityTracker {
 export function onVisibilityChange({
   tracker,
   isHidden,
-  plankState,
+  timerState,
   now,
 }: {
   tracker: VisibilityTracker
   isHidden: boolean
-  plankState: PlankState
+  timerState: PlankState
   now: number
 }): void {
-  if (plankState !== 'RUNNING') return
+  if (timerState !== 'RUNNING') return
 
   if (isHidden && tracker.hiddenAt === null) {
     tracker.hiddenAt = now

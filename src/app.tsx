@@ -31,6 +31,20 @@ type AppView = 'plank' | 'squat' | 'pushup' | 'deadhang' | 'summary' | 'stats'
 type PersistReason = 'general' | 'squat-complete' | 'pushup-complete'
 type CompleteSaveFeedbackTarget = 'squat' | 'pushup'
 type SaveFeedbackTone = 'info' | 'success' | 'error'
+type TimedWorkoutResult = { actualSec: number, success: boolean }
+
+interface UseTimedWorkoutOptions {
+  state: PlankState
+  targetSec: number
+  timerRef: { current: DomainPlankTimer | null }
+  setElapsedMs: (elapsedMs: number) => void
+  onProgressSeconds: (elapsedSec: number) => void
+  setResult: (result: TimedWorkoutResult) => void
+  setLogged: (logged: boolean) => void
+  completedElapsedMsRef: { current: number }
+  syncState: (now?: number) => void
+  requestPersist: () => void
+}
 
 interface NavItemMeta {
   view: AppView
@@ -146,6 +160,59 @@ function TabIcon({ view }: { view: AppView }) {
 
 function nowMs(): number {
   return typeof performance !== 'undefined' ? performance.now() : Date.now()
+}
+
+function useTimedWorkout({
+  state,
+  targetSec,
+  timerRef,
+  setElapsedMs,
+  onProgressSeconds,
+  setResult,
+  setLogged,
+  completedElapsedMsRef,
+  syncState,
+  requestPersist,
+}: UseTimedWorkoutOptions): void {
+  useEffect(() => {
+    if (state !== 'RUNNING') return undefined
+
+    let frameId = 0
+    const tick = () => {
+      const now = nowMs()
+      const currentElapsed = timerRef.current?.getCurrentElapsed(now) ?? 0
+      setElapsedMs(currentElapsed)
+      onProgressSeconds(Math.floor(currentElapsed / 1000))
+
+      if (currentElapsed >= targetSec * 1000) {
+        const result = timerRef.current?.complete(now)
+        if (result) {
+          completedElapsedMsRef.current = timerRef.current?.getCurrentElapsed(now) ?? currentElapsed
+          setResult({ actualSec: result.actual_sec, success: result.success })
+          setLogged(true)
+          requestPersist()
+        }
+        syncState(now)
+        return
+      }
+
+      frameId = requestAnimationFrame(tick)
+    }
+
+    frameId = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(frameId)
+  }, [
+    state,
+    targetSec,
+    timerRef,
+    setElapsedMs,
+    onProgressSeconds,
+    setResult,
+    setLogged,
+    completedElapsedMsRef,
+    syncState,
+    requestPersist,
+  ])
 }
 
 function todayKey(): string {
@@ -542,65 +609,39 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
     swipeStartRef.current = null
   }
 
-  useEffect(() => {
-    if (plankState !== 'RUNNING') return undefined
+  const onPlankProgressSeconds = useCallback((elapsedSec: number) => {
+    goalAlertsRef.current.onPlankProgress(elapsedSec, plankTargetSec)
+  }, [plankTargetSec])
 
-    let frameId = 0
-    const tick = () => {
-      const now = nowMs()
-      const currentElapsed = plankTimerRef.current?.getCurrentElapsed(now) ?? 0
-      setPlankElapsedMs(currentElapsed)
+  const onDeadhangProgressSeconds = useCallback((elapsedSec: number) => {
+    goalAlertsRef.current.onDeadhangProgress(elapsedSec, deadhangTargetSec)
+  }, [deadhangTargetSec])
 
-      goalAlertsRef.current.onPlankProgress(Math.floor(currentElapsed / 1000), plankTargetSec)
+  useTimedWorkout({
+    state: plankState,
+    targetSec: plankTargetSec,
+    timerRef: plankTimerRef,
+    setElapsedMs: setPlankElapsedMs,
+    onProgressSeconds: onPlankProgressSeconds,
+    setResult: setPlankResult,
+    setLogged: setPlankLogged,
+    completedElapsedMsRef: completedPlankElapsedMsRef,
+    syncState: syncPlankState,
+    requestPersist,
+  })
 
-      if (currentElapsed >= plankTargetSec * 1000) {
-        const result = plankTimerRef.current?.complete(now)
-        if (result) {
-          completedPlankElapsedMsRef.current = plankTimerRef.current?.getCurrentElapsed(now) ?? currentElapsed
-          setPlankResult({ actualSec: result.actual_sec, success: true })
-          setPlankLogged(true)
-          requestPersist()
-        }
-        syncPlankState(now)
-        return
-      }
-
-      frameId = requestAnimationFrame(tick)
-    }
-
-    frameId = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(frameId)
-  }, [plankState, plankTargetSec, syncPlankState, requestPersist])
-
-  useEffect(() => {
-    if (deadhangState !== 'RUNNING') return undefined
-
-    let frameId = 0
-    const tick = () => {
-      const now = nowMs()
-      const currentElapsed = deadhangTimerRef.current?.getCurrentElapsed(now) ?? 0
-      setDeadhangElapsedMs(currentElapsed)
-
-      goalAlertsRef.current.onDeadhangProgress(Math.floor(currentElapsed / 1000), deadhangTargetSec)
-
-      if (currentElapsed >= deadhangTargetSec * 1000) {
-        const result = deadhangTimerRef.current?.complete(now)
-        if (result) {
-          completedDeadhangElapsedMsRef.current = deadhangTimerRef.current?.getCurrentElapsed(now) ?? currentElapsed
-          setDeadhangResult({ actualSec: result.actual_sec, success: true })
-          setDeadhangLogged(true)
-          requestPersist()
-        }
-        syncDeadhangState(now)
-        return
-      }
-
-      frameId = requestAnimationFrame(tick)
-    }
-
-    frameId = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(frameId)
-  }, [deadhangState, deadhangTargetSec, syncDeadhangState, requestPersist])
+  useTimedWorkout({
+    state: deadhangState,
+    targetSec: deadhangTargetSec,
+    timerRef: deadhangTimerRef,
+    setElapsedMs: setDeadhangElapsedMs,
+    onProgressSeconds: onDeadhangProgressSeconds,
+    setResult: setDeadhangResult,
+    setLogged: setDeadhangLogged,
+    completedElapsedMsRef: completedDeadhangElapsedMsRef,
+    syncState: syncDeadhangState,
+    requestPersist,
+  })
 
   useEffect(() => {
     if (typeof document === 'undefined') return undefined
@@ -610,13 +651,13 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
       onVisibilityChange({
         tracker: plankVisibilityTrackerRef.current,
         isHidden: document.hidden,
-        plankState,
+        timerState: plankState,
         now,
       })
       onVisibilityChange({
         tracker: deadhangVisibilityTrackerRef.current,
         isHidden: document.hidden,
-        plankState: deadhangState,
+        timerState: deadhangState,
         now,
       })
 
