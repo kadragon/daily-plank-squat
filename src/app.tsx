@@ -22,8 +22,10 @@ import {
 import { detectSwipeDirection, getAdjacentView } from './models/swipe-navigation'
 import { loadAllRecords, saveRecord } from './storage/daily-record'
 import { buildHealthPayload, buildShortcutRunUrl } from './integrations/apple-health-shortcut'
-import type { BaseTargets, DailyRecord, FatigueParams, PlankState } from './types'
+import { getRecommendationReasonText } from './locales/ko'
+import type { BaseTargets, DailyRecord, FatigueParams, PlankState, RecommendationReason } from './types'
 import { getTodayDateKey } from './utils/date-key'
+import { NEUTRAL_RPE, normalizeRpe } from './utils/rpe'
 
 type AppView = 'plank' | 'squat' | 'pushup' | 'summary' | 'stats'
 type PersistReason = 'general' | 'squat-complete' | 'pushup-complete'
@@ -52,12 +54,18 @@ interface InitialAppState {
   squatSuccess: boolean
   pushupActualReps: number
   pushupSuccess: boolean
+  plankRpe: number
+  squatRpe: number
+  pushupRpe: number
   fatigue: number
   overloadWarning: boolean
   suspiciousSession: boolean
   tomorrowPlankTargetSec: number
   tomorrowSquatTargetReps: number
   tomorrowPushupTargetReps: number
+  tomorrowPlankReason: RecommendationReason
+  tomorrowSquatReason: RecommendationReason
+  tomorrowPushupReason: RecommendationReason
   plankState: PlankState
   alreadyLoggedPlankToday: boolean
 }
@@ -170,12 +178,18 @@ function createInitialAppState(initialPlankState?: PlankState): InitialAppState 
     squatSuccess: todayRecord?.squat.success ?? false,
     pushupActualReps: todayRecord?.pushup.actual_reps ?? 0,
     pushupSuccess: todayRecord?.pushup.success ?? false,
+    plankRpe: todayRecord?.plank.rpe ?? NEUTRAL_RPE,
+    squatRpe: todayRecord?.squat.rpe ?? NEUTRAL_RPE,
+    pushupRpe: todayRecord?.pushup.rpe ?? NEUTRAL_RPE,
     fatigue: todayRecord?.fatigue ?? todayTargets.fatigue,
     overloadWarning: todayRecord ? tomorrowPlan.overload_warning : false,
     suspiciousSession: todayRecord?.flag_suspicious ?? false,
     tomorrowPlankTargetSec: tomorrowPlan.plank_target_sec,
     tomorrowSquatTargetReps: tomorrowPlan.squat_target_reps,
     tomorrowPushupTargetReps: tomorrowPlan.pushup_target_reps,
+    tomorrowPlankReason: tomorrowPlan.plank_reason,
+    tomorrowSquatReason: tomorrowPlan.squat_reason,
+    tomorrowPushupReason: tomorrowPlan.pushup_reason,
     plankState: initialPlankState ?? (plankLoggedToday ? (todayRecord?.plank.success ? 'COMPLETED' : 'CANCELLED') : 'IDLE'),
     alreadyLoggedPlankToday: plankLoggedToday,
   }
@@ -213,12 +227,15 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
   const [elapsedMs, setElapsedMs] = useState(initial.plankActualSec * 1000)
   const [plankResult, setPlankResult] = useState({ actualSec: initial.plankActualSec, success: initial.plankSuccess })
   const [plankLogged, setPlankLogged] = useState(initial.alreadyLoggedPlankToday)
+  const [plankRpe, setPlankRpe] = useState(initial.plankRpe)
 
   const [squatCount, setSquatCount] = useState(initial.squatActualReps)
   const [squatSuccess, setSquatSuccess] = useState(initial.squatSuccess)
+  const [squatRpe, setSquatRpe] = useState(initial.squatRpe)
 
   const [pushupCount, setPushupCount] = useState(initial.pushupActualReps)
   const [pushupSuccess, setPushupSuccess] = useState(initial.pushupSuccess)
+  const [pushupRpe, setPushupRpe] = useState(initial.pushupRpe)
 
   const [plankTargetSec] = useState(initial.plankTargetSec)
   const [squatTargetReps, setSquatTargetReps] = useState(initial.squatTargetReps)
@@ -232,6 +249,9 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
     plank: initial.tomorrowPlankTargetSec,
     squat: initial.tomorrowSquatTargetReps,
     pushup: initial.tomorrowPushupTargetReps,
+    plankReason: initial.tomorrowPlankReason,
+    squatReason: initial.tomorrowSquatReason,
+    pushupReason: initial.tomorrowPushupReason,
   })
   const todayRecord = useMemo(() => records.find((record) => record.date === today) ?? null, [records, today])
   const summaryHealthHint = healthExportHint || (todayRecord?.flag_suspicious ? SUSPICIOUS_EXPORT_HINT : '')
@@ -319,6 +339,21 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
     setSquatCount(nextCount)
     setSquatSuccess(computeSquatSuccess(nextCount, squatTargetReps))
     goalAlertsRef.current.onSquatProgress(nextCount, squatTargetReps)
+    requestPersist()
+  }
+
+  function handlePlankRpeChange(rawValue: string) {
+    setPlankRpe(normalizeRpe(Number(rawValue)))
+    requestPersist()
+  }
+
+  function handleSquatRpeChange(rawValue: string) {
+    setSquatRpe(normalizeRpe(Number(rawValue)))
+    requestPersist()
+  }
+
+  function handlePushupRpeChange(rawValue: string) {
+    setPushupRpe(normalizeRpe(Number(rawValue)))
     requestPersist()
   }
 
@@ -521,16 +556,19 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
         target_sec: plankTargetSec,
         actual_sec: plankResult.actualSec,
         success: plankResult.success,
+        rpe: plankRpe,
       },
       squat: {
         target_reps: squatTargetReps,
         actual_reps: squatCount,
         success: squatSuccess,
+        rpe: squatRpe,
       },
       pushup: {
         target_reps: pushupTargetReps,
         actual_reps: pushupCount,
         success: pushupSuccess,
+        rpe: pushupRpe,
       },
       fatigue: 0,
       F_P: 0,
@@ -583,11 +621,31 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
       plank: tomorrowPlan.plank_target_sec,
       squat: tomorrowPlan.squat_target_reps,
       pushup: tomorrowPlan.pushup_target_reps,
+      plankReason: tomorrowPlan.plank_reason,
+      squatReason: tomorrowPlan.squat_reason,
+      pushupReason: tomorrowPlan.pushup_reason,
     })
     if (feedbackTarget) {
       scheduleCompleteSaveFeedbackSuccess(feedbackTarget)
     }
-  }, [persistRequest, plankLogged, records, today, plankTargetSec, squatTargetReps, pushupTargetReps, plankResult, squatCount, squatSuccess, pushupCount, pushupSuccess, clearCompleteSaveFeedbackTimer])
+  }, [
+    persistRequest,
+    plankLogged,
+    records,
+    today,
+    plankTargetSec,
+    squatTargetReps,
+    pushupTargetReps,
+    plankResult,
+    squatCount,
+    squatSuccess,
+    pushupCount,
+    pushupSuccess,
+    plankRpe,
+    squatRpe,
+    pushupRpe,
+    clearCompleteSaveFeedbackTimer,
+  ])
 
   useEffect(() => () => {
     clearCompleteSaveFeedbackTimer()
@@ -602,10 +660,15 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
               elapsedMs={elapsedMs}
               targetSec={plankTargetSec}
               state={plankState}
+              rpe={plankRpe}
+              tomorrowTargetSec={tomorrowTargets.plank}
+              tomorrowDeltaSec={tomorrowTargets.plank - plankTargetSec}
+              recommendationReasonText={getRecommendationReasonText(tomorrowTargets.plankReason)}
               onStart={handlePlankStart}
               onPause={handlePlankPause}
               onResume={handlePlankResume}
               onCancel={handlePlankCancel}
+              onRpeChange={handlePlankRpeChange}
             />
             {wakeLockNotice ? <div className="wake-lock-notice">{wakeLockNotice}</div> : null}
           </>
@@ -617,10 +680,15 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
             <SquatCounter
               count={squatCount}
               targetReps={squatTargetReps}
+              rpe={squatRpe}
+              tomorrowTargetReps={tomorrowTargets.squat}
+              tomorrowDeltaReps={tomorrowTargets.squat - squatTargetReps}
+              recommendationReasonText={getRecommendationReasonText(tomorrowTargets.squatReason)}
               saveFeedbackText={squatSaveFeedback?.text}
               saveFeedbackTone={squatSaveFeedback?.tone}
               onDoneRepsChange={handleSquatDoneRepsChange}
               onTargetRepsChange={handleSquatTargetRepsChange}
+              onRpeChange={handleSquatRpeChange}
               onComplete={handleSquatComplete}
             />
           )
@@ -635,10 +703,15 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
               exerciseName="pushups"
               count={pushupCount}
               targetReps={pushupTargetReps}
+              rpe={pushupRpe}
+              tomorrowTargetReps={tomorrowTargets.pushup}
+              tomorrowDeltaReps={tomorrowTargets.pushup - pushupTargetReps}
+              recommendationReasonText={getRecommendationReasonText(tomorrowTargets.pushupReason)}
               saveFeedbackText={pushupSaveFeedback?.text}
               saveFeedbackTone={pushupSaveFeedback?.tone}
               onDoneRepsChange={handlePushupDoneRepsChange}
               onTargetRepsChange={handlePushupTargetRepsChange}
+              onRpeChange={handlePushupRpeChange}
               onComplete={handlePushupComplete}
             />
           )

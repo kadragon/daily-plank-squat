@@ -18,18 +18,21 @@ export interface ExerciseRecord {
   target_sec: number
   actual_sec: number
   success: boolean
+  rpe: number
 }
 
 export interface SquatRecord {
   target_reps: number
   actual_reps: number
   success: boolean
+  rpe: number
 }
 
 export interface PushupRecord {
   target_reps: number
   actual_reps: number
   success: boolean
+  rpe: number
 }
 
 export interface DailyRecord {
@@ -90,10 +93,21 @@ export interface FatigueSnapshot {
   median_m: number
 }
 
+export type RecommendationReason =
+  | 'failure_streak'
+  | 'high_fatigue_hold'
+  | 'rpe_very_high_reduce'
+  | 'rpe_high_hold'
+  | 'rpe_low_boost'
+  | 'neutral_progression'
+
 export interface TomorrowPlan {
   plank_target_sec: number
   squat_target_reps: number
   pushup_target_reps: number
+  plank_reason: RecommendationReason
+  squat_reason: RecommendationReason
+  pushup_reason: RecommendationReason
   fatigue: number
   F_P: number
   F_S: number

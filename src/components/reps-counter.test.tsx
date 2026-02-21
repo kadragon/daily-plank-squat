@@ -14,6 +14,7 @@ test('RepsCounter uses pushup-prefixed ids when idPrefix="pushup"', () => {
 
   expect(html).toContain('id="pushup-target-reps"')
   expect(html).toContain('id="pushup-done-reps"')
+  expect(html).toContain('id="pushup-rpe"')
 })
 
 test('RepsCounter complete button aria-label reflects exerciseName', () => {
@@ -48,4 +49,17 @@ test('RepsCounter renders inline save feedback with polite live region when prov
   expect(html).toContain('reps-save-feedback')
   expect(html).toContain('reps-save-feedback--success')
   expect(html).toContain('aria-live="polite"')
+})
+
+test('RepsCounter renders tomorrow recommendation target, delta, and reason', () => {
+  const html = renderToStaticMarkup(
+    <RepsCounter
+      tomorrowTargetReps={21}
+      tomorrowDeltaReps={1}
+      recommendationReasonText="오늘 RPE 낮음(1~4)으로 내일 소폭 증량"
+    />,
+  )
+
+  expect(html).toContain('내일 추천: 21 (+1)')
+  expect(html).toContain('오늘 RPE 낮음(1~4)으로 내일 소폭 증량')
 })

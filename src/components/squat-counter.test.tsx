@@ -19,8 +19,8 @@ test('Squat view shows complete button', () => {
 test('Squat view no longer renders +1/-1 buttons', () => {
   const html = renderToStaticMarkup(<SquatCounter count={0} />)
 
-  expect(html).not.toContain('+1')
-  expect(html).not.toContain('-1')
+  expect(html).not.toContain('Increment squats')
+  expect(html).not.toContain('Decrement squats')
 })
 
 test('SquatCounter controls have aria-labels', () => {

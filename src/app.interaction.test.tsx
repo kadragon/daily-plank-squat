@@ -209,6 +209,52 @@ test('Changing pushup done reps updates existing today record instead of appendi
   })
 })
 
+test('Changing squat rpe immediately saves today record', async () => {
+  const view = render(<App initialView="squat" />)
+  const rpeInput = view.container.querySelector('#squat-rpe')
+  if (!rpeInput) throw new Error('squat rpe input not found')
+
+  setNumberInputValue(rpeInput, '8')
+  await waitFor(() => {
+    const stored = readStoredRecords()
+    expect(stored).toHaveLength(1)
+    expect(stored[0]?.squat.rpe).toBe(8)
+  })
+})
+
+test('Changing pushup rpe updates existing today record instead of appending', async () => {
+  const view = render(<App initialView="pushup" />)
+  const rpeInput = view.container.querySelector('#pushup-rpe')
+  if (!rpeInput) throw new Error('pushup rpe input not found')
+
+  setNumberInputValue(rpeInput, '9')
+  await waitFor(() => {
+    const stored = readStoredRecords()
+    expect(stored).toHaveLength(1)
+    expect(stored[0]?.pushup.rpe).toBe(9)
+  })
+  setNumberInputValue(rpeInput, '7')
+  await waitFor(() => {
+    const stored = readStoredRecords()
+    expect(stored).toHaveLength(1)
+    expect(stored[0]?.date).toBe(getTodayDateKey())
+    expect(stored[0]?.pushup.rpe).toBe(7)
+  })
+})
+
+test('Changing plank rpe immediately saves today record', async () => {
+  const view = render(<App initialView="plank" />)
+  const rpeInput = view.container.querySelector('#plank-rpe')
+  if (!rpeInput) throw new Error('plank rpe input not found')
+
+  setNumberInputValue(rpeInput, '4')
+  await waitFor(() => {
+    const stored = readStoredRecords()
+    expect(stored).toHaveLength(1)
+    expect(stored[0]?.plank.rpe).toBe(4)
+  })
+})
+
 test('Complete click shows save feedback lifecycle for squat', async () => {
   const view = render(<App initialView="squat" />)
   const completeButton = view.getByRole('button', { name: 'Complete squats' })

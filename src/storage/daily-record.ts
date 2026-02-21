@@ -1,9 +1,10 @@
 import type { DailyRecord, ExerciseRecord, PushupRecord, SquatRecord } from '../types'
 import { getTodayDateKey } from '../utils/date-key'
+import { NEUTRAL_RPE, normalizeRpe } from '../utils/rpe'
 
 const STORAGE_KEY = 'daily-records'
 
-const NEUTRAL_PUSHUP: PushupRecord = { target_reps: 15, actual_reps: 15, success: true }
+const NEUTRAL_PUSHUP: PushupRecord = { target_reps: 15, actual_reps: 15, success: true, rpe: NEUTRAL_RPE }
 
 function hasLocalStorage(): boolean {
   return typeof localStorage !== 'undefined'
@@ -27,6 +28,7 @@ function asExerciseRecord(value: unknown): ExerciseRecord | null {
     target_sec: value.target_sec,
     actual_sec: value.actual_sec,
     success: value.success,
+    rpe: normalizeRpe(value.rpe),
   }
 }
 
@@ -43,6 +45,7 @@ function asSquatRecord(value: unknown): SquatRecord | null {
       target_reps: value.target_reps,
       actual_reps: value.actual_reps,
       success: value.success,
+      rpe: normalizeRpe(value.rpe),
     }
   }
 
@@ -56,6 +59,7 @@ function asSquatRecord(value: unknown): SquatRecord | null {
       target_reps: value.target_count,
       actual_reps: value.actual_count,
       success: value.success,
+      rpe: normalizeRpe(value.rpe),
     }
   }
 
@@ -74,6 +78,7 @@ function asPushupRecord(value: unknown): PushupRecord | null {
       target_reps: value.target_reps,
       actual_reps: value.actual_reps,
       success: value.success,
+      rpe: normalizeRpe(value.rpe),
     }
   }
 

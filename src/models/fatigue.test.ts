@@ -50,16 +50,19 @@ function dailyRecord(
       target_sec: plankTarget,
       actual_sec: plankActual,
       success: plankSuccess,
+      rpe: 5,
     },
     squat: {
       target_reps: squatTarget,
       actual_reps: squatActual,
       success: squatSuccess,
+      rpe: 5,
     },
     pushup: {
       target_reps: 15,
       actual_reps: 15,
       success: true,
+      rpe: 5,
     },
     fatigue: 0,
     F_P: 0,
@@ -156,11 +159,11 @@ test('computeFatigueSeries computes F_U via pushup EWMA', () => {
   const records: DailyRecord[] = [
     {
       ...dailyRecord('2026-02-16', 60, 60, true, 20, 20, true),
-      pushup: { target_reps: 15, actual_reps: 15, success: true },
+      pushup: { target_reps: 15, actual_reps: 15, success: true, rpe: 5 },
     },
     {
       ...dailyRecord('2026-02-17', 60, 60, true, 20, 20, true),
-      pushup: { target_reps: 15, actual_reps: 15, success: true },
+      pushup: { target_reps: 15, actual_reps: 15, success: true, rpe: 5 },
     },
   ]
 
@@ -191,7 +194,7 @@ test('increases targets when fatigue is low', () => {
 test('computeTomorrowPlan increases pushup target when fatigue low', () => {
   const record: DailyRecord = {
     ...dailyRecord('2026-02-16', 60, 60, true, 20, 20, true),
-    pushup: { target_reps: 15, actual_reps: 15, success: true },
+    pushup: { target_reps: 15, actual_reps: 15, success: true, rpe: 5 },
   }
   const plan = computeTomorrowPlan([record], params, baseTargets)
   expect(plan.pushup_target_reps).toBeGreaterThan(15)
@@ -216,11 +219,11 @@ test('computeTomorrowPlan holds pushup target when fatigue > 0.85', () => {
   const records: DailyRecord[] = [
     {
       ...dailyRecord('2026-02-16', 60, 60, true, 20, 20, true),
-      pushup: { target_reps: 15, actual_reps: 30, success: true },
+      pushup: { target_reps: 15, actual_reps: 30, success: true, rpe: 5 },
     },
     {
       ...dailyRecord('2026-02-17', 800, 1200, true, 300, 450, true),
-      pushup: { target_reps: 100, actual_reps: 200, success: true },
+      pushup: { target_reps: 100, actual_reps: 200, success: true, rpe: 5 },
     },
   ]
   const plan = computeTomorrowPlan(records, params, baseTargets)
@@ -247,15 +250,15 @@ test('hasFailureStreak detects pushup 3-day failure streak', () => {
   const records: DailyRecord[] = [
     {
       ...dailyRecord('2026-02-14', 60, 60, true, 20, 20, true),
-      pushup: { target_reps: 15, actual_reps: 5, success: false },
+      pushup: { target_reps: 15, actual_reps: 5, success: false, rpe: 5 },
     },
     {
       ...dailyRecord('2026-02-15', 60, 60, true, 20, 20, true),
-      pushup: { target_reps: 15, actual_reps: 5, success: false },
+      pushup: { target_reps: 15, actual_reps: 5, success: false, rpe: 5 },
     },
     {
       ...dailyRecord('2026-02-16', 60, 60, true, 20, 20, true),
-      pushup: { target_reps: 15, actual_reps: 5, success: false },
+      pushup: { target_reps: 15, actual_reps: 5, success: false, rpe: 5 },
     },
   ]
   const plan = computeTomorrowPlan(records, params, baseTargets)
@@ -265,7 +268,7 @@ test('hasFailureStreak detects pushup 3-day failure streak', () => {
 test('computeTomorrowPlan decreases pushup target after failure streak', () => {
   const records: DailyRecord[] = Array.from({ length: 3 }, (_, i) => ({
     ...dailyRecord(`2026-02-${14 + i}`, 60, 60, true, 20, 20, true),
-    pushup: { target_reps: 20, actual_reps: 5, success: false },
+    pushup: { target_reps: 20, actual_reps: 5, success: false, rpe: 5 },
   }))
   const plan = computeTomorrowPlan(records, params, baseTargets)
   expect(plan.pushup_target_reps).toBe(18) // 20 * 0.9 = 18
@@ -290,14 +293,139 @@ test('percentile returns interpolated percentile values', () => {
 })
 
 test('compatibility wrappers still compute next targets', () => {
-  const plankTarget = computeNextTarget(60, [{ target_sec: 60, actual_sec: 60, success: true }], params)
-  const squatTarget = computeSquatTarget(20, [{ target_reps: 20, actual_reps: 20, success: true }], params)
+  const plankTarget = computeNextTarget(60, [{ target_sec: 60, actual_sec: 60, success: true, rpe: 5 }], params)
+  const squatTarget = computeSquatTarget(20, [{ target_reps: 20, actual_reps: 20, success: true, rpe: 5 }], params)
 
   expect(plankTarget).toBeGreaterThan(60)
   expect(squatTarget).toBeGreaterThan(20)
 })
 
 test('computePushupTarget compatibility wrapper computes next pushup target', () => {
-  const pushupTarget = computePushupTarget(15, [{ target_reps: 15, actual_reps: 15, success: true }], params)
+  const pushupTarget = computePushupTarget(15, [{ target_reps: 15, actual_reps: 15, success: true, rpe: 5 }], params)
   expect(pushupTarget).toBeGreaterThan(15)
+})
+
+test('computeTomorrowPlan applies neutral progression (+5%) for rpe 5~6', () => {
+  const plan = computeTomorrowPlan(
+    [{
+      ...dailyRecord('2026-02-16', 100, 100, true, 20, 20, true),
+      plank: { target_sec: 100, actual_sec: 100, success: true, rpe: 5 },
+      squat: { target_reps: 20, actual_reps: 20, success: true, rpe: 6 },
+      pushup: { target_reps: 20, actual_reps: 20, success: true, rpe: 5 },
+    }],
+    params,
+    baseTargets,
+  )
+
+  expect(plan.plank_target_sec).toBe(105)
+  expect(plan.squat_target_reps).toBe(21)
+  expect(plan.pushup_target_reps).toBe(21)
+})
+
+test('computeTomorrowPlan applies rpe low boost (+8%) for rpe 1~4', () => {
+  const plan = computeTomorrowPlan(
+    [{
+      ...dailyRecord('2026-02-16', 100, 100, true, 20, 20, true),
+      plank: { target_sec: 100, actual_sec: 100, success: true, rpe: 1 },
+      squat: { target_reps: 20, actual_reps: 20, success: true, rpe: 4 },
+      pushup: { target_reps: 20, actual_reps: 20, success: true, rpe: 3 },
+    }],
+    params,
+    baseTargets,
+  )
+
+  expect(plan.plank_target_sec).toBe(108)
+  expect(plan.squat_target_reps).toBe(22)
+  expect(plan.pushup_target_reps).toBe(22)
+})
+
+test('computeTomorrowPlan holds target for rpe 7~8', () => {
+  const plan = computeTomorrowPlan(
+    [{
+      ...dailyRecord('2026-02-16', 100, 100, true, 20, 20, true),
+      plank: { target_sec: 100, actual_sec: 100, success: true, rpe: 7 },
+      squat: { target_reps: 20, actual_reps: 20, success: true, rpe: 8 },
+      pushup: { target_reps: 20, actual_reps: 20, success: true, rpe: 7 },
+    }],
+    params,
+    baseTargets,
+  )
+
+  expect(plan.plank_target_sec).toBe(100)
+  expect(plan.squat_target_reps).toBe(20)
+  expect(plan.pushup_target_reps).toBe(20)
+})
+
+test('computeTomorrowPlan decreases target by 5% for rpe 9~10', () => {
+  const plan = computeTomorrowPlan(
+    [{
+      ...dailyRecord('2026-02-16', 100, 100, true, 20, 20, true),
+      plank: { target_sec: 100, actual_sec: 100, success: true, rpe: 9 },
+      squat: { target_reps: 20, actual_reps: 20, success: true, rpe: 10 },
+      pushup: { target_reps: 20, actual_reps: 20, success: true, rpe: 9 },
+    }],
+    params,
+    baseTargets,
+  )
+
+  expect(plan.plank_target_sec).toBe(95)
+  expect(plan.squat_target_reps).toBe(19)
+  expect(plan.pushup_target_reps).toBe(19)
+})
+
+test('failure streak has priority over low-rpe boost', () => {
+  const records: DailyRecord[] = Array.from({ length: 3 }, (_, i) => ({
+    ...dailyRecord(`2026-02-${14 + i}`, 100, 20, false, 20, 8, false),
+    plank: { target_sec: 100, actual_sec: 20, success: false, rpe: 1 },
+    squat: { target_reps: 20, actual_reps: 8, success: false, rpe: 1 },
+    pushup: { target_reps: 20, actual_reps: 5, success: false, rpe: 1 },
+  }))
+  const plan = computeTomorrowPlan(records, params, baseTargets)
+
+  expect(plan.plank_target_sec).toBe(90)
+  expect(plan.squat_target_reps).toBe(18)
+  expect(plan.pushup_target_reps).toBe(18)
+})
+
+test('fatigue hold has priority over low-rpe boost', () => {
+  const plan = computeTomorrowPlan(
+    [
+      {
+        ...dailyRecord('2026-02-16', 60, 60, true, 20, 20, true),
+        plank: { target_sec: 60, actual_sec: 60, success: true, rpe: 1 },
+        squat: { target_reps: 20, actual_reps: 20, success: true, rpe: 1 },
+        pushup: { target_reps: 15, actual_reps: 30, success: true, rpe: 1 },
+      },
+      {
+        ...dailyRecord('2026-02-17', 800, 1200, true, 300, 450, true),
+        plank: { target_sec: 800, actual_sec: 1200, success: true, rpe: 1 },
+        squat: { target_reps: 300, actual_reps: 450, success: true, rpe: 1 },
+        pushup: { target_reps: 100, actual_reps: 200, success: true, rpe: 1 },
+      },
+    ],
+    params,
+    baseTargets,
+  )
+
+  expect(plan.fatigue).toBeGreaterThan(0.85)
+  expect(plan.plank_target_sec).toBe(800)
+  expect(plan.squat_target_reps).toBe(300)
+  expect(plan.pushup_target_reps).toBe(100)
+})
+
+test('computeTomorrowPlan returns per-exercise reason codes', () => {
+  const plan = computeTomorrowPlan(
+    [{
+      ...dailyRecord('2026-02-16', 100, 100, true, 20, 20, true),
+      plank: { target_sec: 100, actual_sec: 100, success: true, rpe: 3 },
+      squat: { target_reps: 20, actual_reps: 20, success: true, rpe: 8 },
+      pushup: { target_reps: 20, actual_reps: 20, success: true, rpe: 10 },
+    }],
+    params,
+    baseTargets,
+  )
+
+  expect(plan.plank_reason).toBe('rpe_low_boost')
+  expect(plan.squat_reason).toBe('rpe_high_hold')
+  expect(plan.pushup_reason).toBe('rpe_very_high_reduce')
 })

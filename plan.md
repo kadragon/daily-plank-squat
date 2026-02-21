@@ -230,6 +230,23 @@
 - [x] iOS 노치 상단 safe-area가 app-shell 배경과 시각적으로 일치한다
 - [x] iOS 상단바 관련 theme/background 색상이 앱 상단 배경 톤과 일치한다
 
+## RPE-based Recommendation Integration
+
+> Use per-exercise RPE input to personalize next-day targets and explain why targets changed.
+
+- [x] Model: RPE 5~6 keeps default +5% progression
+- [x] Model: RPE 1~4 applies +8% progression
+- [x] Model: RPE 7~8 holds target
+- [x] Model: RPE 9~10 applies -5% reduction
+- [x] Model: failure streak has priority over RPE rule
+- [x] Model: fatigue hold has priority over RPE rule
+- [x] Model: computeTomorrowPlan returns reason code per exercise
+- [x] Storage: missing rpe in legacy records loads as neutral rpe=5
+- [x] Storage: invalid rpe values load as neutral rpe=5
+- [x] Components: Plank/RepsCounter render RPE input
+- [x] App interaction: plank/squat/pushup RPE input changes persist to today record
+- [x] App rendering: workout views show recommendation reason text
+
 ## Stats Page & Immediate Save
 
 > Prevent record loss and provide visual history for plank, squat, and pushup performance.

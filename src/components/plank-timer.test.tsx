@@ -90,3 +90,21 @@ test('PlankTimer progress bar shows correct width in RUNNING state', () => {
   expect(html).toContain('progress-fill')
   expect(html).toContain('width:50%')
 })
+
+test('PlankTimer renders RPE input with 1~10 bounds', () => {
+  const html = renderToStaticMarkup(<PlankTimer rpe={6} />)
+
+  expect(html).toContain('id="plank-rpe"')
+  expect(html).toContain('RPE (1-10)')
+  expect(html).toContain('min="1"')
+  expect(html).toContain('max="10"')
+})
+
+test('PlankTimer renders tomorrow recommendation target, delta, and reason', () => {
+  const html = renderToStaticMarkup(
+    <PlankTimer tomorrowTargetSec={63} tomorrowDeltaSec={3} recommendationReasonText="중립 강도(5~6)로 기본 증량" />,
+  )
+
+  expect(html).toContain('내일 추천: 63s (+3s)')
+  expect(html).toContain('중립 강도(5~6)로 기본 증량')
+})
