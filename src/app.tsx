@@ -366,6 +366,9 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
   }
 
   function handleSquatComplete() {
+    if (squatCount === 0 && squatCounterRef.current) {
+      squatCounterRef.current.count = squatTargetReps
+    }
     const finalCount = completeSquatCounter(squatCounterRef.current as DomainSquatCounter)
     setSquatCount(finalCount)
     goalAlertsRef.current.onSquatProgress(finalCount, squatTargetReps)
@@ -395,6 +398,9 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
   }
 
   function handlePushupComplete() {
+    if (pushupCount === 0 && pushupCounterRef.current) {
+      pushupCounterRef.current.count = pushupTargetReps
+    }
     const finalCount = completeSquatCounter(pushupCounterRef.current as DomainSquatCounter)
     setPushupCount(finalCount)
     goalAlertsRef.current.onPushupProgress(finalCount, pushupTargetReps)

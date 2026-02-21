@@ -90,15 +90,14 @@ export default function PlankTimer({
       <h2>Plank Timer</h2>
       <div className="timer-target">Target: {targetSec}s</div>
       <div className="reps-input-row">
-        <label className="reps-input-label" htmlFor="plank-rpe">RPE (1-10)</label>
+        <label className="reps-input-label" htmlFor="plank-rpe">RPE (1-10): {rpe}</label>
         <input
           id="plank-rpe"
-          className="reps-input"
-          type="number"
+          className="rpe-slider"
+          type="range"
           min={1}
           max={10}
           step={1}
-          inputMode="numeric"
           aria-label="Plank RPE"
           value={rpe}
           onInput={(event) => onRpeChange?.((event.currentTarget as HTMLInputElement).value)}

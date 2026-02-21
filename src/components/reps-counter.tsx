@@ -67,15 +67,14 @@ export default function RepsCounter({
         />
       </div>
       <div className="reps-input-row">
-        <label className="reps-input-label" htmlFor={`${idPrefix}-rpe`}>RPE (1-10)</label>
+        <label className="reps-input-label" htmlFor={`${idPrefix}-rpe`}>RPE (1-10): {rpe}</label>
         <input
           id={`${idPrefix}-rpe`}
-          className="reps-input"
-          type="number"
+          className="rpe-slider"
+          type="range"
           min={1}
           max={10}
           step={1}
-          inputMode="numeric"
           aria-label="RPE"
           value={rpe}
           onInput={(event) => onRpeChange?.((event.currentTarget as HTMLInputElement).value)}
