@@ -1,5 +1,7 @@
 import type { RecommendationReason } from '../types'
 
+type RecommendationExercise = 'plank' | 'squat' | 'pushup' | 'deadhang'
+
 const RECOMMENDATION_REASON_TEXT: Record<RecommendationReason, string> = {
   failure_streak: '최근 3일 미달성으로 회복을 위해 감량',
   high_fatigue_hold: '피로도 높음(>0.85)으로 목표 유지',
@@ -9,6 +11,17 @@ const RECOMMENDATION_REASON_TEXT: Record<RecommendationReason, string> = {
   neutral_progression: '중립 강도(5~6)로 기본 증량',
 }
 
-export function getRecommendationReasonText(reason: RecommendationReason): string {
+const DEADHANG_REASON_TEXT: Partial<Record<RecommendationReason, string>> = {
+  failure_streak: '최근 3일 Deadhang 미달성으로 회복을 위해 감량',
+  high_fatigue_hold: 'Deadhang 피로도 높음(>0.85)으로 목표 유지',
+}
+
+export function getRecommendationReasonText(
+  reason: RecommendationReason,
+  exercise: RecommendationExercise = 'plank',
+): string {
+  if (exercise === 'deadhang') {
+    return DEADHANG_REASON_TEXT[reason] ?? RECOMMENDATION_REASON_TEXT[reason]
+  }
   return RECOMMENDATION_REASON_TEXT[reason]
 }

@@ -8,10 +8,12 @@ function sampleRecord(): DailyRecord {
     plank: { target_sec: 60, actual_sec: 75, success: true },
     squat: { target_reps: 20, actual_reps: 18, success: false },
     pushup: { target_reps: 15, actual_reps: 12, success: false },
+    deadhang: { target_sec: 30, actual_sec: 40, success: true },
     fatigue: 0.42,
     F_P: 0.31,
     F_S: 0.28,
     F_U: 0.33,
+    F_D: 0.2,
     F_total_raw: 0.5,
     inactive_time_ratio: 0.1,
     flag_suspicious: true,
@@ -20,12 +22,13 @@ function sampleRecord(): DailyRecord {
 
 test('buildHealthPayload computes duration with reps conversion (2 sec per rep)', () => {
   const payload = buildHealthPayload(sampleRecord())
-  const expectedDuration = 75 + 2 * (18 + 12)
+  const expectedDuration = 75 + 40 + 2 * (18 + 12)
 
   expect(payload.duration_sec).toBe(expectedDuration)
   expect(payload.plank_actual_sec).toBe(75)
   expect(payload.squat_actual_reps).toBe(18)
   expect(payload.pushup_actual_reps).toBe(12)
+  expect(payload.deadhang_actual_sec).toBe(40)
 })
 
 test('buildShortcutRunUrl encodes shortcut name and payload JSON in text input', () => {

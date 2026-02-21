@@ -1,6 +1,8 @@
 import type { PlankState } from '../types'
 
 interface PlankTimerProps {
+  title?: string
+  idPrefix?: string
   elapsedMs?: number
   targetSec?: number
   state?: PlankState
@@ -8,6 +10,7 @@ interface PlankTimerProps {
   tomorrowTargetSec?: number
   tomorrowDeltaSec?: number
   recommendationReasonText?: string
+  startDisabled?: boolean
   onStart?: () => void
   onPause?: () => void
   onResume?: () => void
@@ -28,6 +31,8 @@ function formatTime(ms: number): string {
 }
 
 export default function PlankTimer({
+  title = 'Plank Timer',
+  idPrefix = 'plank',
   elapsedMs = 0,
   targetSec = 0,
   state = 'IDLE',
@@ -35,6 +40,7 @@ export default function PlankTimer({
   tomorrowTargetSec = 0,
   tomorrowDeltaSec = 0,
   recommendationReasonText = '',
+  startDisabled = false,
   onStart,
   onPause,
   onResume,
@@ -51,7 +57,7 @@ export default function PlankTimer({
       case 'IDLE':
         return (
           <div className="timer-controls">
-            <button type="button" className="btn btn--primary" onClick={onStart}>Start</button>
+            <button type="button" className="btn btn--primary" onClick={onStart} disabled={startDisabled}>Start</button>
           </div>
         )
       case 'RUNNING':
@@ -87,18 +93,18 @@ export default function PlankTimer({
 
   return (
     <div className={`plank-timer plank-timer--${state.toLowerCase()}`}>
-      <h2>Plank Timer</h2>
+      <h2>{title}</h2>
       <div className="timer-target">Target: {targetSec}s</div>
       <div className="reps-input-row">
-        <label className="reps-input-label" htmlFor="plank-rpe">RPE (1-10): {rpe}</label>
+        <label className="reps-input-label" htmlFor={`${idPrefix}-rpe`}>RPE (1-10): {rpe}</label>
         <input
-          id="plank-rpe"
+          id={`${idPrefix}-rpe`}
           className="rpe-slider"
           type="range"
           min={1}
           max={10}
           step={1}
-          aria-label="Plank RPE"
+          aria-label={`${title} RPE`}
           value={rpe}
           onInput={(event) => onRpeChange?.((event.currentTarget as HTMLInputElement).value)}
         />

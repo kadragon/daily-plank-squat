@@ -247,11 +247,31 @@
 - [x] App interaction: plank/squat/pushup RPE input changes persist to today record
 - [x] App rendering: workout views show recommendation reason text
 
+## Add Deadhang as Fourth Exercise
+
+> Add Deadhang as a fourth time-based workout, reuse Plank timer UI/model, and integrate into persistence, fatigue, summary/stats, and health export.
+
+- [x] Types add deadhang/F_D/base_D and tomorrow deadhang fields
+- [x] Storage loads missing deadhang with neutral defaults and missing F_D as 0
+- [x] PlankTimer supports title/idPrefix/startDisabled props with backward-compatible defaults
+- [x] Fatigue model computes ALPHA_D, 4-exercise shared fatigue, and deadhang tomorrow targets
+- [x] GoalAlerts supports deadhang one-time goal trigger
+- [x] Stats model aggregates and series-map deadhang actual seconds
+- [x] Apple Health payload exports deadhang_actual_sec and includes deadhang in duration_sec
+- [x] DailySummary renders deadhang target/status and tomorrow target
+- [x] WorkoutStats renders Total deadhang and Deadhang chart
+- [x] App navigation adds deadhang tab between pushup and summary
+- [x] App integrates deadhang timer state, handlers, persistence, and rendering
+- [x] App enforces single running timed workout (plank/deadhang start disabled while other running)
+- [x] App wake lock stays active when either timed workout is RUNNING
+- [x] App suspicious calculation uses max(plankInactiveRatio, deadhangInactiveRatio)
+- [x] Korean locale supports deadhang-specific recommendation reason text
+
 ## Stats Page & Immediate Save
 
 > Prevent record loss and provide visual history for plank, squat, and pushup performance.
 
-- [ ] Uses local date key (YYYY-MM-DD) for today record lookup
+- [x] Uses local date key (YYYY-MM-DD) for today record lookup
 - [ ] Saves/updates today record when squat inputs change
 - [ ] Saves/updates today record when pushup inputs change
 - [ ] Saves/updates today record when plank completes or cancels

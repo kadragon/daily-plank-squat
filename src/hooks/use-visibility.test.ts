@@ -7,7 +7,7 @@ test('visibilitychange hidden during RUNNING stores timestamp', () => {
   onVisibilityChange({
     tracker,
     isHidden: true,
-    plankState: 'RUNNING',
+    timerState: 'RUNNING',
     now: 1000,
   })
 
@@ -19,14 +19,14 @@ test('visibilitychange visible accumulates hidden duration', () => {
   onVisibilityChange({
     tracker,
     isHidden: true,
-    plankState: 'RUNNING',
+    timerState: 'RUNNING',
     now: 1000,
   })
 
   onVisibilityChange({
     tracker,
     isHidden: false,
-    plankState: 'RUNNING',
+    timerState: 'RUNNING',
     now: 2500,
   })
 
@@ -39,7 +39,7 @@ test('inactive ratio includes in-flight hidden duration', () => {
   onVisibilityChange({
     tracker,
     isHidden: true,
-    plankState: 'RUNNING',
+    timerState: 'RUNNING',
     now: 1000,
   })
 

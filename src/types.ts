@@ -40,10 +40,12 @@ export interface DailyRecord {
   plank: ExerciseRecord
   squat: SquatRecord
   pushup: PushupRecord
+  deadhang: ExerciseRecord
   fatigue: number // sigmoid fatigue score [0, 1]
   F_P: number // plank EWMA fatigue
   F_S: number // squat EWMA fatigue
   F_U: number // pushup EWMA fatigue
+  F_D: number // deadhang EWMA fatigue
   F_total_raw: number
   inactive_time_ratio: number
   flag_suspicious: boolean
@@ -57,6 +59,7 @@ export interface HealthShortcutPayload {
   plank_actual_sec: number
   squat_actual_reps: number
   pushup_actual_reps: number
+  deadhang_actual_sec: number
   fatigue: number
   flag_suspicious: boolean
   source: string
@@ -75,18 +78,21 @@ export interface FatigueHistory {
   plank: ExerciseRecord[]
   squat: SquatRecord[]
   pushup: PushupRecord[]
+  deadhang: ExerciseRecord[]
 }
 
 export interface BaseTargets {
   base_P: number
   base_S: number
   base_U: number
+  base_D: number
 }
 
 export interface FatigueSnapshot {
   F_P: number
   F_S: number
   F_U: number
+  F_D: number
   F_total_raw: number
   F_total_adj: number
   fatigue: number
@@ -105,13 +111,16 @@ export interface TomorrowPlan {
   plank_target_sec: number
   squat_target_reps: number
   pushup_target_reps: number
+  deadhang_target_sec: number
   plank_reason: RecommendationReason
   squat_reason: RecommendationReason
   pushup_reason: RecommendationReason
+  deadhang_reason: RecommendationReason
   fatigue: number
   F_P: number
   F_S: number
   F_U: number
+  F_D: number
   F_total_raw: number
   overload_warning: boolean
 }

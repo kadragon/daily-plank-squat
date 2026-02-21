@@ -1,4 +1,4 @@
-export type GoalExercise = 'plank' | 'squat' | 'pushup'
+export type GoalExercise = 'plank' | 'squat' | 'pushup' | 'deadhang'
 
 type PlayGoalSound = (goal: GoalExercise) => void
 
@@ -6,6 +6,7 @@ export interface GoalAlerts {
   onPlankProgress(actualSec: number, targetSec: number): void
   onSquatProgress(actualReps: number, targetReps: number): void
   onPushupProgress(actualReps: number, targetReps: number): void
+  onDeadhangProgress(actualSec: number, targetSec: number): void
 }
 
 export function playGoalFeedback(): void {
@@ -38,6 +39,7 @@ export function createGoalAlerts(playGoalSound: PlayGoalSound): GoalAlerts {
   let plankAlerted = false
   let squatAlerted = false
   let pushupAlerted = false
+  let deadhangAlerted = false
 
   return {
     onPlankProgress(actualSec, targetSec) {
@@ -56,6 +58,12 @@ export function createGoalAlerts(playGoalSound: PlayGoalSound): GoalAlerts {
       if (!pushupAlerted && actualReps >= targetReps) {
         pushupAlerted = true
         playGoalSound('pushup')
+      }
+    },
+    onDeadhangProgress(actualSec, targetSec) {
+      if (!deadhangAlerted && actualSec >= targetSec) {
+        deadhangAlerted = true
+        playGoalSound('deadhang')
       }
     },
   }

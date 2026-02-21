@@ -63,10 +63,12 @@ function seedTodayRecord(overrides: Partial<DailyRecord> = {}) {
     plank: { target_sec: 60, actual_sec: 63, success: true },
     squat: { target_reps: 20, actual_reps: 21, success: true },
     pushup: { target_reps: 15, actual_reps: 16, success: true },
+    deadhang: { target_sec: 30, actual_sec: 31, success: true },
     fatigue: 0.2,
     F_P: 0.2,
     F_S: 0.2,
     F_U: 0.2,
+    F_D: 0.2,
     F_total_raw: 0.2,
     inactive_time_ratio: 0.1,
     flag_suspicious: false,
@@ -139,6 +141,18 @@ test('Tap navigation can open stats tab', () => {
 
   expect(view.getByText('Workout Stats')).toBeTruthy()
   expect(statsTab.getAttribute('aria-current')).toBe('page')
+})
+
+test('Tap navigation can open deadhang tab', () => {
+  const view = render(<App initialView="plank" />)
+  const deadhangTab = Array.from(view.container.querySelectorAll('button'))
+    .find((button) => button.querySelector('.app-tabbar__label')?.textContent?.trim() === 'Deadhang')
+  if (!deadhangTab) throw new Error('deadhang tab button not found')
+
+  fireEvent.click(deadhangTab)
+
+  expect(view.getByText('Deadhang Timer')).toBeTruthy()
+  expect(deadhangTab.getAttribute('aria-current')).toBe('page')
 })
 
 test('Pointer up from a different pointer id does not trigger swipe navigation', () => {
@@ -255,6 +269,40 @@ test('Changing plank rpe immediately saves today record', async () => {
   })
 })
 
+test('Changing deadhang rpe immediately saves today record', async () => {
+  const view = render(<App initialView="deadhang" />)
+  const rpeInput = view.container.querySelector('#deadhang-rpe')
+  if (!rpeInput) throw new Error('deadhang rpe input not found')
+
+  setNumberInputValue(rpeInput, '6')
+  await waitFor(() => {
+    const stored = readStoredRecords()
+    expect(stored).toHaveLength(1)
+    expect(stored[0]?.deadhang.rpe).toBe(6)
+  })
+})
+
+test('Deadhang start is disabled when plank is running', () => {
+  const view = render(<App initialView="deadhang" initialPlankState="RUNNING" />)
+  const startButton = view.getByRole('button', { name: 'Start' })
+
+  expect(startButton.hasAttribute('disabled')).toBe(true)
+})
+
+test('Plank start is disabled while deadhang is running', () => {
+  const view = render(<App initialView="deadhang" />)
+  const deadhangStartButton = view.getByRole('button', { name: 'Start' })
+  fireEvent.click(deadhangStartButton)
+
+  const plankTab = Array.from(view.container.querySelectorAll('button'))
+    .find((button) => button.querySelector('.app-tabbar__label')?.textContent?.trim() === 'Plank')
+  if (!plankTab) throw new Error('plank tab button not found')
+  fireEvent.click(plankTab)
+
+  const plankStartButton = view.getByRole('button', { name: 'Start' })
+  expect(plankStartButton.hasAttribute('disabled')).toBe(true)
+})
+
 test('Complete click shows save feedback lifecycle for squat', async () => {
   const view = render(<App initialView="squat" />)
   const completeButton = view.getByRole('button', { name: 'Complete squats' })
@@ -329,6 +377,7 @@ test('Partial today record without plank log keeps plank view in IDLE', () => {
     plank: { target_sec: 60, actual_sec: 0, success: false },
     squat: { target_reps: 20, actual_reps: 12, success: false },
     pushup: { target_reps: 15, actual_reps: 0, success: false },
+    deadhang: { target_sec: 30, actual_sec: 0, success: false },
   })
 
   const view = render(<App initialView="plank" />)

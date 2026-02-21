@@ -27,10 +27,24 @@ import type { BaseTargets, DailyRecord, FatigueParams, PlankState, Recommendatio
 import { getTodayDateKey } from './utils/date-key'
 import { NEUTRAL_RPE, normalizeRpe } from './utils/rpe'
 
-type AppView = 'plank' | 'squat' | 'pushup' | 'summary' | 'stats'
+type AppView = 'plank' | 'squat' | 'pushup' | 'deadhang' | 'summary' | 'stats'
 type PersistReason = 'general' | 'squat-complete' | 'pushup-complete'
 type CompleteSaveFeedbackTarget = 'squat' | 'pushup'
 type SaveFeedbackTone = 'info' | 'success' | 'error'
+type TimedWorkoutResult = { actualSec: number, success: boolean }
+
+interface UseTimedWorkoutOptions {
+  state: PlankState
+  targetSec: number
+  timerRef: { current: DomainPlankTimer | null }
+  setElapsedMs: (elapsedMs: number) => void
+  onProgressSeconds: (elapsedSec: number) => void
+  setResult: (result: TimedWorkoutResult) => void
+  setLogged: (logged: boolean) => void
+  completedElapsedMsRef: { current: number }
+  syncState: (now?: number) => void
+  requestPersist: () => void
+}
 
 interface NavItemMeta {
   view: AppView
@@ -48,8 +62,11 @@ interface InitialAppState {
   plankTargetSec: number
   squatTargetReps: number
   pushupTargetReps: number
+  deadhangTargetSec: number
   plankActualSec: number
   plankSuccess: boolean
+  deadhangActualSec: number
+  deadhangSuccess: boolean
   squatActualReps: number
   squatSuccess: boolean
   pushupActualReps: number
@@ -57,23 +74,29 @@ interface InitialAppState {
   plankRpe: number
   squatRpe: number
   pushupRpe: number
+  deadhangRpe: number
   fatigue: number
   overloadWarning: boolean
   suspiciousSession: boolean
   tomorrowPlankTargetSec: number
   tomorrowSquatTargetReps: number
   tomorrowPushupTargetReps: number
+  tomorrowDeadhangTargetSec: number
   tomorrowPlankReason: RecommendationReason
   tomorrowSquatReason: RecommendationReason
   tomorrowPushupReason: RecommendationReason
+  tomorrowDeadhangReason: RecommendationReason
   plankState: PlankState
+  deadhangState: PlankState
   alreadyLoggedPlankToday: boolean
+  alreadyLoggedDeadhangToday: boolean
 }
 
 const BASE_TARGETS: BaseTargets = {
   base_P: 60,
   base_S: 20,
   base_U: 15,
+  base_D: 30,
 }
 
 const DEFAULT_PARAMS: FatigueParams = {
@@ -82,12 +105,13 @@ const DEFAULT_PARAMS: FatigueParams = {
   gender: 'other',
 }
 
-const NAV_VIEWS = ['plank', 'squat', 'pushup', 'summary', 'stats'] as const satisfies readonly AppView[]
+const NAV_VIEWS = ['plank', 'squat', 'pushup', 'deadhang', 'summary', 'stats'] as const satisfies readonly AppView[]
 
 const NAV_ITEMS: readonly NavItemMeta[] = [
   { view: 'plank', label: 'Plank' },
   { view: 'squat', label: 'Squat' },
   { view: 'pushup', label: 'Pushup' },
+  { view: 'deadhang', label: 'Deadhang' },
   { view: 'summary', label: 'Summary' },
   { view: 'stats', label: 'Stats' },
 ]
@@ -97,7 +121,7 @@ const HEALTH_EXPORT_ERROR_HINT = 'Could not open Shortcuts. Check that Apple Sho
 const SUSPICIOUS_EXPORT_HINT = '기록은 가능하지만 측정 환경 경고'
 
 function isWorkoutView(view: AppView): boolean {
-  return view === 'plank' || view === 'squat' || view === 'pushup'
+  return view === 'plank' || view === 'squat' || view === 'pushup' || view === 'deadhang'
 }
 
 function isScrollableView(view: AppView): boolean {
@@ -123,6 +147,8 @@ function TabIcon({ view }: { view: AppView }) {
       return <span className="app-tabbar__icon" aria-hidden="true">🏋️</span>
     case 'pushup':
       return <span className="app-tabbar__icon" aria-hidden="true">💪</span>
+    case 'deadhang':
+      return <span className="app-tabbar__icon" aria-hidden="true">🧗</span>
     case 'summary':
       return <span className="app-tabbar__icon" aria-hidden="true">📝</span>
     case 'stats':
@@ -134,6 +160,59 @@ function TabIcon({ view }: { view: AppView }) {
 
 function nowMs(): number {
   return typeof performance !== 'undefined' ? performance.now() : Date.now()
+}
+
+function useTimedWorkout({
+  state,
+  targetSec,
+  timerRef,
+  setElapsedMs,
+  onProgressSeconds,
+  setResult,
+  setLogged,
+  completedElapsedMsRef,
+  syncState,
+  requestPersist,
+}: UseTimedWorkoutOptions): void {
+  useEffect(() => {
+    if (state !== 'RUNNING') return undefined
+
+    let frameId = 0
+    const tick = () => {
+      const now = nowMs()
+      const currentElapsed = timerRef.current?.getCurrentElapsed(now) ?? 0
+      setElapsedMs(currentElapsed)
+      onProgressSeconds(Math.floor(currentElapsed / 1000))
+
+      if (currentElapsed >= targetSec * 1000) {
+        const result = timerRef.current?.complete(now)
+        if (result) {
+          completedElapsedMsRef.current = timerRef.current?.getCurrentElapsed(now) ?? currentElapsed
+          setResult({ actualSec: result.actual_sec, success: result.success })
+          setLogged(true)
+          requestPersist()
+        }
+        syncState(now)
+        return
+      }
+
+      frameId = requestAnimationFrame(tick)
+    }
+
+    frameId = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(frameId)
+  }, [
+    state,
+    targetSec,
+    timerRef,
+    setElapsedMs,
+    onProgressSeconds,
+    setResult,
+    setLogged,
+    completedElapsedMsRef,
+    syncState,
+    requestPersist,
+  ])
 }
 
 function todayKey(): string {
@@ -149,6 +228,11 @@ function isPlankLogged(record: DailyRecord | null): boolean {
   return record.plank.success || record.plank.actual_sec > 0
 }
 
+function isDeadhangLogged(record: DailyRecord | null): boolean {
+  if (!record) return false
+  return record.deadhang.success || record.deadhang.actual_sec > 0
+}
+
 function createInitialAppState(initialPlankState?: PlankState): InitialAppState {
   const records = loadAllRecords()
   const today = todayKey()
@@ -160,20 +244,25 @@ function createInitialAppState(initialPlankState?: PlankState): InitialAppState 
       plank_target_sec: todayRecord.plank.target_sec,
       squat_target_reps: todayRecord.squat.target_reps,
       pushup_target_reps: todayRecord.pushup.target_reps,
+      deadhang_target_sec: todayRecord.deadhang.target_sec,
       fatigue: todayRecord.fatigue,
     }
     : computeTomorrowPlan(historyBeforeToday, DEFAULT_PARAMS, BASE_TARGETS)
 
   const tomorrowPlan = computeTomorrowPlan(records, DEFAULT_PARAMS, BASE_TARGETS)
   const plankLoggedToday = isPlankLogged(todayRecord)
+  const deadhangLoggedToday = isDeadhangLogged(todayRecord)
 
   return {
     records,
     plankTargetSec: todayTargets.plank_target_sec,
     squatTargetReps: todayTargets.squat_target_reps,
     pushupTargetReps: todayTargets.pushup_target_reps,
+    deadhangTargetSec: todayTargets.deadhang_target_sec,
     plankActualSec: todayRecord?.plank.actual_sec ?? 0,
     plankSuccess: todayRecord?.plank.success ?? false,
+    deadhangActualSec: todayRecord?.deadhang.actual_sec ?? 0,
+    deadhangSuccess: todayRecord?.deadhang.success ?? false,
     squatActualReps: todayRecord?.squat.actual_reps ?? 0,
     squatSuccess: todayRecord?.squat.success ?? false,
     pushupActualReps: todayRecord?.pushup.actual_reps ?? 0,
@@ -181,17 +270,22 @@ function createInitialAppState(initialPlankState?: PlankState): InitialAppState 
     plankRpe: todayRecord?.plank.rpe ?? NEUTRAL_RPE,
     squatRpe: todayRecord?.squat.rpe ?? NEUTRAL_RPE,
     pushupRpe: todayRecord?.pushup.rpe ?? NEUTRAL_RPE,
+    deadhangRpe: todayRecord?.deadhang.rpe ?? NEUTRAL_RPE,
     fatigue: todayRecord?.fatigue ?? todayTargets.fatigue,
     overloadWarning: todayRecord ? tomorrowPlan.overload_warning : false,
     suspiciousSession: todayRecord?.flag_suspicious ?? false,
     tomorrowPlankTargetSec: tomorrowPlan.plank_target_sec,
     tomorrowSquatTargetReps: tomorrowPlan.squat_target_reps,
     tomorrowPushupTargetReps: tomorrowPlan.pushup_target_reps,
+    tomorrowDeadhangTargetSec: tomorrowPlan.deadhang_target_sec,
     tomorrowPlankReason: tomorrowPlan.plank_reason,
     tomorrowSquatReason: tomorrowPlan.squat_reason,
     tomorrowPushupReason: tomorrowPlan.pushup_reason,
+    tomorrowDeadhangReason: tomorrowPlan.deadhang_reason,
     plankState: initialPlankState ?? (plankLoggedToday ? (todayRecord?.plank.success ? 'COMPLETED' : 'CANCELLED') : 'IDLE'),
+    deadhangState: deadhangLoggedToday ? (todayRecord?.deadhang.success ? 'COMPLETED' : 'CANCELLED') : 'IDLE',
     alreadyLoggedPlankToday: plankLoggedToday,
+    alreadyLoggedDeadhangToday: deadhangLoggedToday,
   }
 }
 
@@ -200,17 +294,23 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
   const today = useMemo(() => todayKey(), [])
 
   const plankTimerRef = useRef<DomainPlankTimer | null>(null)
+  const deadhangTimerRef = useRef<DomainPlankTimer | null>(null)
   const squatCounterRef = useRef<DomainSquatCounter | null>(null)
   const pushupCounterRef = useRef<DomainSquatCounter | null>(null)
-  const visibilityTrackerRef = useRef(createVisibilityTracker())
+  const plankVisibilityTrackerRef = useRef(createVisibilityTracker())
+  const deadhangVisibilityTrackerRef = useRef(createVisibilityTracker())
   const wakeLockSentinelRef = useRef<WakeLockSentinelLike | null>(null)
   const goalAlertsRef = useRef(createGoalAlerts(() => playGoalFeedback()))
   const lastSavedSnapshotRef = useRef('')
-  const completedElapsedMsRef = useRef(initial.plankActualSec * 1000)
+  const completedPlankElapsedMsRef = useRef(initial.plankActualSec * 1000)
+  const completedDeadhangElapsedMsRef = useRef(initial.deadhangActualSec * 1000)
   const swipeStartRef = useRef<{ x: number, y: number, pointerId: number, ignore: boolean } | null>(null)
 
   if (plankTimerRef.current === null) {
     plankTimerRef.current = createPlankTimer()
+  }
+  if (deadhangTimerRef.current === null) {
+    deadhangTimerRef.current = createPlankTimer()
   }
   if (squatCounterRef.current === null) {
     squatCounterRef.current = createSquatCounter()
@@ -224,10 +324,15 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
   const [records, setRecords] = useState<DailyRecord[]>(initial.records)
   const [view, setView] = useState<AppView>(initialView)
   const [plankState, setPlankState] = useState<PlankState>(initial.plankState)
-  const [elapsedMs, setElapsedMs] = useState(initial.plankActualSec * 1000)
+  const [plankElapsedMs, setPlankElapsedMs] = useState(initial.plankActualSec * 1000)
   const [plankResult, setPlankResult] = useState({ actualSec: initial.plankActualSec, success: initial.plankSuccess })
   const [plankLogged, setPlankLogged] = useState(initial.alreadyLoggedPlankToday)
   const [plankRpe, setPlankRpe] = useState(initial.plankRpe)
+  const [deadhangState, setDeadhangState] = useState<PlankState>(initial.deadhangState)
+  const [deadhangElapsedMs, setDeadhangElapsedMs] = useState(initial.deadhangActualSec * 1000)
+  const [deadhangResult, setDeadhangResult] = useState({ actualSec: initial.deadhangActualSec, success: initial.deadhangSuccess })
+  const [deadhangLogged, setDeadhangLogged] = useState(initial.alreadyLoggedDeadhangToday)
+  const [deadhangRpe, setDeadhangRpe] = useState(initial.deadhangRpe)
 
   const [squatCount, setSquatCount] = useState(initial.squatActualReps)
   const [squatSuccess, setSquatSuccess] = useState(initial.squatSuccess)
@@ -238,6 +343,7 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
   const [pushupRpe, setPushupRpe] = useState(initial.pushupRpe)
 
   const [plankTargetSec] = useState(initial.plankTargetSec)
+  const [deadhangTargetSec] = useState(initial.deadhangTargetSec)
   const [squatTargetReps, setSquatTargetReps] = useState(initial.squatTargetReps)
   const [pushupTargetReps, setPushupTargetReps] = useState(initial.pushupTargetReps)
   const [fatigue, setFatigue] = useState(initial.fatigue)
@@ -249,9 +355,11 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
     plank: initial.tomorrowPlankTargetSec,
     squat: initial.tomorrowSquatTargetReps,
     pushup: initial.tomorrowPushupTargetReps,
+    deadhang: initial.tomorrowDeadhangTargetSec,
     plankReason: initial.tomorrowPlankReason,
     squatReason: initial.tomorrowSquatReason,
     pushupReason: initial.tomorrowPushupReason,
+    deadhangReason: initial.tomorrowDeadhangReason,
   })
   const todayRecord = useMemo(() => records.find((record) => record.date === today) ?? null, [records, today])
   const summaryHealthHint = healthExportHint || (todayRecord?.flag_suspicious ? SUSPICIOUS_EXPORT_HINT : '')
@@ -295,16 +403,22 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
 
   const syncPlankState = useCallback((now = nowMs()) => {
     setPlankState(plankTimerRef.current?.state() ?? 'IDLE')
-    setElapsedMs(plankTimerRef.current?.getCurrentElapsed(now) ?? 0)
+    setPlankElapsedMs(plankTimerRef.current?.getCurrentElapsed(now) ?? 0)
+  }, [])
+
+  const syncDeadhangState = useCallback((now = nowMs()) => {
+    setDeadhangState(deadhangTimerRef.current?.state() ?? 'IDLE')
+    setDeadhangElapsedMs(deadhangTimerRef.current?.getCurrentElapsed(now) ?? 0)
   }, [])
 
   function handlePlankStart() {
-    visibilityTrackerRef.current = createVisibilityTracker()
+    if (deadhangState === 'RUNNING') return
+    plankVisibilityTrackerRef.current = createVisibilityTracker()
     plankTimerRef.current?.start(nowMs())
     setPlankResult({ actualSec: 0, success: false })
     setPlankLogged(false)
     setSuspiciousSession(false)
-    completedElapsedMsRef.current = 0
+    completedPlankElapsedMsRef.current = 0
     syncPlankState()
   }
 
@@ -323,12 +437,46 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
     const result = plankTimerRef.current?.cancel(now)
     if (result) {
       const elapsed = plankTimerRef.current?.getCurrentElapsed(now) ?? 0
-      completedElapsedMsRef.current = elapsed
+      completedPlankElapsedMsRef.current = elapsed
       setPlankResult({ actualSec: result.actual_sec, success: false })
       setPlankLogged(true)
       requestPersist()
     }
     syncPlankState()
+  }
+
+  function handleDeadhangStart() {
+    if (plankState === 'RUNNING') return
+    deadhangVisibilityTrackerRef.current = createVisibilityTracker()
+    deadhangTimerRef.current?.start(nowMs())
+    setDeadhangResult({ actualSec: 0, success: false })
+    setDeadhangLogged(false)
+    setSuspiciousSession(false)
+    completedDeadhangElapsedMsRef.current = 0
+    syncDeadhangState()
+  }
+
+  function handleDeadhangPause() {
+    deadhangTimerRef.current?.pause(nowMs())
+    syncDeadhangState()
+  }
+
+  function handleDeadhangResume() {
+    deadhangTimerRef.current?.resume(nowMs())
+    syncDeadhangState()
+  }
+
+  function handleDeadhangCancel() {
+    const now = nowMs()
+    const result = deadhangTimerRef.current?.cancel(now)
+    if (result) {
+      const elapsed = deadhangTimerRef.current?.getCurrentElapsed(now) ?? 0
+      completedDeadhangElapsedMsRef.current = elapsed
+      setDeadhangResult({ actualSec: result.actual_sec, success: false })
+      setDeadhangLogged(true)
+      requestPersist()
+    }
+    syncDeadhangState()
   }
 
   function handleSquatDoneRepsChange(rawValue: string) {
@@ -344,6 +492,11 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
 
   function handlePlankRpeChange(rawValue: string) {
     setPlankRpe(normalizeRpe(Number(rawValue)))
+    requestPersist()
+  }
+
+  function handleDeadhangRpeChange(rawValue: string) {
+    setDeadhangRpe(normalizeRpe(Number(rawValue)))
     requestPersist()
   }
 
@@ -456,49 +609,61 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
     swipeStartRef.current = null
   }
 
-  useEffect(() => {
-    if (plankState !== 'RUNNING') return undefined
+  const onPlankProgressSeconds = useCallback((elapsedSec: number) => {
+    goalAlertsRef.current.onPlankProgress(elapsedSec, plankTargetSec)
+  }, [plankTargetSec])
 
-    let frameId = 0
-    const tick = () => {
-      const now = nowMs()
-      const currentElapsed = plankTimerRef.current?.getCurrentElapsed(now) ?? 0
-      setElapsedMs(currentElapsed)
+  const onDeadhangProgressSeconds = useCallback((elapsedSec: number) => {
+    goalAlertsRef.current.onDeadhangProgress(elapsedSec, deadhangTargetSec)
+  }, [deadhangTargetSec])
 
-      goalAlertsRef.current.onPlankProgress(Math.floor(currentElapsed / 1000), plankTargetSec)
+  useTimedWorkout({
+    state: plankState,
+    targetSec: plankTargetSec,
+    timerRef: plankTimerRef,
+    setElapsedMs: setPlankElapsedMs,
+    onProgressSeconds: onPlankProgressSeconds,
+    setResult: setPlankResult,
+    setLogged: setPlankLogged,
+    completedElapsedMsRef: completedPlankElapsedMsRef,
+    syncState: syncPlankState,
+    requestPersist,
+  })
 
-      if (currentElapsed >= plankTargetSec * 1000) {
-        const result = plankTimerRef.current?.complete(now)
-        if (result) {
-          completedElapsedMsRef.current = plankTimerRef.current?.getCurrentElapsed(now) ?? currentElapsed
-          setPlankResult({ actualSec: result.actual_sec, success: true })
-          setPlankLogged(true)
-          requestPersist()
-        }
-        syncPlankState(now)
-        return
-      }
-
-      frameId = requestAnimationFrame(tick)
-    }
-
-    frameId = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(frameId)
-  }, [plankState, plankTargetSec, syncPlankState, requestPersist])
+  useTimedWorkout({
+    state: deadhangState,
+    targetSec: deadhangTargetSec,
+    timerRef: deadhangTimerRef,
+    setElapsedMs: setDeadhangElapsedMs,
+    onProgressSeconds: onDeadhangProgressSeconds,
+    setResult: setDeadhangResult,
+    setLogged: setDeadhangLogged,
+    completedElapsedMsRef: completedDeadhangElapsedMsRef,
+    syncState: syncDeadhangState,
+    requestPersist,
+  })
 
   useEffect(() => {
     if (typeof document === 'undefined') return undefined
 
     const onChange = () => {
+      const now = nowMs()
       onVisibilityChange({
-        tracker: visibilityTrackerRef.current,
+        tracker: plankVisibilityTrackerRef.current,
         isHidden: document.hidden,
-        plankState,
-        now: nowMs(),
+        timerState: plankState,
+        now,
+      })
+      onVisibilityChange({
+        tracker: deadhangVisibilityTrackerRef.current,
+        isHidden: document.hidden,
+        timerState: deadhangState,
+        now,
       })
 
       if (!document.hidden) {
-        setElapsedMs(plankTimerRef.current?.getCurrentElapsed(nowMs()) ?? 0)
+        setPlankElapsedMs(plankTimerRef.current?.getCurrentElapsed(now) ?? 0)
+        setDeadhangElapsedMs(deadhangTimerRef.current?.getCurrentElapsed(now) ?? 0)
       }
     }
 
@@ -506,25 +671,27 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
     return () => {
       document.removeEventListener('visibilitychange', onChange)
     }
-  }, [plankState])
+  }, [plankState, deadhangState])
 
   useEffect(() => {
     let isDisposed = false
     const wakeLock = getWakeLock()
+    const hasRunningTimer = plankState === 'RUNNING' || deadhangState === 'RUNNING'
+    const wakeLockState: PlankState = hasRunningTimer ? 'RUNNING' : 'COMPLETED'
 
     async function sync() {
       try {
-        const next = await syncWakeLock(plankState, wakeLockSentinelRef.current, wakeLock)
+        const next = await syncWakeLock(wakeLockState, wakeLockSentinelRef.current, wakeLock)
         if (!isDisposed) {
           wakeLockSentinelRef.current = next
-          if (plankState === 'RUNNING' && !wakeLock) {
+          if (hasRunningTimer && !wakeLock) {
             setWakeLockNotice('Wake Lock is not supported on this device. Keep the screen on manually.')
           } else {
             setWakeLockNotice('')
           }
         }
       } catch {
-        if (!isDisposed && plankState === 'RUNNING') {
+        if (!isDisposed && hasRunningTimer) {
           setWakeLockNotice('Wake Lock could not be acquired. Keep the screen on manually.')
         }
       }
@@ -534,7 +701,7 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
     return () => {
       isDisposed = true
     }
-  }, [plankState])
+  }, [plankState, deadhangState])
 
   useEffect(() => {
     if (persistRequest.id === 0) return
@@ -550,11 +717,18 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
       }, 120)
     }
 
-    const sessionElapsedMs = plankLogged ? (completedElapsedMsRef.current || plankResult.actualSec * 1000) : 0
-    const inactiveTimeRatio = plankLogged
-      ? getInactiveTimeRatio(visibilityTrackerRef.current, sessionElapsedMs, nowMs())
+    const plankSessionElapsedMs = plankLogged ? (completedPlankElapsedMsRef.current || plankResult.actualSec * 1000) : 0
+    const deadhangSessionElapsedMs = deadhangLogged
+      ? (completedDeadhangElapsedMsRef.current || deadhangResult.actualSec * 1000)
       : 0
-    const flagSuspicious = plankLogged ? inactiveTimeRatio > 0.5 : false
+    const plankInactiveTimeRatio = plankLogged
+      ? getInactiveTimeRatio(plankVisibilityTrackerRef.current, plankSessionElapsedMs, nowMs())
+      : 0
+    const deadhangInactiveTimeRatio = deadhangLogged
+      ? getInactiveTimeRatio(deadhangVisibilityTrackerRef.current, deadhangSessionElapsedMs, nowMs())
+      : 0
+    const inactiveTimeRatio = Math.max(plankInactiveTimeRatio, deadhangInactiveTimeRatio)
+    const flagSuspicious = (plankLogged || deadhangLogged) ? inactiveTimeRatio > 0.5 : false
 
     const draftRecord: DailyRecord = {
       date: today,
@@ -576,10 +750,17 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
         success: pushupSuccess,
         rpe: pushupRpe,
       },
+      deadhang: {
+        target_sec: deadhangTargetSec,
+        actual_sec: deadhangResult.actualSec,
+        success: deadhangResult.success,
+        rpe: deadhangRpe,
+      },
       fatigue: 0,
       F_P: 0,
       F_S: 0,
       F_U: 0,
+      F_D: 0,
       F_total_raw: 0,
       inactive_time_ratio: inactiveTimeRatio,
       flag_suspicious: flagSuspicious,
@@ -594,6 +775,7 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
       F_P: snapshot.F_P,
       F_S: snapshot.F_S,
       F_U: snapshot.F_U,
+      F_D: snapshot.F_D,
       F_total_raw: snapshot.F_total_raw,
     }
 
@@ -627,9 +809,11 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
       plank: tomorrowPlan.plank_target_sec,
       squat: tomorrowPlan.squat_target_reps,
       pushup: tomorrowPlan.pushup_target_reps,
+      deadhang: tomorrowPlan.deadhang_target_sec,
       plankReason: tomorrowPlan.plank_reason,
       squatReason: tomorrowPlan.squat_reason,
       pushupReason: tomorrowPlan.pushup_reason,
+      deadhangReason: tomorrowPlan.deadhang_reason,
     })
     if (feedbackTarget) {
       scheduleCompleteSaveFeedbackSuccess(feedbackTarget)
@@ -637,17 +821,21 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
   }, [
     persistRequest,
     plankLogged,
+    deadhangLogged,
     records,
     today,
     plankTargetSec,
+    deadhangTargetSec,
     squatTargetReps,
     pushupTargetReps,
     plankResult,
+    deadhangResult,
     squatCount,
     squatSuccess,
     pushupCount,
     pushupSuccess,
     plankRpe,
+    deadhangRpe,
     squatRpe,
     pushupRpe,
     clearCompleteSaveFeedbackTimer,
@@ -663,13 +851,14 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
         return (
           <>
             <PlankTimer
-              elapsedMs={elapsedMs}
+              elapsedMs={plankElapsedMs}
               targetSec={plankTargetSec}
               state={plankState}
               rpe={plankRpe}
               tomorrowTargetSec={tomorrowTargets.plank}
               tomorrowDeltaSec={tomorrowTargets.plank - plankTargetSec}
-              recommendationReasonText={getRecommendationReasonText(tomorrowTargets.plankReason)}
+              recommendationReasonText={getRecommendationReasonText(tomorrowTargets.plankReason, 'plank')}
+              startDisabled={deadhangState === 'RUNNING'}
               onStart={handlePlankStart}
               onPause={handlePlankPause}
               onResume={handlePlankResume}
@@ -689,7 +878,7 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
               rpe={squatRpe}
               tomorrowTargetReps={tomorrowTargets.squat}
               tomorrowDeltaReps={tomorrowTargets.squat - squatTargetReps}
-              recommendationReasonText={getRecommendationReasonText(tomorrowTargets.squatReason)}
+              recommendationReasonText={getRecommendationReasonText(tomorrowTargets.squatReason, 'squat')}
               saveFeedbackText={squatSaveFeedback?.text}
               saveFeedbackTone={squatSaveFeedback?.tone}
               onDoneRepsChange={handleSquatDoneRepsChange}
@@ -712,7 +901,7 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
               rpe={pushupRpe}
               tomorrowTargetReps={tomorrowTargets.pushup}
               tomorrowDeltaReps={tomorrowTargets.pushup - pushupTargetReps}
-              recommendationReasonText={getRecommendationReasonText(tomorrowTargets.pushupReason)}
+              recommendationReasonText={getRecommendationReasonText(tomorrowTargets.pushupReason, 'pushup')}
               saveFeedbackText={pushupSaveFeedback?.text}
               saveFeedbackTone={pushupSaveFeedback?.tone}
               onDoneRepsChange={handlePushupDoneRepsChange}
@@ -722,18 +911,44 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
             />
           )
         }
+      case 'deadhang':
+        return (
+          <>
+            <PlankTimer
+              title="Deadhang Timer"
+              idPrefix="deadhang"
+              elapsedMs={deadhangElapsedMs}
+              targetSec={deadhangTargetSec}
+              state={deadhangState}
+              rpe={deadhangRpe}
+              tomorrowTargetSec={tomorrowTargets.deadhang}
+              tomorrowDeltaSec={tomorrowTargets.deadhang - deadhangTargetSec}
+              recommendationReasonText={getRecommendationReasonText(tomorrowTargets.deadhangReason, 'deadhang')}
+              startDisabled={plankState === 'RUNNING'}
+              onStart={handleDeadhangStart}
+              onPause={handleDeadhangPause}
+              onResume={handleDeadhangResume}
+              onCancel={handleDeadhangCancel}
+              onRpeChange={handleDeadhangRpeChange}
+            />
+            {wakeLockNotice ? <div className="wake-lock-notice">{wakeLockNotice}</div> : null}
+          </>
+        )
       case 'summary':
         return (
           <DailySummary
             plankTargetSec={plankTargetSec}
             squatTargetReps={squatTargetReps}
             pushupTargetReps={pushupTargetReps}
+            deadhangTargetSec={deadhangTargetSec}
             tomorrowPlankTargetSec={tomorrowTargets.plank}
             tomorrowSquatTargetReps={tomorrowTargets.squat}
             tomorrowPushupTargetReps={tomorrowTargets.pushup}
+            tomorrowDeadhangTargetSec={tomorrowTargets.deadhang}
             plankSuccess={plankResult.success}
             squatSuccess={squatSuccess}
             pushupSuccess={pushupSuccess}
+            deadhangSuccess={deadhangResult.success}
             fatigue={fatigue}
             overloadWarning={overloadWarning}
             suspiciousSession={suspiciousSession}
@@ -753,7 +968,7 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
     <div className="app">
       <div className="app-shell">
         <header className="app-header" data-swipe-ignore="true">
-          <h1 className="app-title">Daily Plank, Squat &amp; Pushup</h1>
+          <h1 className="app-title">Daily Plank, Squat, Pushup &amp; Deadhang</h1>
           <p className="app-subtitle">Train consistently. Recover intelligently.</p>
         </header>
         <main

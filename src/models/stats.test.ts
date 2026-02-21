@@ -8,10 +8,12 @@ function record(date: string, plank: number, squat: number, pushup: number): Dai
     plank: { target_sec: 60, actual_sec: plank, success: plank >= 60 },
     squat: { target_reps: 20, actual_reps: squat, success: squat >= 20 },
     pushup: { target_reps: 15, actual_reps: pushup, success: pushup >= 15 },
+    deadhang: { target_sec: 30, actual_sec: 30, success: true },
     fatigue: 0.4,
     F_P: 0.3,
     F_S: 0.2,
     F_U: 0.1,
+    F_D: 0.1,
     F_total_raw: 0.5,
     inactive_time_ratio: 0,
     flag_suspicious: false,
@@ -67,6 +69,7 @@ test('computeWorkoutTotals sums plank seconds and reps per exercise', () => {
     plankActualSec: 180,
     squatActualReps: 57,
     pushupActualReps: 43,
+    deadhangActualSec: 90,
   })
 })
 
@@ -83,18 +86,21 @@ test('buildDailyStatsSeries returns date-sorted daily values', () => {
       plankActualSec: 45,
       squatActualReps: 12,
       pushupActualReps: 8,
+      deadhangActualSec: 30,
     },
     {
       date: '2026-02-19',
       plankActualSec: 60,
       squatActualReps: 20,
       pushupActualReps: 15,
+      deadhangActualSec: 30,
     },
     {
       date: '2026-02-20',
       plankActualSec: 75,
       squatActualReps: 25,
       pushupActualReps: 20,
+      deadhangActualSec: 30,
     },
   ])
 })
