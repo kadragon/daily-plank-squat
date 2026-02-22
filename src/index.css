@@ -514,7 +514,7 @@ body {
 .nav.app-tabbar {
   margin-top: auto;
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 0.45rem;
   width: 100%;
   padding: 0.55rem 1rem;
@@ -582,6 +582,24 @@ body {
   font-size: 0.78rem;
   font-weight: 600;
   letter-spacing: 0.02em;
+}
+
+@media (max-width: 360px) {
+  .nav.app-tabbar {
+    gap: 0.2rem;
+    padding-left: max(0.5rem, env(safe-area-inset-left));
+    padding-right: max(0.5rem, env(safe-area-inset-right));
+  }
+
+  .nav-btn.app-tabbar__button {
+    min-width: 40px;
+    min-height: 54px;
+  }
+
+  .app-tabbar__label {
+    font-size: 0.72rem;
+    letter-spacing: 0.01em;
+  }
 }
 
 @media (min-width: 768px) {

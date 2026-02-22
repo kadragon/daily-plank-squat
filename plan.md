@@ -217,6 +217,7 @@
 - [x] App ignores swipe gestures that start on input/button/label
 - [x] App keeps edge swipe-right on plank as no-op
 - [x] App allows tap navigation fallback via bottom tabs
+- [x] Bottom nav keeps 6 tabs in a single row
 
 - [x] Executes iOS 17 Safari manual validation checklist (proxy-only: desktop Safari 26.2 on macOS 26.2; iOS simulator unavailable in this environment)
 
