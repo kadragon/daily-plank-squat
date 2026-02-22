@@ -39,6 +39,13 @@ test('index.css separates content and tabbar visual tokens', async () => {
   expect(css).toContain('--tabbar-border:')
 })
 
+test('bottom tabbar uses 6 equal columns for one-row navigation', async () => {
+  const css = await readIndexCss()
+  const tabbarBlock = css.match(/\.nav\.app-tabbar\s*\{([\s\S]*?)\}/)?.[1] ?? ''
+
+  expect(tabbarBlock).toContain('grid-template-columns: repeat(6, minmax(0, 1fr));')
+})
+
 test('main scroll policy disables page vertical scroll and enables horizontal swipe priority', async () => {
   const css = await readIndexCss()
   const mainContentBlock = css.match(/\.main-content\s*\{([\s\S]*?)\}/)?.[1] ?? ''
