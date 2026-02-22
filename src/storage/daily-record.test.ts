@@ -37,6 +37,7 @@ function sampleRecord(date: string): DailyRecord {
     squat: { target_reps: 20, actual_reps: 20, success: true, rpe: 5 },
     pushup: { target_reps: 15, actual_reps: 15, success: true, rpe: 5 },
     deadhang: { target_sec: 30, actual_sec: 30, success: true, rpe: 5 },
+    rpe_unlock: { plank: true, squat: true, pushup: true, deadhang: true },
     fatigue: 0.4,
     F_P: 0.3,
     F_S: 0.2,
@@ -291,6 +292,67 @@ test('Invalid rpe values load as neutral rpe=5', () => {
   expect(record?.plank.rpe).toBe(5)
   expect(record?.squat.rpe).toBe(5)
   expect(record?.pushup.rpe).toBe(5)
+})
+
+test('Records without rpe_unlock field derive unlock defaults from legacy values', () => {
+  const today = getTodayDateKey()
+  localStorage.setItem(
+    STORAGE_KEY,
+    JSON.stringify([
+      {
+        date: today,
+        plank: { target_sec: 60, actual_sec: 20, success: false, rpe: 5 },
+        squat: { target_reps: 20, actual_reps: 0, success: false, rpe: 5 },
+        pushup: { target_reps: 15, actual_reps: 6, success: false, rpe: 5 },
+        deadhang: { target_sec: 30, actual_sec: 30, success: true, rpe: 5 },
+        fatigue: 0.4,
+        F_P: 0.3,
+        F_S: 0.2,
+        F_U: 0.15,
+        F_D: 0.1,
+        F_total_raw: 0.5,
+      },
+    ]),
+  )
+
+  const record = loadTodayRecord()
+  expect(record?.rpe_unlock).toEqual({
+    plank: false,
+    squat: false,
+    pushup: true,
+    deadhang: true,
+  })
+})
+
+test('Records with rpe_unlock field preserve stored unlock flags', () => {
+  const today = getTodayDateKey()
+  localStorage.setItem(
+    STORAGE_KEY,
+    JSON.stringify([
+      {
+        date: today,
+        plank: { target_sec: 60, actual_sec: 60, success: true, rpe: 5 },
+        squat: { target_reps: 20, actual_reps: 20, success: true, rpe: 5 },
+        pushup: { target_reps: 15, actual_reps: 15, success: true, rpe: 5 },
+        deadhang: { target_sec: 30, actual_sec: 30, success: true, rpe: 5 },
+        rpe_unlock: { plank: true, squat: false, pushup: true, deadhang: false },
+        fatigue: 0.4,
+        F_P: 0.3,
+        F_S: 0.2,
+        F_U: 0.15,
+        F_D: 0.1,
+        F_total_raw: 0.5,
+      },
+    ]),
+  )
+
+  const record = loadTodayRecord()
+  expect(record?.rpe_unlock).toEqual({
+    plank: true,
+    squat: false,
+    pushup: true,
+    deadhang: false,
+  })
 })
 
 test('Records without deadhang field load with neutral deadhang defaults (target=30, actual=30, success=true)', () => {

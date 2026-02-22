@@ -280,3 +280,16 @@
 - [x] Shows all/7d/30d range filters in stats view
 - [x] Shows cumulative totals for plank seconds, squat reps, and pushup reps
 - [x] Shows separate visual daily charts for plank, squat, and pushup
+
+## RPE Input Timing - Post Workout
+
+> Show RPE input only after workout completion for each exercise and persist unlock state across app restarts.
+
+- [x] Types: DailyRecord adds rpe_unlock flags per exercise
+- [x] Storage: parse rpe_unlock and derive legacy fallback unlock rules when field is missing
+- [x] Components: PlankTimer/RepsCounter support showRpe prop and hide RPE UI when false
+- [x] App: timed workouts unlock RPE only on COMPLETED (not CANCELLED)
+- [x] App: reps workouts unlock RPE only after Complete click
+- [x] App: persist rpe_unlock in today draft record and restore unlock state on reload
+- [x] Interaction: RPE inputs are hidden before completion and editable after unlock with immediate save
+- [x] Interaction: cancel path keeps timed-workout RPE locked

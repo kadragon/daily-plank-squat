@@ -7,6 +7,7 @@ interface PlankTimerProps {
   targetSec?: number
   state?: PlankState
   rpe?: number
+  showRpe?: boolean
   tomorrowTargetSec?: number
   tomorrowDeltaSec?: number
   recommendationReasonText?: string
@@ -37,6 +38,7 @@ export default function PlankTimer({
   targetSec = 0,
   state = 'IDLE',
   rpe = 5,
+  showRpe = true,
   tomorrowTargetSec = 0,
   tomorrowDeltaSec = 0,
   recommendationReasonText = '',
@@ -95,20 +97,24 @@ export default function PlankTimer({
     <div className={`plank-timer plank-timer--${state.toLowerCase()}`}>
       <h2>{title}</h2>
       <div className="timer-target">Target: {targetSec}s</div>
-      <div className="reps-input-row">
-        <label className="reps-input-label" htmlFor={`${idPrefix}-rpe`}>RPE (1-10): {rpe}</label>
-        <input
-          id={`${idPrefix}-rpe`}
-          className="rpe-slider"
-          type="range"
-          min={1}
-          max={10}
-          step={1}
-          aria-label={`${title} RPE`}
-          value={rpe}
-          onInput={(event) => onRpeChange?.((event.currentTarget as HTMLInputElement).value)}
-        />
-      </div>
+      {showRpe
+        ? (
+          <div className="reps-input-row">
+            <label className="reps-input-label" htmlFor={`${idPrefix}-rpe`}>RPE (1-10): {rpe}</label>
+            <input
+              id={`${idPrefix}-rpe`}
+              className="rpe-slider"
+              type="range"
+              min={1}
+              max={10}
+              step={1}
+              aria-label={`${title} RPE`}
+              value={rpe}
+              onInput={(event) => onRpeChange?.((event.currentTarget as HTMLInputElement).value)}
+            />
+          </div>
+        )
+        : null}
       <div className="timer-display" aria-live="polite">{formatTime(remainingMs)}</div>
       <div className="progress-bar">
         <div className="progress-fill" style={{ width: `${progressPercent}%` }} />

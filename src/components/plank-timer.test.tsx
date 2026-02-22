@@ -100,6 +100,13 @@ test('PlankTimer renders RPE input with 1~10 bounds', () => {
   expect(html).toContain('max="10"')
 })
 
+test('PlankTimer hides RPE input when showRpe=false', () => {
+  const html = renderToStaticMarkup(<PlankTimer showRpe={false} />)
+
+  expect(html).not.toContain('id="plank-rpe"')
+  expect(html).not.toContain('RPE (1-10)')
+})
+
 test('PlankTimer renders custom title via title prop', () => {
   const html = renderToStaticMarkup(<PlankTimer title="Deadhang Timer" />)
 

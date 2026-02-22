@@ -4,6 +4,7 @@ interface SquatCounterProps {
   count?: number
   targetReps?: number
   rpe?: number
+  showRpe?: boolean
   tomorrowTargetReps?: number
   tomorrowDeltaReps?: number
   recommendationReasonText?: string
