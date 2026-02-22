@@ -43,7 +43,17 @@ test('bottom tabbar uses 6 equal columns for one-row navigation', async () => {
   const css = await readIndexCss()
   const tabbarBlock = css.match(/\.nav\.app-tabbar\s*\{([\s\S]*?)\}/)?.[1] ?? ''
 
-  expect(tabbarBlock).toContain('grid-template-columns: repeat(6, minmax(0, 1fr));')
+  expect(tabbarBlock).toMatch(/grid-template-columns:\s*repeat\(6,\s*minmax\(0,\s*1fr\)\);/)
+})
+
+test('bottom tabbar applies compact spacing rules on narrow screens', async () => {
+  const css = await readIndexCss()
+
+  expect(css).toMatch(/@media\s*\(max-width:\s*360px\)/)
+  expect(css).toMatch(/@media\s*\(max-width:\s*360px\)\s*\{[\s\S]*?\.nav\.app-tabbar\s*\{[\s\S]*?gap:\s*0\.2rem;/)
+  expect(css).toMatch(/@media\s*\(max-width:\s*360px\)\s*\{[\s\S]*?\.nav\.app-tabbar\s*\{[\s\S]*?padding-left:\s*max\(0\.5rem,\s*env\(safe-area-inset-left\)\);/)
+  expect(css).toMatch(/@media\s*\(max-width:\s*360px\)\s*\{[\s\S]*?\.nav\.app-tabbar\s*\{[\s\S]*?padding-right:\s*max\(0\.5rem,\s*env\(safe-area-inset-right\)\);/)
+  expect(css).toMatch(/@media\s*\(max-width:\s*360px\)\s*\{[\s\S]*?\.nav-btn\.app-tabbar__button\s*\{[\s\S]*?min-width:\s*40px;/)
 })
 
 test('main scroll policy disables page vertical scroll and enables horizontal swipe priority', async () => {
