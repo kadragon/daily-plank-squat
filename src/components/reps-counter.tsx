@@ -5,6 +5,7 @@ interface RepsCounterProps {
   count?: number
   targetReps?: number
   rpe?: number
+  showRpe?: boolean
   tomorrowTargetReps?: number
   tomorrowDeltaReps?: number
   recommendationReasonText?: string
@@ -23,6 +24,7 @@ export default function RepsCounter({
   count = 0,
   targetReps = 0,
   rpe = 5,
+  showRpe = true,
   tomorrowTargetReps = 0,
   tomorrowDeltaReps = 0,
   recommendationReasonText = '',
@@ -66,20 +68,24 @@ export default function RepsCounter({
           onInput={(event) => onDoneRepsChange?.((event.currentTarget as HTMLInputElement).value)}
         />
       </div>
-      <div className="reps-input-row">
-        <label className="reps-input-label" htmlFor={`${idPrefix}-rpe`}>RPE (1-10): {rpe}</label>
-        <input
-          id={`${idPrefix}-rpe`}
-          className="rpe-slider"
-          type="range"
-          min={1}
-          max={10}
-          step={1}
-          aria-label="RPE"
-          value={rpe}
-          onInput={(event) => onRpeChange?.((event.currentTarget as HTMLInputElement).value)}
-        />
-      </div>
+      {showRpe
+        ? (
+          <div className="reps-input-row">
+            <label className="reps-input-label" htmlFor={`${idPrefix}-rpe`}>RPE (1-10): {rpe}</label>
+            <input
+              id={`${idPrefix}-rpe`}
+              className="rpe-slider"
+              type="range"
+              min={1}
+              max={10}
+              step={1}
+              aria-label="RPE"
+              value={rpe}
+              onInput={(event) => onRpeChange?.((event.currentTarget as HTMLInputElement).value)}
+            />
+          </div>
+        )
+        : null}
       <div className="recommendation-note">
         <div className="recommendation-note__target">
           내일 추천: {tomorrowTargetReps} ({tomorrowDeltaReps > 0 ? '+' : ''}{tomorrowDeltaReps})

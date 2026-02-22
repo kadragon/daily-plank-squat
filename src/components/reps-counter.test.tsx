@@ -17,6 +17,15 @@ test('RepsCounter uses pushup-prefixed ids when idPrefix="pushup"', () => {
   expect(html).toContain('id="pushup-rpe"')
 })
 
+test('RepsCounter hides RPE input when showRpe=false', () => {
+  const html = renderToStaticMarkup(
+    <RepsCounter title="Pushup Counter" idPrefix="pushup" exerciseName="pushups" count={0} showRpe={false} />,
+  )
+
+  expect(html).not.toContain('id="pushup-rpe"')
+  expect(html).not.toContain('RPE (1-10)')
+})
+
 test('RepsCounter complete button aria-label reflects exerciseName', () => {
   const html = renderToStaticMarkup(<RepsCounter title="Pushup Counter" idPrefix="pushup" exerciseName="pushups" count={0} />)
 

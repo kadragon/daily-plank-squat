@@ -35,12 +35,20 @@ export interface PushupRecord {
   rpe: number
 }
 
+export interface RpeUnlockRecord {
+  plank: boolean
+  squat: boolean
+  pushup: boolean
+  deadhang: boolean
+}
+
 export interface DailyRecord {
   date: string // YYYY-MM-DD
   plank: ExerciseRecord
   squat: SquatRecord
   pushup: PushupRecord
   deadhang: ExerciseRecord
+  rpe_unlock: RpeUnlockRecord
   fatigue: number // sigmoid fatigue score [0, 1]
   F_P: number // plank EWMA fatigue
   F_S: number // squat EWMA fatigue

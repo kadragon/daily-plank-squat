@@ -114,11 +114,11 @@ test('App renders pushup view with editable reps inputs before completion', () =
   expect(html).toContain('id="pushup-done-reps"')
 })
 
-test('App renders deadhang timer view with prefixed rpe input id', () => {
+test('App hides deadhang rpe input before completion', () => {
   const html = renderToStaticMarkup(<App initialView="deadhang" />)
 
   expect(html).toContain('Deadhang Timer')
-  expect(html).toContain('id="deadhang-rpe"')
+  expect(html).not.toContain('id="deadhang-rpe"')
 })
 
 test('App applies swipe-priority main classes for workout views and scrollable stage for summary', () => {

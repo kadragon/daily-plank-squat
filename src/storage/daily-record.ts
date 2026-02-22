@@ -1,4 +1,4 @@
-import type { DailyRecord, ExerciseRecord, PushupRecord, SquatRecord } from '../types'
+import type { DailyRecord, ExerciseRecord, PushupRecord, RpeUnlockRecord, SquatRecord } from '../types'
 import { getTodayDateKey } from '../utils/date-key'
 import { NEUTRAL_RPE, normalizeRpe } from '../utils/rpe'
 
@@ -86,6 +86,39 @@ function asPushupRecord(value: unknown): PushupRecord | null {
   return null
 }
 
+function asRpeUnlockRecord(value: unknown): RpeUnlockRecord | null {
+  if (!isRecord(value)) return null
+  if (
+    typeof value.plank !== 'boolean'
+    || typeof value.squat !== 'boolean'
+    || typeof value.pushup !== 'boolean'
+    || typeof value.deadhang !== 'boolean'
+  ) {
+    return null
+  }
+
+  return {
+    plank: value.plank,
+    squat: value.squat,
+    pushup: value.pushup,
+    deadhang: value.deadhang,
+  }
+}
+
+function deriveLegacyRpeUnlock(
+  plank: ExerciseRecord,
+  squat: SquatRecord,
+  pushup: PushupRecord,
+  deadhang: ExerciseRecord,
+): RpeUnlockRecord {
+  return {
+    plank: plank.success,
+    squat: squat.actual_reps > 0,
+    pushup: pushup.actual_reps > 0,
+    deadhang: deadhang.success,
+  }
+}
+
 function asDailyRecord(value: unknown): DailyRecord | null {
   if (!isRecord(value)) return null
 
@@ -104,6 +137,7 @@ function asDailyRecord(value: unknown): DailyRecord | null {
 
   const pushup = asPushupRecord(value.pushup) ?? NEUTRAL_PUSHUP
   const deadhang = asExerciseRecord(value.deadhang) ?? NEUTRAL_DEADHANG
+  const rpeUnlock = asRpeUnlockRecord(value.rpe_unlock) ?? deriveLegacyRpeUnlock(plank, squat, pushup, deadhang)
 
   return {
     date: value.date,
@@ -111,6 +145,7 @@ function asDailyRecord(value: unknown): DailyRecord | null {
     squat,
     pushup,
     deadhang,
+    rpe_unlock: rpeUnlock,
     fatigue: value.fatigue,
     F_P: value.F_P,
     F_S: value.F_S,

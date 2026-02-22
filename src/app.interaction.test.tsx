@@ -263,29 +263,64 @@ test('Changing pushup target reps immediately saves today record', async () => {
   })
 })
 
-test('Changing squat rpe immediately saves today record', async () => {
+test('RPE inputs are hidden before completion for all workout views', () => {
+  const squatView = render(<App initialView="squat" />)
+  expect(squatView.container.querySelector('#squat-rpe')).toBeNull()
+  cleanup()
+
+  const pushupView = render(<App initialView="pushup" />)
+  expect(pushupView.container.querySelector('#pushup-rpe')).toBeNull()
+  cleanup()
+
+  const plankView = render(<App initialView="plank" />)
+  expect(plankView.container.querySelector('#plank-rpe')).toBeNull()
+  cleanup()
+
+  const deadhangView = render(<App initialView="deadhang" />)
+  expect(deadhangView.container.querySelector('#deadhang-rpe')).toBeNull()
+})
+
+test('Changing squat rpe is possible only after complete and saves today record', async () => {
   const view = render(<App initialView="squat" />)
+
+  expect(view.container.querySelector('#squat-rpe')).toBeNull()
+  fireEvent.click(view.getByRole('button', { name: 'Complete squats' }))
+
+  await waitFor(() => {
+    expect(view.container.querySelector('#squat-rpe')).toBeTruthy()
+  })
+
   const rpeInput = view.container.querySelector('#squat-rpe')
-  if (!rpeInput) throw new Error('squat rpe input not found')
+  if (!rpeInput) throw new Error('squat rpe input not found after complete')
 
   setNumberInputValue(rpeInput, '8')
   await waitFor(() => {
     const stored = readStoredRecords()
     expect(stored).toHaveLength(1)
     expect(stored[0]?.squat.rpe).toBe(8)
+    expect(stored[0]?.rpe_unlock.squat).toBe(true)
   })
 })
 
-test('Changing pushup rpe updates existing today record instead of appending', async () => {
+test('Changing pushup rpe is possible only after complete and updates existing today record', async () => {
   const view = render(<App initialView="pushup" />)
+
+  expect(view.container.querySelector('#pushup-rpe')).toBeNull()
+  fireEvent.click(view.getByRole('button', { name: 'Complete pushups' }))
+
+  await waitFor(() => {
+    expect(view.container.querySelector('#pushup-rpe')).toBeTruthy()
+  })
+
   const rpeInput = view.container.querySelector('#pushup-rpe')
-  if (!rpeInput) throw new Error('pushup rpe input not found')
+  if (!rpeInput) throw new Error('pushup rpe input not found after complete')
 
   setNumberInputValue(rpeInput, '9')
   await waitFor(() => {
     const stored = readStoredRecords()
     expect(stored).toHaveLength(1)
     expect(stored[0]?.pushup.rpe).toBe(9)
+    expect(stored[0]?.rpe_unlock.pushup).toBe(true)
   })
   setNumberInputValue(rpeInput, '7')
   await waitFor(() => {
@@ -293,32 +328,84 @@ test('Changing pushup rpe updates existing today record instead of appending', a
     expect(stored).toHaveLength(1)
     expect(stored[0]?.date).toBe(getTodayDateKey())
     expect(stored[0]?.pushup.rpe).toBe(7)
+    expect(stored[0]?.rpe_unlock.pushup).toBe(true)
   })
 })
 
-test('Changing plank rpe immediately saves today record', async () => {
+test('Cancelling plank keeps plank rpe locked', async () => {
   const view = render(<App initialView="plank" />)
+
+  fireEvent.click(view.getByRole('button', { name: 'Start' }))
+  fireEvent.click(view.getByRole('button', { name: 'Cancel' }))
+
+  await waitFor(() => {
+    const stored = readStoredRecords()
+    expect(stored).toHaveLength(1)
+    expect(stored[0]?.plank.success).toBe(false)
+    expect(stored[0]?.rpe_unlock.plank).toBe(false)
+  })
+
+  expect(view.container.querySelector('#plank-rpe')).toBeNull()
+})
+
+test('Completing plank unlocks rpe and keeps unlock state after rerender', async () => {
+  seedTodayRecord({
+    plank: { target_sec: 0, actual_sec: 0, success: false },
+  })
+
+  const view = render(<App initialView="plank" />)
+  expect(view.container.querySelector('#plank-rpe')).toBeNull()
+
+  fireEvent.click(view.getByRole('button', { name: 'Start' }))
+
+  await waitFor(() => {
+    const stored = readStoredRecords()
+    expect(stored[0]?.plank.success).toBe(true)
+    expect(stored[0]?.rpe_unlock.plank).toBe(true)
+    expect(view.container.querySelector('#plank-rpe')).toBeTruthy()
+  })
+
   const rpeInput = view.container.querySelector('#plank-rpe')
-  if (!rpeInput) throw new Error('plank rpe input not found')
+  if (!rpeInput) throw new Error('plank rpe input not found after complete')
 
   setNumberInputValue(rpeInput, '4')
   await waitFor(() => {
     const stored = readStoredRecords()
-    expect(stored).toHaveLength(1)
     expect(stored[0]?.plank.rpe).toBe(4)
+    expect(stored[0]?.rpe_unlock.plank).toBe(true)
   })
+
+  cleanup()
+  const rerendered = render(<App initialView="plank" />)
+  expect(rerendered.container.querySelector('#plank-rpe')).toBeTruthy()
 })
 
-test('Changing deadhang rpe immediately saves today record', async () => {
+test('Completing deadhang unlocks rpe and saves today record', async () => {
+  seedTodayRecord({
+    deadhang: { target_sec: 0, actual_sec: 0, success: false },
+  })
+
   const view = render(<App initialView="deadhang" />)
+  expect(view.container.querySelector('#deadhang-rpe')).toBeNull()
+
+  fireEvent.click(view.getByRole('button', { name: 'Start' }))
+
+  await waitFor(() => {
+    const stored = readStoredRecords()
+    expect(stored[0]?.deadhang.success).toBe(true)
+    expect(stored[0]?.rpe_unlock.deadhang).toBe(true)
+    expect(view.container.querySelector('#deadhang-rpe')).toBeTruthy()
+  })
+
   const rpeInput = view.container.querySelector('#deadhang-rpe')
-  if (!rpeInput) throw new Error('deadhang rpe input not found')
+  if (!rpeInput) throw new Error('deadhang rpe input not found after complete')
 
   setNumberInputValue(rpeInput, '6')
   await waitFor(() => {
     const stored = readStoredRecords()
     expect(stored).toHaveLength(1)
     expect(stored[0]?.deadhang.rpe).toBe(6)
+    expect(stored[0]?.rpe_unlock.deadhang).toBe(true)
   })
 })
 
