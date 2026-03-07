@@ -588,6 +588,47 @@ test('no missed day decay when targetDate is not provided', () => {
   expect(plan.squat_target_reps).toBe(21)
 })
 
+test('computeTomorrowPlan reduces target by 5% for exactly 1 missed day', () => {
+  const records = [
+    {
+      ...dailyRecord('2026-02-16', 100, 100, true, 40, 40, true),
+      pushup: { target_reps: 30, actual_reps: 30, success: true, rpe: 5 },
+      deadhang: { target_sec: 40, actual_sec: 40, success: true, rpe: 5 },
+    },
+  ]
+  // 1 missed day (Feb 17 skipped, target is Feb 18)
+  const plan = computeTomorrowPlan(records, params, baseTargets, '2026-02-18')
+
+  expect(plan.plank_target_sec).toBe(95)   // 100 * 0.95
+  expect(plan.squat_target_reps).toBe(38)  // 40 * 0.95
+  expect(plan.plank_reason).toBe('missed_day_decay')
+})
+
+test('missed day decay takes priority over high fatigue hold', () => {
+  // Create records with rapidly increasing targets to push fatigue above 0.85
+  const records: DailyRecord[] = []
+  for (let i = 0; i < 14; i++) {
+    const day = String(i + 1).padStart(2, '0')
+    const plankSec = 60 + i * 30  // rapidly increasing load
+    const squatReps = 20 + i * 10
+    records.push({
+      ...dailyRecord(`2026-02-${day}`, plankSec, plankSec, true, squatReps, squatReps, true),
+      pushup: { target_reps: 15 + i * 8, actual_reps: 15 + i * 8, success: true, rpe: 5 },
+      deadhang: { target_sec: 30 + i * 10, actual_sec: 30 + i * 10, success: true, rpe: 5 },
+    })
+  }
+
+  // Verify fatigue is high without missed days
+  const basePlan = computeTomorrowPlan(records, params, baseTargets, '2026-02-15')
+  expect(basePlan.fatigue).toBeGreaterThan(0.85)
+  expect(basePlan.plank_reason).toBe('high_fatigue_hold')
+
+  // Now with 3 missed days → missed_day_decay should win
+  const decayPlan = computeTomorrowPlan(records, params, baseTargets, '2026-02-18')
+  expect(decayPlan.plank_reason).toBe('missed_day_decay')
+  expect(decayPlan.plank_target_sec).toBeLessThan(basePlan.plank_target_sec)
+})
+
 test('failure streak takes priority over missed day decay', () => {
   const records = [
     dailyRecord('2026-02-14', 100, 20, false, 20, 8, false),

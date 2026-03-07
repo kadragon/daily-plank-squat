@@ -212,8 +212,8 @@ function hasFailureStreak(records: DailyRecord[], exercise: 'plank' | 'squat' | 
 export function computeMissedDays(lastRecordDate: string, targetDate: string): number {
   const [ly, lm, ld] = lastRecordDate.split('-').map(Number)
   const [ty, tm, td] = targetDate.split('-').map(Number)
-  const lastMs = new Date(ly, lm - 1, ld).getTime()
-  const targetMs = new Date(ty, tm - 1, td).getTime()
+  const lastMs = Date.UTC(ly, lm - 1, ld)
+  const targetMs = Date.UTC(ty, tm - 1, td)
   const dayDiff = Math.round((targetMs - lastMs) / (1000 * 60 * 60 * 24))
   // 1 day gap is normal (consecutive days), so missed = gap - 1
   return Math.max(0, dayDiff - 1)
