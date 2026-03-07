@@ -135,6 +135,17 @@ export function computeFatigueSeries(
   const ageFactor = computeAgeFactor(params.age)
 
   for (const record of sorted) {
+    // Decay EWMA for each gap day (rest day = load 0 → F *= (1-alpha))
+    if (previous) {
+      const gap = computeMissedDays(previous.date, record.date)
+      for (let i = 0; i < gap; i++) {
+        F_P *= (1 - ALPHA_P)
+        F_S *= (1 - ALPHA_S)
+        F_U *= (1 - ALPHA_U)
+        F_D *= (1 - ALPHA_D)
+      }
+    }
+
     const pushup = record.pushup ?? { target_reps: 15, actual_reps: 15, success: true, rpe: NEUTRAL_RPE }
     const deadhang = record.deadhang ?? { target_sec: 30, actual_sec: 30, success: true, rpe: NEUTRAL_RPE }
 
@@ -214,6 +225,7 @@ function computeNextTargetValue(
   failureStreak: boolean,
   rpe: number,
   missedDays: number,
+  baseTarget: number,
 ): { target: number, reason: RecommendationReason } {
   if (failureStreak) {
     return {
@@ -225,7 +237,7 @@ function computeNextTargetValue(
   if (missedDays > 0) {
     const decay = Math.min(missedDays * MISSED_DAY_DECAY_PER_DAY, MAX_MISSED_DAY_DECAY)
     return {
-      target: Math.max(1, Math.round(lastTarget * (1 - decay))),
+      target: Math.max(baseTarget, Math.round(lastTarget * (1 - decay))),
       reason: 'missed_day_decay',
     }
   }
@@ -309,6 +321,7 @@ export function computeTomorrowPlan(
     plankFailureStreak,
     lastRecord.plank.rpe,
     missedDays,
+    baseTargets.base_P,
   )
   const squatRecommendation = computeNextTargetValue(
     lastRecord.squat.target_reps,
@@ -316,6 +329,7 @@ export function computeTomorrowPlan(
     squatFailureStreak,
     lastRecord.squat.rpe,
     missedDays,
+    baseTargets.base_S,
   )
   const pushupRecommendation = computeNextTargetValue(
     lastPushup.target_reps,
@@ -323,6 +337,7 @@ export function computeTomorrowPlan(
     pushupFailureStreak,
     lastPushup.rpe,
     missedDays,
+    baseTargets.base_U,
   )
   const lastDeadhang = lastRecord.deadhang ?? { target_sec: baseTargets.base_D, actual_sec: baseTargets.base_D, success: true, rpe: NEUTRAL_RPE }
   const deadhangRecommendation = computeNextTargetValue(
@@ -331,6 +346,7 @@ export function computeTomorrowPlan(
     deadhangFailureStreak,
     lastDeadhang.rpe,
     missedDays,
+    baseTargets.base_D,
   )
 
   return {
