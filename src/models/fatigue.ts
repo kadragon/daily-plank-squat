@@ -25,6 +25,8 @@ const VERY_HIGH_RPE_DECREASE_FACTOR = 0.95
 const FAILURE_DECREASE_FACTOR = 0.9
 const FAILURE_STREAK_DAYS = 3
 const MEDIAN_WINDOW = 14
+export const MISSED_DAY_DECAY_PER_DAY = 0.05
+export const MAX_MISSED_DAY_DECAY = 0.30
 
 function clip(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value))
@@ -133,6 +135,15 @@ export function computeFatigueSeries(
   const ageFactor = computeAgeFactor(params.age)
 
   for (const record of sorted) {
+    // Decay EWMA for each gap day (rest day = load 0 → F *= (1-alpha)^gap)
+    if (previous) {
+      const gap = computeMissedDays(previous.date, record.date)
+      F_P *= (1 - ALPHA_P) ** gap
+      F_S *= (1 - ALPHA_S) ** gap
+      F_U *= (1 - ALPHA_U) ** gap
+      F_D *= (1 - ALPHA_D) ** gap
+    }
+
     const pushup = record.pushup ?? { target_reps: 15, actual_reps: 15, success: true, rpe: NEUTRAL_RPE }
     const deadhang = record.deadhang ?? { target_sec: 30, actual_sec: 30, success: true, rpe: NEUTRAL_RPE }
 
@@ -196,16 +207,36 @@ function hasFailureStreak(records: DailyRecord[], exercise: 'plank' | 'squat' | 
   })
 }
 
+export function computeMissedDays(lastRecordDate: string, targetDate: string): number {
+  const [ly, lm, ld] = lastRecordDate.split('-').map(Number)
+  const [ty, tm, td] = targetDate.split('-').map(Number)
+  const lastMs = Date.UTC(ly, lm - 1, ld)
+  const targetMs = Date.UTC(ty, tm - 1, td)
+  const dayDiff = Math.round((targetMs - lastMs) / (1000 * 60 * 60 * 24))
+  // 1 day gap is normal (consecutive days), so missed = gap - 1
+  return Math.max(0, dayDiff - 1)
+}
+
 function computeNextTargetValue(
   lastTarget: number,
   fatigue: number,
   failureStreak: boolean,
   rpe: number,
+  missedDays: number,
+  baseTarget: number,
 ): { target: number, reason: RecommendationReason } {
   if (failureStreak) {
     return {
       target: Math.max(1, Math.round(lastTarget * FAILURE_DECREASE_FACTOR)),
       reason: 'failure_streak',
+    }
+  }
+
+  if (missedDays > 0) {
+    const decay = Math.min(missedDays * MISSED_DAY_DECAY_PER_DAY, MAX_MISSED_DAY_DECAY)
+    return {
+      target: Math.min(lastTarget, Math.max(baseTarget, Math.round(lastTarget * (1 - decay)))),
+      reason: 'missed_day_decay',
     }
   }
 
@@ -224,6 +255,7 @@ export function computeTomorrowPlan(
   records: DailyRecord[],
   params: FatigueParams,
   baseTargets: BaseTargets,
+  targetDate?: string,
 ): TomorrowPlan {
   if (records.length === 0) {
     return {
@@ -275,6 +307,8 @@ export function computeTomorrowPlan(
   const pushupFailureStreak = hasFailureStreak(sorted, 'pushup')
   const deadhangFailureStreak = hasFailureStreak(sorted, 'deadhang')
 
+  const missedDays = targetDate ? computeMissedDays(lastRecord.date, targetDate) : 0
+
   const F_total_raw_history = snapshots.map((snapshot) => snapshot.F_total_raw)
   const previousThreshold = percentile(F_total_raw_history.slice(0, -1), 95)
 
@@ -284,18 +318,24 @@ export function computeTomorrowPlan(
     latest.fatigue,
     plankFailureStreak,
     lastRecord.plank.rpe,
+    missedDays,
+    baseTargets.base_P,
   )
   const squatRecommendation = computeNextTargetValue(
     lastRecord.squat.target_reps,
     latest.fatigue,
     squatFailureStreak,
     lastRecord.squat.rpe,
+    missedDays,
+    baseTargets.base_S,
   )
   const pushupRecommendation = computeNextTargetValue(
     lastPushup.target_reps,
     latest.fatigue,
     pushupFailureStreak,
     lastPushup.rpe,
+    missedDays,
+    baseTargets.base_U,
   )
   const lastDeadhang = lastRecord.deadhang ?? { target_sec: baseTargets.base_D, actual_sec: baseTargets.base_D, success: true, rpe: NEUTRAL_RPE }
   const deadhangRecommendation = computeNextTargetValue(
@@ -303,6 +343,8 @@ export function computeTomorrowPlan(
     latest.fatigue,
     deadhangFailureStreak,
     lastDeadhang.rpe,
+    missedDays,
+    baseTargets.base_D,
   )
 
   return {

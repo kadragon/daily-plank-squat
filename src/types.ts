@@ -109,6 +109,7 @@ export interface FatigueSnapshot {
 
 export type RecommendationReason =
   | 'failure_streak'
+  | 'missed_day_decay'
   | 'high_fatigue_hold'
   | 'rpe_very_high_reduce'
   | 'rpe_high_hold'

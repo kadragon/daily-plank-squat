@@ -10,6 +10,7 @@ import {
   computeFatigueScore,
   computeFatigueSeries,
   computeLoad,
+  computeMissedDays,
   computeNextTarget,
   computePushupTarget,
   computeRampPenalty,
@@ -177,6 +178,25 @@ test('computes fatigue series for both plank and squat dimensions', () => {
   expect(series).toHaveLength(2)
   expect(series[1]?.F_P ?? 0).toBeGreaterThan(0)
   expect(series[1]?.F_S ?? 0).toBeGreaterThan(0)
+})
+
+test('computeFatigueSeries decays EWMA during gap days', () => {
+  const consecutive: DailyRecord[] = [
+    dailyRecord('2026-02-16', 60, 60, true, 20, 20, true),
+    dailyRecord('2026-02-17', 60, 60, true, 20, 20, true),
+  ]
+  const withGap: DailyRecord[] = [
+    dailyRecord('2026-02-16', 60, 60, true, 20, 20, true),
+    dailyRecord('2026-02-20', 60, 60, true, 20, 20, true), // 3 gap days
+  ]
+
+  const consecutiveSeries = computeFatigueSeries(consecutive, params, baseTargets)
+  const gapSeries = computeFatigueSeries(withGap, params, baseTargets)
+
+  // After gap days, EWMA decays before the second record is processed,
+  // so the fatigue at record 2 should be lower with a gap
+  expect(gapSeries[1]?.F_P).toBeLessThan(consecutiveSeries[1]?.F_P)
+  expect(gapSeries[1]?.F_S).toBeLessThan(consecutiveSeries[1]?.F_S)
 })
 
 test('computeFatigueSeries computes F_U via pushup EWMA', () => {
@@ -489,4 +509,157 @@ test('computeTomorrowPlan returns per-exercise reason codes', () => {
   expect(plan.squat_reason).toBe('rpe_high_hold')
   expect(plan.pushup_reason).toBe('rpe_very_high_reduce')
   expect(plan.deadhang_reason).toBe('neutral_progression')
+})
+
+test('computeMissedDays returns 0 for consecutive days', () => {
+  expect(computeMissedDays('2026-02-16', '2026-02-17')).toBe(0)
+})
+
+test('computeMissedDays returns correct gap for skipped days', () => {
+  expect(computeMissedDays('2026-02-16', '2026-02-18')).toBe(1)
+  expect(computeMissedDays('2026-02-16', '2026-02-20')).toBe(3)
+  expect(computeMissedDays('2026-02-16', '2026-02-23')).toBe(6)
+})
+
+test('computeMissedDays returns 0 when targetDate is before or same as lastDate', () => {
+  expect(computeMissedDays('2026-02-16', '2026-02-16')).toBe(0)
+  expect(computeMissedDays('2026-02-16', '2026-02-14')).toBe(0)
+})
+
+test('computeTomorrowPlan reduces targets by 5% per missed day', () => {
+  const records = [
+    {
+      ...dailyRecord('2026-02-16', 100, 100, true, 40, 40, true),
+      pushup: { target_reps: 30, actual_reps: 30, success: true, rpe: 5 },
+      deadhang: { target_sec: 40, actual_sec: 40, success: true, rpe: 5 },
+    },
+  ]
+  // 2 missed days (Feb 17, 18 skipped, target is Feb 19)
+  const plan = computeTomorrowPlan(records, params, baseTargets, '2026-02-19')
+
+  // 2 missed days = 10% decay
+  expect(plan.plank_target_sec).toBe(90)   // 100 * 0.9
+  expect(plan.squat_target_reps).toBe(36)  // 40 * 0.9
+  expect(plan.pushup_target_reps).toBe(27) // 30 * 0.9
+  expect(plan.deadhang_target_sec).toBe(36) // 40 * 0.9
+  expect(plan.plank_reason).toBe('missed_day_decay')
+  expect(plan.squat_reason).toBe('missed_day_decay')
+  expect(plan.pushup_reason).toBe('missed_day_decay')
+  expect(plan.deadhang_reason).toBe('missed_day_decay')
+})
+
+test('missed day decay caps at 30%', () => {
+  const records = [dailyRecord('2026-02-01', 100, 100, true, 40, 40, true)]
+  // 10 missed days → capped at 30%
+  const plan = computeTomorrowPlan(records, params, baseTargets, '2026-02-12')
+
+  expect(plan.plank_target_sec).toBe(70) // 100 * 0.7
+  expect(plan.squat_target_reps).toBe(28) // 40 * 0.7
+})
+
+test('missed day decay does not reduce below base target', () => {
+  // squat target = 22 (just above base 20), 6 missed days → 30% decay → 22*0.7=15.4 → floored to 20
+  const records = [dailyRecord('2026-02-01', 65, 65, true, 22, 22, true)]
+  const plan = computeTomorrowPlan(records, params, baseTargets, '2026-02-08')
+
+  expect(plan.squat_target_reps).toBe(20) // floored at base_S=20
+  expect(plan.plank_target_sec).toBe(60)  // 65*0.7=45.5 → floored at base_P=60
+  expect(plan.squat_reason).toBe('missed_day_decay')
+})
+
+test('no missed day decay when consecutive days', () => {
+  const records = [dailyRecord('2026-02-16', 100, 100, true, 20, 20, true)]
+  const plan = computeTomorrowPlan(records, params, baseTargets, '2026-02-17')
+
+  // Normal progression (+5%)
+  expect(plan.plank_target_sec).toBe(105)
+  expect(plan.squat_target_reps).toBe(21)
+  expect(plan.plank_reason).toBe('neutral_progression')
+})
+
+test('no missed day decay when targetDate is not provided', () => {
+  const records = [dailyRecord('2026-02-16', 100, 100, true, 20, 20, true)]
+  const plan = computeTomorrowPlan(records, params, baseTargets)
+
+  // Normal progression without targetDate
+  expect(plan.plank_target_sec).toBe(105)
+  expect(plan.squat_target_reps).toBe(21)
+})
+
+test('computeTomorrowPlan reduces target by 5% for exactly 1 missed day', () => {
+  const records = [
+    {
+      ...dailyRecord('2026-02-16', 100, 100, true, 40, 40, true),
+      pushup: { target_reps: 30, actual_reps: 30, success: true, rpe: 5 },
+      deadhang: { target_sec: 40, actual_sec: 40, success: true, rpe: 5 },
+    },
+  ]
+  // 1 missed day (Feb 17 skipped, target is Feb 18)
+  const plan = computeTomorrowPlan(records, params, baseTargets, '2026-02-18')
+
+  expect(plan.plank_target_sec).toBe(95)   // 100 * 0.95
+  expect(plan.squat_target_reps).toBe(38)  // 40 * 0.95
+  expect(plan.plank_reason).toBe('missed_day_decay')
+})
+
+test('missed day decay takes priority over high fatigue hold', () => {
+  // Create records with rapidly increasing targets to push fatigue above 0.85
+  const records: DailyRecord[] = []
+  for (let i = 0; i < 14; i++) {
+    const day = String(i + 1).padStart(2, '0')
+    const plankSec = 60 + i * 30  // rapidly increasing load
+    const squatReps = 20 + i * 10
+    records.push({
+      ...dailyRecord(`2026-02-${day}`, plankSec, plankSec, true, squatReps, squatReps, true),
+      pushup: { target_reps: 15 + i * 8, actual_reps: 15 + i * 8, success: true, rpe: 5 },
+      deadhang: { target_sec: 30 + i * 10, actual_sec: 30 + i * 10, success: true, rpe: 5 },
+    })
+  }
+
+  // Verify fatigue is high without missed days
+  const basePlan = computeTomorrowPlan(records, params, baseTargets, '2026-02-15')
+  expect(basePlan.fatigue).toBeGreaterThan(0.85)
+  expect(basePlan.plank_reason).toBe('high_fatigue_hold')
+
+  // Now with 3 missed days → missed_day_decay should win
+  const decayPlan = computeTomorrowPlan(records, params, baseTargets, '2026-02-18')
+  expect(decayPlan.plank_reason).toBe('missed_day_decay')
+  expect(decayPlan.plank_target_sec).toBeLessThan(basePlan.plank_target_sec)
+})
+
+test('missed day decay does not raise target when lastTarget is below baseTarget', () => {
+  // After failure_streak, squat target could be 18 (below base_S=20)
+  // If user then misses days, missed_day_decay should NOT raise it back to 20
+  const records = [
+    dailyRecord('2026-02-14', 50, 10, false, 18, 5, false),
+    dailyRecord('2026-02-15', 50, 10, false, 18, 5, false),
+    dailyRecord('2026-02-16', 50, 10, false, 18, 5, false),
+  ]
+  // First verify failure_streak reduces squat below base
+  const streakPlan = computeTomorrowPlan(records, params, baseTargets, '2026-02-17')
+  expect(streakPlan.squat_reason).toBe('failure_streak')
+  expect(streakPlan.squat_target_reps).toBeLessThan(baseTargets.base_S)
+
+  // Now simulate: user worked out at the reduced target, then missed 2 days
+  const afterStreak = [
+    ...records,
+    dailyRecord('2026-02-17', 50, 50, true, streakPlan.squat_target_reps, streakPlan.squat_target_reps, true),
+  ]
+  const decayPlan = computeTomorrowPlan(afterStreak, params, baseTargets, '2026-02-20')
+  expect(decayPlan.squat_reason).toBe('missed_day_decay')
+  // Should NOT raise above the last target
+  expect(decayPlan.squat_target_reps).toBeLessThanOrEqual(afterStreak.at(-1)?.squat.target_reps)
+})
+
+test('failure streak takes priority over missed day decay', () => {
+  const records = [
+    dailyRecord('2026-02-14', 100, 20, false, 20, 8, false),
+    dailyRecord('2026-02-15', 100, 20, false, 20, 8, false),
+    dailyRecord('2026-02-16', 100, 20, false, 20, 8, false),
+  ]
+  // 3 missed days + failure streak → failure streak wins
+  const plan = computeTomorrowPlan(records, params, baseTargets, '2026-02-20')
+
+  expect(plan.plank_target_sec).toBe(90) // failure_streak: 100 * 0.9
+  expect(plan.plank_reason).toBe('failure_streak')
 })
