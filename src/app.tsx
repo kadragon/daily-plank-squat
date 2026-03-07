@@ -24,7 +24,7 @@ import { loadAllRecords, saveRecord } from './storage/daily-record'
 import { buildHealthPayload, buildShortcutRunUrl } from './integrations/apple-health-shortcut'
 import { getRecommendationReasonText } from './locales/ko'
 import type { BaseTargets, DailyRecord, FatigueParams, PlankState, RecommendationReason, RpeUnlockRecord } from './types'
-import { getTodayDateKey } from './utils/date-key'
+import { addDaysToDateKey, getTodayDateKey } from './utils/date-key'
 import { NEUTRAL_RPE, normalizeRpe } from './utils/rpe'
 
 type AppView = 'plank' | 'squat' | 'pushup' | 'deadhang' | 'summary' | 'stats'
@@ -252,9 +252,9 @@ function createInitialAppState(initialPlankState?: PlankState): InitialAppState 
       deadhang_target_sec: todayRecord.deadhang.target_sec,
       fatigue: todayRecord.fatigue,
     }
-    : computeTomorrowPlan(historyBeforeToday, DEFAULT_PARAMS, BASE_TARGETS)
+    : computeTomorrowPlan(historyBeforeToday, DEFAULT_PARAMS, BASE_TARGETS, today)
 
-  const tomorrowPlan = computeTomorrowPlan(records, DEFAULT_PARAMS, BASE_TARGETS)
+  const tomorrowPlan = computeTomorrowPlan(records, DEFAULT_PARAMS, BASE_TARGETS, addDaysToDateKey(today, 1))
   const plankLoggedToday = isPlankLogged(todayRecord)
   const deadhangLoggedToday = isDeadhangLogged(todayRecord)
 
@@ -829,7 +829,7 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
     lastSavedSnapshotRef.current = snapshotKey
 
     const nextRecords = [...withoutToday, finalRecord].toSorted((a, b) => a.date.localeCompare(b.date))
-    const tomorrowPlan = computeTomorrowPlan(nextRecords, DEFAULT_PARAMS, BASE_TARGETS)
+    const tomorrowPlan = computeTomorrowPlan(nextRecords, DEFAULT_PARAMS, BASE_TARGETS, addDaysToDateKey(today, 1))
 
     setRecords(nextRecords)
     setFatigue(finalRecord.fatigue)
