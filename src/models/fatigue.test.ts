@@ -5,9 +5,7 @@ import {
   ALPHA_P,
   ALPHA_S,
   ALPHA_U,
-  MAX_MISSED_DAY_DECAY,
   MEDIAN_INITIAL,
-  MISSED_DAY_DECAY_PER_DAY,
   computeAgeFactor,
   computeFatigueScore,
   computeFatigueSeries,
@@ -197,8 +195,8 @@ test('computeFatigueSeries decays EWMA during gap days', () => {
 
   // After gap days, EWMA decays before the second record is processed,
   // so the fatigue at record 2 should be lower with a gap
-  expect(gapSeries[1]!.F_P).toBeLessThan(consecutiveSeries[1]!.F_P)
-  expect(gapSeries[1]!.F_S).toBeLessThan(consecutiveSeries[1]!.F_S)
+  expect(gapSeries[1]?.F_P).toBeLessThan(consecutiveSeries[1]?.F_P)
+  expect(gapSeries[1]?.F_S).toBeLessThan(consecutiveSeries[1]?.F_S)
 })
 
 test('computeFatigueSeries computes F_U via pushup EWMA', () => {
@@ -650,7 +648,7 @@ test('missed day decay does not raise target when lastTarget is below baseTarget
   const decayPlan = computeTomorrowPlan(afterStreak, params, baseTargets, '2026-02-20')
   expect(decayPlan.squat_reason).toBe('missed_day_decay')
   // Should NOT raise above the last target
-  expect(decayPlan.squat_target_reps).toBeLessThanOrEqual(afterStreak.at(-1)!.squat.target_reps)
+  expect(decayPlan.squat_target_reps).toBeLessThanOrEqual(afterStreak.at(-1)?.squat.target_reps)
 })
 
 test('failure streak takes priority over missed day decay', () => {
