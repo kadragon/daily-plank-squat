@@ -135,15 +135,13 @@ export function computeFatigueSeries(
   const ageFactor = computeAgeFactor(params.age)
 
   for (const record of sorted) {
-    // Decay EWMA for each gap day (rest day = load 0 → F *= (1-alpha))
+    // Decay EWMA for each gap day (rest day = load 0 → F *= (1-alpha)^gap)
     if (previous) {
       const gap = computeMissedDays(previous.date, record.date)
-      for (let i = 0; i < gap; i++) {
-        F_P *= (1 - ALPHA_P)
-        F_S *= (1 - ALPHA_S)
-        F_U *= (1 - ALPHA_U)
-        F_D *= (1 - ALPHA_D)
-      }
+      F_P *= (1 - ALPHA_P) ** gap
+      F_S *= (1 - ALPHA_S) ** gap
+      F_U *= (1 - ALPHA_U) ** gap
+      F_D *= (1 - ALPHA_D) ** gap
     }
 
     const pushup = record.pushup ?? { target_reps: 15, actual_reps: 15, success: true, rpe: NEUTRAL_RPE }
@@ -237,7 +235,7 @@ function computeNextTargetValue(
   if (missedDays > 0) {
     const decay = Math.min(missedDays * MISSED_DAY_DECAY_PER_DAY, MAX_MISSED_DAY_DECAY)
     return {
-      target: Math.max(baseTarget, Math.round(lastTarget * (1 - decay))),
+      target: Math.min(lastTarget, Math.max(baseTarget, Math.round(lastTarget * (1 - decay)))),
       reason: 'missed_day_decay',
     }
   }

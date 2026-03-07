@@ -629,6 +629,30 @@ test('missed day decay takes priority over high fatigue hold', () => {
   expect(decayPlan.plank_target_sec).toBeLessThan(basePlan.plank_target_sec)
 })
 
+test('missed day decay does not raise target when lastTarget is below baseTarget', () => {
+  // After failure_streak, squat target could be 18 (below base_S=20)
+  // If user then misses days, missed_day_decay should NOT raise it back to 20
+  const records = [
+    dailyRecord('2026-02-14', 50, 10, false, 18, 5, false),
+    dailyRecord('2026-02-15', 50, 10, false, 18, 5, false),
+    dailyRecord('2026-02-16', 50, 10, false, 18, 5, false),
+  ]
+  // First verify failure_streak reduces squat below base
+  const streakPlan = computeTomorrowPlan(records, params, baseTargets, '2026-02-17')
+  expect(streakPlan.squat_reason).toBe('failure_streak')
+  expect(streakPlan.squat_target_reps).toBeLessThan(baseTargets.base_S)
+
+  // Now simulate: user worked out at the reduced target, then missed 2 days
+  const afterStreak = [
+    ...records,
+    dailyRecord('2026-02-17', 50, 50, true, streakPlan.squat_target_reps, streakPlan.squat_target_reps, true),
+  ]
+  const decayPlan = computeTomorrowPlan(afterStreak, params, baseTargets, '2026-02-20')
+  expect(decayPlan.squat_reason).toBe('missed_day_decay')
+  // Should NOT raise above the last target
+  expect(decayPlan.squat_target_reps).toBeLessThanOrEqual(afterStreak.at(-1)!.squat.target_reps)
+})
+
 test('failure streak takes priority over missed day decay', () => {
   const records = [
     dailyRecord('2026-02-14', 100, 20, false, 20, 8, false),
