@@ -72,6 +72,8 @@ function seedTodayRecord(overrides: Partial<DailyRecord> = {}) {
     F_total_raw: 0.2,
     inactive_time_ratio: 0.1,
     flag_suspicious: false,
+    squat_completed: false,
+    pushup_completed: false,
     ...overrides,
   }
 
@@ -263,149 +265,25 @@ test('Changing pushup target reps immediately saves today record', async () => {
   })
 })
 
-test('RPE inputs are hidden before completion for all workout views', () => {
-  const squatView = render(<App initialView="squat" />)
-  expect(squatView.container.querySelector('#squat-rpe')).toBeNull()
-  cleanup()
-
-  const pushupView = render(<App initialView="pushup" />)
-  expect(pushupView.container.querySelector('#pushup-rpe')).toBeNull()
-  cleanup()
-
-  const plankView = render(<App initialView="plank" />)
-  expect(plankView.container.querySelector('#plank-rpe')).toBeNull()
-  cleanup()
-
-  const deadhangView = render(<App initialView="deadhang" />)
-  expect(deadhangView.container.querySelector('#deadhang-rpe')).toBeNull()
-})
-
-test('Changing squat rpe is possible only after complete and saves today record', async () => {
+test('Squat complete shows recommendation', async () => {
   const view = render(<App initialView="squat" />)
 
-  expect(view.container.querySelector('#squat-rpe')).toBeNull()
+  expect(view.container.querySelector('.recommendation-note')).toBeNull()
   fireEvent.click(view.getByRole('button', { name: 'Complete squats' }))
 
   await waitFor(() => {
-    expect(view.container.querySelector('#squat-rpe')).toBeTruthy()
-  })
-
-  const rpeInput = view.container.querySelector('#squat-rpe')
-  if (!rpeInput) throw new Error('squat rpe input not found after complete')
-
-  setNumberInputValue(rpeInput, '8')
-  await waitFor(() => {
-    const stored = readStoredRecords()
-    expect(stored).toHaveLength(1)
-    expect(stored[0]?.squat.rpe).toBe(8)
-    expect(stored[0]?.rpe_unlock.squat).toBe(true)
+    expect(view.container.querySelector('.recommendation-note')).toBeTruthy()
   })
 })
 
-test('Changing pushup rpe is possible only after complete and updates existing today record', async () => {
+test('Pushup complete shows recommendation', async () => {
   const view = render(<App initialView="pushup" />)
 
-  expect(view.container.querySelector('#pushup-rpe')).toBeNull()
+  expect(view.container.querySelector('.recommendation-note')).toBeNull()
   fireEvent.click(view.getByRole('button', { name: 'Complete pushups' }))
 
   await waitFor(() => {
-    expect(view.container.querySelector('#pushup-rpe')).toBeTruthy()
-  })
-
-  const rpeInput = view.container.querySelector('#pushup-rpe')
-  if (!rpeInput) throw new Error('pushup rpe input not found after complete')
-
-  setNumberInputValue(rpeInput, '9')
-  await waitFor(() => {
-    const stored = readStoredRecords()
-    expect(stored).toHaveLength(1)
-    expect(stored[0]?.pushup.rpe).toBe(9)
-    expect(stored[0]?.rpe_unlock.pushup).toBe(true)
-  })
-  setNumberInputValue(rpeInput, '7')
-  await waitFor(() => {
-    const stored = readStoredRecords()
-    expect(stored).toHaveLength(1)
-    expect(stored[0]?.date).toBe(getTodayDateKey())
-    expect(stored[0]?.pushup.rpe).toBe(7)
-    expect(stored[0]?.rpe_unlock.pushup).toBe(true)
-  })
-})
-
-test('Cancelling plank keeps plank rpe locked', async () => {
-  const view = render(<App initialView="plank" />)
-
-  fireEvent.click(view.getByRole('button', { name: 'Start' }))
-  fireEvent.click(view.getByRole('button', { name: 'Cancel' }))
-
-  await waitFor(() => {
-    const stored = readStoredRecords()
-    expect(stored).toHaveLength(1)
-    expect(stored[0]?.plank.success).toBe(false)
-    expect(stored[0]?.rpe_unlock.plank).toBe(false)
-  })
-
-  expect(view.container.querySelector('#plank-rpe')).toBeNull()
-})
-
-test('Completing plank unlocks rpe and keeps unlock state after rerender', async () => {
-  seedTodayRecord({
-    plank: { target_sec: 0, actual_sec: 0, success: false },
-  })
-
-  const view = render(<App initialView="plank" />)
-  expect(view.container.querySelector('#plank-rpe')).toBeNull()
-
-  fireEvent.click(view.getByRole('button', { name: 'Start' }))
-
-  await waitFor(() => {
-    const stored = readStoredRecords()
-    expect(stored[0]?.plank.success).toBe(true)
-    expect(stored[0]?.rpe_unlock.plank).toBe(true)
-    expect(view.container.querySelector('#plank-rpe')).toBeTruthy()
-  })
-
-  const rpeInput = view.container.querySelector('#plank-rpe')
-  if (!rpeInput) throw new Error('plank rpe input not found after complete')
-
-  setNumberInputValue(rpeInput, '4')
-  await waitFor(() => {
-    const stored = readStoredRecords()
-    expect(stored[0]?.plank.rpe).toBe(4)
-    expect(stored[0]?.rpe_unlock.plank).toBe(true)
-  })
-
-  cleanup()
-  const rerendered = render(<App initialView="plank" />)
-  expect(rerendered.container.querySelector('#plank-rpe')).toBeTruthy()
-})
-
-test('Completing deadhang unlocks rpe and saves today record', async () => {
-  seedTodayRecord({
-    deadhang: { target_sec: 0, actual_sec: 0, success: false },
-  })
-
-  const view = render(<App initialView="deadhang" />)
-  expect(view.container.querySelector('#deadhang-rpe')).toBeNull()
-
-  fireEvent.click(view.getByRole('button', { name: 'Start' }))
-
-  await waitFor(() => {
-    const stored = readStoredRecords()
-    expect(stored[0]?.deadhang.success).toBe(true)
-    expect(stored[0]?.rpe_unlock.deadhang).toBe(true)
-    expect(view.container.querySelector('#deadhang-rpe')).toBeTruthy()
-  })
-
-  const rpeInput = view.container.querySelector('#deadhang-rpe')
-  if (!rpeInput) throw new Error('deadhang rpe input not found after complete')
-
-  setNumberInputValue(rpeInput, '6')
-  await waitFor(() => {
-    const stored = readStoredRecords()
-    expect(stored).toHaveLength(1)
-    expect(stored[0]?.deadhang.rpe).toBe(6)
-    expect(stored[0]?.rpe_unlock.deadhang).toBe(true)
+    expect(view.container.querySelector('.recommendation-note')).toBeTruthy()
   })
 })
 
@@ -530,6 +408,39 @@ test('Save failure on complete shows inline error feedback', async () => {
       value: originalSetItem,
     })
   }
+})
+
+test('In-progress squat draft with reps does not show recommendation on reload', () => {
+  seedTodayRecord({
+    squat: { target_reps: 20, actual_reps: 12, success: false },
+    squat_completed: false,
+  })
+
+  const view = render(<App initialView="squat" />)
+
+  expect(view.container.querySelector('.recommendation-note')).toBeNull()
+})
+
+test('Completed squat record shows recommendation on reload', () => {
+  seedTodayRecord({
+    squat: { target_reps: 20, actual_reps: 21, success: true },
+    squat_completed: true,
+  })
+
+  const view = render(<App initialView="squat" />)
+
+  expect(view.container.querySelector('.recommendation-note')).toBeTruthy()
+})
+
+test('In-progress pushup draft with reps does not show recommendation on reload', () => {
+  seedTodayRecord({
+    pushup: { target_reps: 15, actual_reps: 10, success: false },
+    pushup_completed: false,
+  })
+
+  const view = render(<App initialView="pushup" />)
+
+  expect(view.container.querySelector('.recommendation-note')).toBeNull()
 })
 
 test('Partial today record without plank log keeps plank view in IDLE', () => {

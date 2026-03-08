@@ -18,28 +18,18 @@ export interface ExerciseRecord {
   target_sec: number
   actual_sec: number
   success: boolean
-  rpe: number
 }
 
 export interface SquatRecord {
   target_reps: number
   actual_reps: number
   success: boolean
-  rpe: number
 }
 
 export interface PushupRecord {
   target_reps: number
   actual_reps: number
   success: boolean
-  rpe: number
-}
-
-export interface RpeUnlockRecord {
-  plank: boolean
-  squat: boolean
-  pushup: boolean
-  deadhang: boolean
 }
 
 export interface DailyRecord {
@@ -48,7 +38,6 @@ export interface DailyRecord {
   squat: SquatRecord
   pushup: PushupRecord
   deadhang: ExerciseRecord
-  rpe_unlock: RpeUnlockRecord
   fatigue: number // sigmoid fatigue score [0, 1]
   F_P: number // plank EWMA fatigue
   F_S: number // squat EWMA fatigue
@@ -57,6 +46,8 @@ export interface DailyRecord {
   F_total_raw: number
   inactive_time_ratio: number
   flag_suspicious: boolean
+  squat_completed: boolean
+  pushup_completed: boolean
 }
 
 export interface HealthShortcutPayload {
@@ -111,10 +102,9 @@ export type RecommendationReason =
   | 'failure_streak'
   | 'missed_day_decay'
   | 'high_fatigue_hold'
-  | 'rpe_very_high_reduce'
-  | 'rpe_high_hold'
-  | 'rpe_low_boost'
-  | 'neutral_progression'
+  | 'success_progression'
+  | 'not_met_hold'
+  | 'streak_moderate'
 
 export interface TomorrowPlan {
   plank_target_sec: number

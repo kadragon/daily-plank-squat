@@ -4,8 +4,7 @@ interface RepsCounterProps {
   exerciseName?: string
   count?: number
   targetReps?: number
-  rpe?: number
-  showRpe?: boolean
+  showRecommendation?: boolean
   tomorrowTargetReps?: number
   tomorrowDeltaReps?: number
   recommendationReasonText?: string
@@ -13,7 +12,6 @@ interface RepsCounterProps {
   saveFeedbackTone?: 'info' | 'success' | 'error'
   onTargetRepsChange?: (rawValue: string) => void
   onDoneRepsChange?: (rawValue: string) => void
-  onRpeChange?: (rawValue: string) => void
   onComplete?: () => void
 }
 
@@ -23,8 +21,7 @@ export default function RepsCounter({
   exerciseName = 'squats',
   count = 0,
   targetReps = 0,
-  rpe = 5,
-  showRpe = true,
+  showRecommendation = false,
   tomorrowTargetReps = 0,
   tomorrowDeltaReps = 0,
   recommendationReasonText = '',
@@ -32,7 +29,6 @@ export default function RepsCounter({
   saveFeedbackTone = 'info',
   onTargetRepsChange,
   onDoneRepsChange,
-  onRpeChange,
   onComplete,
 }: RepsCounterProps) {
   const goalReached = targetReps > 0 && count >= targetReps
@@ -68,30 +64,16 @@ export default function RepsCounter({
           onInput={(event) => onDoneRepsChange?.((event.currentTarget as HTMLInputElement).value)}
         />
       </div>
-      {showRpe
+      {showRecommendation
         ? (
-          <div className="reps-input-row">
-            <label className="reps-input-label" htmlFor={`${idPrefix}-rpe`}>RPE (1-10): {rpe}</label>
-            <input
-              id={`${idPrefix}-rpe`}
-              className="rpe-slider"
-              type="range"
-              min={1}
-              max={10}
-              step={1}
-              aria-label="RPE"
-              value={rpe}
-              onInput={(event) => onRpeChange?.((event.currentTarget as HTMLInputElement).value)}
-            />
+          <div className="recommendation-note">
+            <div className="recommendation-note__target">
+              내일 추천: {tomorrowTargetReps} ({tomorrowDeltaReps > 0 ? '+' : ''}{tomorrowDeltaReps})
+            </div>
+            <div className="recommendation-note__reason">{recommendationReasonText}</div>
           </div>
         )
         : null}
-      <div className="recommendation-note">
-        <div className="recommendation-note__target">
-          내일 추천: {tomorrowTargetReps} ({tomorrowDeltaReps > 0 ? '+' : ''}{tomorrowDeltaReps})
-        </div>
-        <div className="recommendation-note__reason">{recommendationReasonText}</div>
-      </div>
       <div className="reps-controls">
         <button type="button" className="btn" aria-label={`Complete ${exerciseName}`} onClick={onComplete}>Complete</button>
       </div>

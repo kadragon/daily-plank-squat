@@ -17,6 +17,8 @@ function record(date: string, plank: number, squat: number, pushup: number): Dai
     F_total_raw: 0.5,
     inactive_time_ratio: 0,
     flag_suspicious: false,
+    squat_completed: false,
+    pushup_completed: false,
   }
 }
 

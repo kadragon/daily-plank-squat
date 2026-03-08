@@ -14,16 +14,32 @@ test('RepsCounter uses pushup-prefixed ids when idPrefix="pushup"', () => {
 
   expect(html).toContain('id="pushup-target-reps"')
   expect(html).toContain('id="pushup-done-reps"')
-  expect(html).toContain('id="pushup-rpe"')
 })
 
-test('RepsCounter hides RPE input when showRpe=false', () => {
+test('RepsCounter hides recommendation when showRecommendation=false', () => {
   const html = renderToStaticMarkup(
-    <RepsCounter title="Pushup Counter" idPrefix="pushup" exerciseName="pushups" count={0} showRpe={false} />,
+    <RepsCounter title="Pushup Counter" idPrefix="pushup" exerciseName="pushups" count={0} showRecommendation={false} />,
   )
 
-  expect(html).not.toContain('id="pushup-rpe"')
-  expect(html).not.toContain('RPE (1-10)')
+  expect(html).not.toContain('recommendation-note')
+})
+
+test('RepsCounter shows recommendation when showRecommendation=true', () => {
+  const html = renderToStaticMarkup(
+    <RepsCounter
+      title="Pushup Counter"
+      idPrefix="pushup"
+      exerciseName="pushups"
+      count={0}
+      showRecommendation={true}
+      tomorrowTargetReps={21}
+      tomorrowDeltaReps={1}
+      recommendationReasonText="목표 달성으로 기본 증량"
+    />,
+  )
+
+  expect(html).toContain('내일 추천: 21 (+1)')
+  expect(html).toContain('목표 달성으로 기본 증량')
 })
 
 test('RepsCounter complete button aria-label reflects exerciseName', () => {
@@ -60,15 +76,9 @@ test('RepsCounter renders inline save feedback with polite live region when prov
   expect(html).toContain('aria-live="polite"')
 })
 
-test('RepsCounter renders tomorrow recommendation target, delta, and reason', () => {
-  const html = renderToStaticMarkup(
-    <RepsCounter
-      tomorrowTargetReps={21}
-      tomorrowDeltaReps={1}
-      recommendationReasonText="오늘 RPE 낮음(1~4)으로 내일 소폭 증량"
-    />,
-  )
+test('RepsCounter does not render RPE input', () => {
+  const html = renderToStaticMarkup(<RepsCounter count={0} />)
 
-  expect(html).toContain('내일 추천: 21 (+1)')
-  expect(html).toContain('오늘 RPE 낮음(1~4)으로 내일 소폭 증량')
+  expect(html).not.toContain('RPE')
+  expect(html).not.toContain('rpe')
 })
