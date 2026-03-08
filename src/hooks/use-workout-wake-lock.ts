@@ -23,7 +23,8 @@ export function useWorkoutWakeLock(plankState: PlankState, deadhangState: PlankS
             setWakeLockNotice('')
           }
         }
-      } catch {
+      } catch (err) {
+        console.warn('[useWorkoutWakeLock] Wake lock sync failed:', err)
         if (!isDisposed && hasRunningTimer) {
           setWakeLockNotice('Wake Lock could not be acquired. Keep the screen on manually.')
         }

@@ -63,7 +63,9 @@ export function useRepsExercise({
 
   const handleDoneRepsChange = useCallback((rawValue: string) => {
     const nextCount = sanitizeDoneReps(Number(rawValue))
-    if (counterRef.current) {
+    if (!counterRef.current) {
+      console.error('[useRepsExercise] counterRef is null in handleDoneRepsChange — this should never happen')
+    } else {
       counterRef.current.count = nextCount
     }
     setCount(nextCount)
@@ -81,7 +83,10 @@ export function useRepsExercise({
   }, [count, goalAlerts, requestPersist])
 
   const handleComplete = useCallback(() => {
-    if (!counterRef.current) return
+    if (!counterRef.current) {
+      console.error('[useRepsExercise] counterRef is null in handleComplete — this should never happen')
+      return
+    }
     if (count === 0) {
       counterRef.current.count = target
     }

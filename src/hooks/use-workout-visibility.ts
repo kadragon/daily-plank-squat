@@ -1,10 +1,7 @@
 import { useEffect } from 'react'
 import { onVisibilityChange, type VisibilityTracker } from './use-visibility'
 import type { PlankState } from '../types'
-
-function nowMs(): number {
-  return typeof performance !== 'undefined' ? performance.now() : Date.now()
-}
+import { nowMs } from '../utils/now-ms'
 
 interface TimedExerciseRef {
   visibilityTrackerRef: React.RefObject<VisibilityTracker>

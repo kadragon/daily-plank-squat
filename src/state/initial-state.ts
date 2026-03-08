@@ -90,7 +90,7 @@ export function createInitialAppState(initialPlankState?: PlankState): InitialAp
       squat_target_reps: todayRecord.squat.target_reps,
       pushup_target_reps: todayRecord.pushup.target_reps,
       deadhang_target_sec: todayRecord.deadhang.target_sec,
-      dumbbell_target_reps: todayRecord.dumbbell.target_reps,
+      dumbbell_target_reps: todayRecord.dumbbell?.target_reps ?? 0,
       fatigue: todayRecord.fatigue,
     }
     : computeTomorrowPlan(historyBeforeToday, DEFAULT_PARAMS, BASE_TARGETS, today)
@@ -114,8 +114,8 @@ export function createInitialAppState(initialPlankState?: PlankState): InitialAp
     squatSuccess: todayRecord?.squat.success ?? false,
     pushupActualReps: todayRecord?.pushup.actual_reps ?? 0,
     pushupSuccess: todayRecord?.pushup.success ?? false,
-    dumbbellActualReps: todayRecord?.dumbbell.actual_reps ?? 0,
-    dumbbellSuccess: todayRecord?.dumbbell.success ?? false,
+    dumbbellActualReps: todayRecord?.dumbbell?.actual_reps ?? 0,
+    dumbbellSuccess: todayRecord?.dumbbell?.success ?? false,
     fatigue: todayRecord?.fatigue ?? todayTargets.fatigue,
     overloadWarning: todayRecord ? tomorrowPlan.overload_warning : false,
     suspiciousSession: todayRecord?.flag_suspicious ?? false,

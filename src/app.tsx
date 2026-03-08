@@ -42,6 +42,7 @@ import {
 } from './state/build-daily-record'
 import type { DailyRecord, PlankState } from './types'
 import { addDaysToDateKey } from './utils/date-key'
+import { nowMs } from './utils/now-ms'
 
 export { computeSquatSuccess }
 
@@ -54,10 +55,6 @@ interface AppProps {
 const APPLE_HEALTH_SHORTCUT_NAME = 'DailyPlankSquatToHealth'
 const HEALTH_EXPORT_ERROR_HINT = 'Could not open Shortcuts. Check that Apple Shortcuts is available on this device.'
 const SUSPICIOUS_EXPORT_HINT = '기록은 가능하지만 측정 환경 경고'
-
-function nowMs(): number {
-  return typeof performance !== 'undefined' ? performance.now() : Date.now()
-}
 
 export default function App({ initialView = 'plank', initialPlankState, initialWakeLockNotice }: AppProps) {
   const initial = useRef(createInitialAppState(initialPlankState)).current
