@@ -7,7 +7,7 @@ import {
   type SquatCounter as DomainSquatCounter,
 } from '../models/squat-counter'
 import { computeSquatSuccess } from '../state/initial-state'
-import type { CompleteSaveFeedbackTarget, PersistReason, SaveFeedbackTone } from '../state/build-daily-record'
+import type { PersistReason } from '../state/build-daily-record'
 
 export interface GoalAlertCallbacks {
   onProgress: (count: number, target: number) => void
@@ -19,11 +19,9 @@ export interface UseRepsExerciseOptions {
   initialSuccess: boolean
   initialCompleted: boolean
   goalAlerts: GoalAlertCallbacks
-  feedbackTarget: CompleteSaveFeedbackTarget
   persistReason: PersistReason
   requestPersist: (reason?: PersistReason) => void
-  clearCompleteSaveFeedbackTimer: () => void
-  setCompleteSaveFeedback: (feedback: { target: CompleteSaveFeedbackTarget, text: string, tone: SaveFeedbackTone } | null) => void
+  onComplete: (finalCount: number, target: number) => void
 }
 
 export interface UseRepsExerciseReturn {
@@ -44,11 +42,9 @@ export function useRepsExercise({
   initialSuccess,
   initialCompleted,
   goalAlerts,
-  feedbackTarget,
   persistReason,
   requestPersist,
-  clearCompleteSaveFeedbackTimer,
-  setCompleteSaveFeedback,
+  onComplete,
 }: UseRepsExerciseOptions): UseRepsExerciseReturn {
   const counterRef = useRef<DomainSquatCounter | null>(null)
   if (counterRef.current === null) {
@@ -95,10 +91,9 @@ export function useRepsExercise({
     goalAlerts.onProgress(finalCount, target)
     setSuccess(computeSquatSuccess(finalCount, target))
     setCompleted(true)
-    clearCompleteSaveFeedbackTimer()
-    setCompleteSaveFeedback({ target: feedbackTarget, text: 'Saving...', tone: 'info' })
+    onComplete(finalCount, target)
     requestPersist(persistReason)
-  }, [count, target, goalAlerts, feedbackTarget, persistReason, requestPersist, clearCompleteSaveFeedbackTimer, setCompleteSaveFeedback])
+  }, [count, target, goalAlerts, persistReason, requestPersist, onComplete])
 
   return {
     count,

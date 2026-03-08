@@ -53,24 +53,3 @@ export function isSwipeIgnoredTarget(target: EventTarget | null): boolean {
   if (!(target instanceof Element)) return false
   return target.closest('input,button,label,textarea,select,a,[data-swipe-ignore="true"]') !== null
 }
-
-export function TabIcon({ view }: { view: AppView }) {
-  switch (view) {
-    case 'plank':
-      return <span className="app-tabbar__icon" aria-hidden="true">🧘</span>
-    case 'squat':
-      return <span className="app-tabbar__icon" aria-hidden="true">🏋️</span>
-    case 'pushup':
-      return <span className="app-tabbar__icon" aria-hidden="true">💪</span>
-    case 'deadhang':
-      return <span className="app-tabbar__icon" aria-hidden="true">🧗</span>
-    case 'dumbbell':
-      return <span className="app-tabbar__icon" aria-hidden="true">🏋️‍♂️</span>
-    case 'overview':
-      return <span className="app-tabbar__icon" aria-hidden="true">📊</span>
-    case 'settings':
-      return <span className="app-tabbar__icon" aria-hidden="true">⚙️</span>
-    default:
-      return null
-  }
-}

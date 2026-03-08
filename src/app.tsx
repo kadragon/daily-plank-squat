@@ -20,8 +20,8 @@ import {
   getActiveNavItems,
   isWorkoutView,
   isScrollableView,
-  TabIcon,
 } from './models/navigation'
+import { TabIcon } from './components/tab-icon'
 import { saveRecord } from './storage/daily-record'
 import { buildHealthPayload, buildShortcutRunUrl } from './integrations/apple-health-shortcut'
 import { getRecommendationReasonText } from './locales/ko'
@@ -140,17 +140,22 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
     initialSuccess: initial.deadhangSuccess,
     initialLogged: initial.alreadyLoggedDeadhangToday,
     targetSec: deadhangTargetSec,
-    otherTimerRunning: plank.state === 'RUNNING',
+    otherTimerRunning: false,
     onProgressSeconds: onDeadhangProgressSeconds,
     requestPersist,
     setSuspiciousSession,
   })
 
-  // Plank start override: check deadhang mutual exclusion
+  // Mutual exclusion: only one timed exercise can run at a time
   const handlePlankStart = useCallback(() => {
     if (deadhang.state === 'RUNNING') return
     plank.handleStart()
   }, [deadhang.state, plank.handleStart])
+
+  const handleDeadhangStart = useCallback(() => {
+    if (plank.state === 'RUNNING') return
+    deadhang.handleStart()
+  }, [plank.state, deadhang.handleStart])
 
   // Reps exercise goal alert callbacks
   const squatGoalAlerts = useMemo(() => ({
@@ -163,6 +168,23 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
     onProgress: (count: number, target: number) => goalAlertsRef.current.onDumbbellProgress(count, target),
   }), [])
 
+  const showSaveFeedback = useCallback((target: CompleteSaveFeedbackTarget) => {
+    clearCompleteSaveFeedbackTimer()
+    setCompleteSaveFeedback({ target, text: 'Saving...', tone: 'info' })
+  }, [clearCompleteSaveFeedbackTimer])
+
+  const onSquatComplete = useCallback(() => {
+    showSaveFeedback('squat')
+  }, [showSaveFeedback])
+
+  const onPushupComplete = useCallback(() => {
+    showSaveFeedback('pushup')
+  }, [showSaveFeedback])
+
+  const onDumbbellComplete = useCallback(() => {
+    showSaveFeedback('dumbbell')
+  }, [showSaveFeedback])
+
   // Reps exercise hooks
   const squat = useRepsExercise({
     initialCount: initial.squatActualReps,
@@ -170,11 +192,9 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
     initialSuccess: initial.squatSuccess,
     initialCompleted: initial.squatCompleted,
     goalAlerts: squatGoalAlerts,
-    feedbackTarget: 'squat',
     persistReason: 'squat-complete',
     requestPersist,
-    clearCompleteSaveFeedbackTimer,
-    setCompleteSaveFeedback,
+    onComplete: onSquatComplete,
   })
 
   const pushup = useRepsExercise({
@@ -183,11 +203,9 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
     initialSuccess: initial.pushupSuccess,
     initialCompleted: initial.pushupCompleted,
     goalAlerts: pushupGoalAlerts,
-    feedbackTarget: 'pushup',
     persistReason: 'pushup-complete',
     requestPersist,
-    clearCompleteSaveFeedbackTimer,
-    setCompleteSaveFeedback,
+    onComplete: onPushupComplete,
   })
 
   const dumbbellExercise = useRepsExercise({
@@ -196,11 +214,9 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
     initialSuccess: initial.dumbbellSuccess,
     initialCompleted: initial.dumbbellCompleted,
     goalAlerts: dumbbellGoalAlerts,
-    feedbackTarget: 'dumbbell',
     persistReason: 'dumbbell-complete',
     requestPersist,
-    clearCompleteSaveFeedbackTimer,
-    setCompleteSaveFeedback,
+    onComplete: onDumbbellComplete,
   })
 
   const handleExportToHealth = useCallback(() => {
@@ -211,7 +227,8 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
       if (typeof window === 'undefined') throw new Error('window is unavailable')
       window.location.href = shortcutUrl
       setHealthExportHint('')
-    } catch {
+    } catch (err) {
+      console.warn('[handleExportToHealth] Health export failed:', err)
       setHealthExportHint(HEALTH_EXPORT_ERROR_HINT)
     }
   }, [todayRecord])
@@ -450,7 +467,7 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
               tomorrowDeltaSec={tomorrowTargets.deadhang - deadhangTargetSec}
               recommendationReasonText={getRecommendationReasonText(tomorrowTargets.deadhangReason, 'deadhang')}
               startDisabled={plank.state === 'RUNNING'}
-              onStart={deadhang.handleStart}
+              onStart={handleDeadhangStart}
               onPause={deadhang.handlePause}
               onResume={deadhang.handleResume}
               onCancel={deadhang.handleCancel}

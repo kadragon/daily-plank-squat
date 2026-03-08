@@ -78,6 +78,11 @@ function isDeadhangLogged(record: DailyRecord | null): boolean {
 
 export { todayKey }
 
+function resolveTimedExerciseState(logged: boolean, success: boolean | undefined): PlankState {
+  if (!logged) return 'IDLE'
+  return success ? 'COMPLETED' : 'CANCELLED'
+}
+
 export function createInitialAppState(initialPlankState?: PlankState): InitialAppState {
   const records = loadAllRecords()
   const today = todayKey()
@@ -129,8 +134,8 @@ export function createInitialAppState(initialPlankState?: PlankState): InitialAp
     tomorrowPushupReason: tomorrowPlan.pushup_reason,
     tomorrowDeadhangReason: tomorrowPlan.deadhang_reason,
     tomorrowDumbbellReason: tomorrowPlan.dumbbell_reason,
-    plankState: initialPlankState ?? (plankLoggedToday ? (todayRecord?.plank.success ? 'COMPLETED' : 'CANCELLED') : 'IDLE'),
-    deadhangState: deadhangLoggedToday ? (todayRecord?.deadhang.success ? 'COMPLETED' : 'CANCELLED') : 'IDLE',
+    plankState: initialPlankState ?? resolveTimedExerciseState(plankLoggedToday, todayRecord?.plank.success),
+    deadhangState: resolveTimedExerciseState(deadhangLoggedToday, todayRecord?.deadhang.success),
     alreadyLoggedPlankToday: plankLoggedToday,
     alreadyLoggedDeadhangToday: deadhangLoggedToday,
     squatCompleted: todayRecord?.squat_completed ?? false,
