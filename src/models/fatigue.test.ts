@@ -37,6 +37,7 @@ const baseTargets: BaseTargets = {
   base_S: 20,
   base_U: 15,
   base_D: 30,
+  base_DB: 10,
 }
 
 function dailyRecord(
@@ -70,16 +71,23 @@ function dailyRecord(
       actual_sec: 30,
       success: true,
     },
+    dumbbell: {
+      target_reps: 10,
+      actual_reps: 10,
+      success: true,
+    },
     fatigue: 0,
     F_P: 0,
     F_S: 0,
     F_U: 0,
     F_D: 0,
+    F_DB: 0,
     F_total_raw: 0,
     inactive_time_ratio: 0,
     flag_suspicious: false,
     squat_completed: false,
     pushup_completed: false,
+    dumbbell_completed: false,
   }
 }
 
@@ -127,22 +135,28 @@ test('ALPHA_D constant equals 0.35', () => {
   expect(updateEWMA(ALPHA_D, 0, 1.0)).toBeCloseTo(0.35)
 })
 
-test('computeSharedFatigueRaw(F_P, F_S, F_U, F_D) returns 4-exercise weighted formula', () => {
-  const allOnes = 0.22 + 0.28 + 0.28 + 0.22 + 0.07 + 0.06 + 0.05 + 0.05 + 0.04 + 0.04
-  expect(computeSharedFatigueRaw(1.0, 1.0, 1.0, 1.0)).toBeCloseTo(allOnes)
+test('computeSharedFatigueRaw(F_P, F_S, F_U, F_D, F_DB) returns 5-exercise weighted formula', () => {
+  const allOnes = 0.18 + 0.23 + 0.23 + 0.18 + 0.18
+    + 0.04 + 0.04 + 0.03 + 0.03 + 0.03 + 0.03 + 0.03 + 0.03 + 0.03 + 0.02
+  expect(computeSharedFatigueRaw(1.0, 1.0, 1.0, 1.0, 1.0)).toBeCloseTo(allOnes)
   const expected = (
-    0.22 * 0.5
-    + 0.28 * 1.0
-    + 0.28 * 0
-    + 0.22 * 0.2
-    + 0.07 * 0.5 * 0.2
-    + 0.06 * 1.0 * 0
-    + 0.05 * 0.5 * 1.0
-    + 0.05 * 0.5 * 0
-    + 0.04 * 1.0 * 0.2
-    + 0.04 * 0 * 0.2
+    0.18 * 0.5
+    + 0.23 * 1.0
+    + 0.23 * 0
+    + 0.18 * 0.2
+    + 0.18 * 0.3
+    + 0.04 * 0.5 * 0.2
+    + 0.04 * 1.0 * 0
+    + 0.03 * 0.5 * 1.0
+    + 0.03 * 0.5 * 0
+    + 0.03 * 1.0 * 0.2
+    + 0.03 * 0 * 0.2
+    + 0.03 * 0.5 * 0.3
+    + 0.03 * 1.0 * 0.3
+    + 0.03 * 0 * 0.3
+    + 0.02 * 0.2 * 0.3
   )
-  expect(computeSharedFatigueRaw(0.5, 1.0, 0, 0.2)).toBeCloseTo(expected)
+  expect(computeSharedFatigueRaw(0.5, 1.0, 0, 0.2, 0.3)).toBeCloseTo(expected)
 })
 
 test('computes clipped body factors from PRD', () => {
@@ -701,4 +715,5 @@ test('empty history default reason is success_progression', () => {
   expect(plan.squat_reason).toBe('success_progression')
   expect(plan.pushup_reason).toBe('success_progression')
   expect(plan.deadhang_reason).toBe('success_progression')
+  expect(plan.dumbbell_reason).toBe('success_progression')
 })

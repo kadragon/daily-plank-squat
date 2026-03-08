@@ -1,4 +1,4 @@
-import type { DailyRecord, ExerciseRecord, PushupRecord, SquatRecord } from '../types'
+import type { DailyRecord, DumbbellRecord, ExerciseRecord, PushupRecord, SquatRecord } from '../types'
 import { getTodayDateKey } from '../utils/date-key'
 
 const STORAGE_KEY = 'daily-records'
@@ -81,6 +81,24 @@ function asPushupRecord(value: unknown): PushupRecord | null {
   return null
 }
 
+function asDumbbellRecord(value: unknown): DumbbellRecord | null {
+  if (!isRecord(value)) return null
+
+  if (
+    typeof value.target_reps === 'number'
+    && typeof value.actual_reps === 'number'
+    && typeof value.success === 'boolean'
+  ) {
+    return {
+      target_reps: value.target_reps,
+      actual_reps: value.actual_reps,
+      success: value.success,
+    }
+  }
+
+  return null
+}
+
 function asDailyRecord(value: unknown): DailyRecord | null {
   if (!isRecord(value)) return null
 
@@ -99,6 +117,7 @@ function asDailyRecord(value: unknown): DailyRecord | null {
 
   const pushup = asPushupRecord(value.pushup) ?? NEUTRAL_PUSHUP
   const deadhang = asExerciseRecord(value.deadhang) ?? NEUTRAL_DEADHANG
+  const dumbbell = asDumbbellRecord(value.dumbbell)
 
   return {
     date: value.date,
@@ -106,16 +125,19 @@ function asDailyRecord(value: unknown): DailyRecord | null {
     squat,
     pushup,
     deadhang,
+    dumbbell,
     fatigue: value.fatigue,
     F_P: value.F_P,
     F_S: value.F_S,
     F_U: typeof value.F_U === 'number' ? value.F_U : 0,
     F_D: typeof value.F_D === 'number' ? value.F_D : 0,
+    F_DB: typeof value.F_DB === 'number' ? value.F_DB : 0,
     F_total_raw: typeof value.F_total_raw === 'number' ? value.F_total_raw : 0,
     inactive_time_ratio: typeof value.inactive_time_ratio === 'number' ? value.inactive_time_ratio : 0,
     flag_suspicious: typeof value.flag_suspicious === 'boolean' ? value.flag_suspicious : false,
     squat_completed: typeof value.squat_completed === 'boolean' ? value.squat_completed : false,
     pushup_completed: typeof value.pushup_completed === 'boolean' ? value.pushup_completed : false,
+    dumbbell_completed: typeof value.dumbbell_completed === 'boolean' ? value.dumbbell_completed : false,
   }
 }
 

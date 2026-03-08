@@ -9,11 +9,12 @@ export function buildHealthPayload(todayRecord: DailyRecord): HealthShortcutPayl
     workout_type: 'Functional Strength Training',
     duration_sec: todayRecord.plank.actual_sec
       + todayRecord.deadhang.actual_sec
-      + REP_DURATION_SECONDS * (todayRecord.squat.actual_reps + todayRecord.pushup.actual_reps),
+      + REP_DURATION_SECONDS * (todayRecord.squat.actual_reps + todayRecord.pushup.actual_reps + (todayRecord.dumbbell?.actual_reps ?? 0)),
     plank_actual_sec: todayRecord.plank.actual_sec,
     squat_actual_reps: todayRecord.squat.actual_reps,
     pushup_actual_reps: todayRecord.pushup.actual_reps,
     deadhang_actual_sec: todayRecord.deadhang.actual_sec,
+    dumbbell_actual_reps: todayRecord.dumbbell?.actual_reps ?? 0,
     fatigue: todayRecord.fatigue,
     flag_suspicious: todayRecord.flag_suspicious,
     source: 'daily-plank-squat-web',
