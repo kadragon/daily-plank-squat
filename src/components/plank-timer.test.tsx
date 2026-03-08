@@ -91,22 +91,6 @@ test('PlankTimer progress bar shows correct width in RUNNING state', () => {
   expect(html).toContain('width:50%')
 })
 
-test('PlankTimer renders RPE input with 1~10 bounds', () => {
-  const html = renderToStaticMarkup(<PlankTimer rpe={6} />)
-
-  expect(html).toContain('id="plank-rpe"')
-  expect(html).toContain('RPE (1-10)')
-  expect(html).toContain('min="1"')
-  expect(html).toContain('max="10"')
-})
-
-test('PlankTimer hides RPE input when showRpe=false', () => {
-  const html = renderToStaticMarkup(<PlankTimer showRpe={false} />)
-
-  expect(html).not.toContain('id="plank-rpe"')
-  expect(html).not.toContain('RPE (1-10)')
-})
-
 test('PlankTimer renders custom title via title prop', () => {
   const html = renderToStaticMarkup(<PlankTimer title="Deadhang Timer" />)
 
@@ -119,19 +103,6 @@ test('PlankTimer defaults to "Plank Timer" when title prop is omitted', () => {
   expect(html).toContain('<h2>Plank Timer</h2>')
 })
 
-test('PlankTimer idPrefix prop sets RPE input id and htmlFor', () => {
-  const html = renderToStaticMarkup(<PlankTimer idPrefix="deadhang" />)
-
-  expect(html).toContain('id="deadhang-rpe"')
-  expect(html).toContain('for="deadhang-rpe"')
-})
-
-test('PlankTimer defaults to "plank" idPrefix when prop is omitted', () => {
-  const html = renderToStaticMarkup(<PlankTimer />)
-
-  expect(html).toContain('id="plank-rpe"')
-})
-
 test('PlankTimer disables Start button when startDisabled=true', () => {
   const html = renderToStaticMarkup(<PlankTimer state="IDLE" startDisabled />)
 
@@ -139,11 +110,34 @@ test('PlankTimer disables Start button when startDisabled=true', () => {
   expect(html).toContain('disabled')
 })
 
-test('PlankTimer renders tomorrow recommendation target, delta, and reason', () => {
+test('PlankTimer hides recommendation when state is IDLE', () => {
   const html = renderToStaticMarkup(
-    <PlankTimer tomorrowTargetSec={63} tomorrowDeltaSec={3} recommendationReasonText="중립 강도(5~6)로 기본 증량" />,
+    <PlankTimer state="IDLE" tomorrowTargetSec={63} tomorrowDeltaSec={3} recommendationReasonText="목표 달성으로 기본 증량" />,
+  )
+
+  expect(html).not.toContain('recommendation-note')
+})
+
+test('PlankTimer shows recommendation when state is COMPLETED', () => {
+  const html = renderToStaticMarkup(
+    <PlankTimer state="COMPLETED" tomorrowTargetSec={63} tomorrowDeltaSec={3} recommendationReasonText="목표 달성으로 기본 증량" />,
   )
 
   expect(html).toContain('내일 추천: 63s (+3s)')
-  expect(html).toContain('중립 강도(5~6)로 기본 증량')
+  expect(html).toContain('목표 달성으로 기본 증량')
+})
+
+test('PlankTimer shows recommendation when state is CANCELLED', () => {
+  const html = renderToStaticMarkup(
+    <PlankTimer state="CANCELLED" tomorrowTargetSec={63} tomorrowDeltaSec={3} recommendationReasonText="목표 달성으로 기본 증량" />,
+  )
+
+  expect(html).toContain('recommendation-note')
+})
+
+test('PlankTimer does not render RPE input', () => {
+  const html = renderToStaticMarkup(<PlankTimer />)
+
+  expect(html).not.toContain('RPE')
+  expect(html).not.toContain('rpe')
 })

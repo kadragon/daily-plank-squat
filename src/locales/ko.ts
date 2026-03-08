@@ -6,10 +6,9 @@ const RECOMMENDATION_REASON_TEXT: Record<RecommendationReason, string> = {
   failure_streak: '최근 3일 미달성으로 회복을 위해 감량',
   missed_day_decay: '운동 쉰 날이 있어 목표 감량',
   high_fatigue_hold: '피로도 높음(>0.85)으로 목표 유지',
-  rpe_very_high_reduce: '오늘 RPE 높음(9~10)으로 내일 소폭 감량',
-  rpe_high_hold: '오늘 RPE 높음(7~8)으로 내일 목표 유지',
-  rpe_low_boost: '오늘 RPE 낮음(1~4)으로 내일 소폭 증량',
-  neutral_progression: '중립 강도(5~6)로 기본 증량',
+  success_progression: '목표 달성으로 기본 증량',
+  not_met_hold: '목표 미달성으로 유지',
+  streak_moderate: '7일 연속 운동으로 완만한 증량',
 }
 
 const DEADHANG_REASON_TEXT: Partial<Record<RecommendationReason, string>> = {

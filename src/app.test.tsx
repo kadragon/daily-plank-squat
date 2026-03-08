@@ -78,7 +78,7 @@ test('App nav includes pushup and deadhang tabs between squat and summary', () =
 
   expect(html).toContain('Pushup')
   expect(html).toContain('Deadhang')
-  // Nav order: Plank, Squat, Pushup, Summary
+  // Nav order: Plank, Squat, Pushup, Deadhang, Summary
   const plankIdx = html.indexOf('Plank')
   const squatIdx = html.indexOf('Squat')
   const pushupIdx = html.indexOf('Pushup')
@@ -114,13 +114,6 @@ test('App renders pushup view with editable reps inputs before completion', () =
   expect(html).toContain('id="pushup-done-reps"')
 })
 
-test('App hides deadhang rpe input before completion', () => {
-  const html = renderToStaticMarkup(<App initialView="deadhang" />)
-
-  expect(html).toContain('Deadhang Timer')
-  expect(html).not.toContain('id="deadhang-rpe"')
-})
-
 test('App applies swipe-priority main classes for workout views and scrollable stage for summary', () => {
   const workoutHtml = renderToStaticMarkup(<App initialView="squat" />)
   const summaryHtml = renderToStaticMarkup(<App initialView="summary" />)
@@ -137,12 +130,26 @@ test('computeSquatSuccess (reused) computes pushup success correctly', () => {
   expect(computeSquatSuccess(20, 15)).toBe(true)
 })
 
-test('App workout views render recommendation reason text', () => {
+test('No RPE inputs are rendered in any workout view', () => {
   const plankHtml = renderToStaticMarkup(<App initialView="plank" />)
   const squatHtml = renderToStaticMarkup(<App initialView="squat" />)
   const pushupHtml = renderToStaticMarkup(<App initialView="pushup" />)
+  const deadhangHtml = renderToStaticMarkup(<App initialView="deadhang" />)
 
-  expect(plankHtml).toContain('중립 강도(5~6)로 기본 증량')
-  expect(squatHtml).toContain('중립 강도(5~6)로 기본 증량')
-  expect(pushupHtml).toContain('중립 강도(5~6)로 기본 증량')
+  expect(plankHtml).not.toContain('id="plank-rpe"')
+  expect(squatHtml).not.toContain('id="squat-rpe"')
+  expect(pushupHtml).not.toContain('id="pushup-rpe"')
+  expect(deadhangHtml).not.toContain('id="deadhang-rpe"')
+})
+
+test('Recommendation is hidden in IDLE plank state', () => {
+  const html = renderToStaticMarkup(<App initialView="plank" />)
+
+  expect(html).not.toContain('recommendation-note')
+})
+
+test('Recommendation is hidden in squat view before completion', () => {
+  const html = renderToStaticMarkup(<App initialView="squat" />)
+
+  expect(html).not.toContain('recommendation-note')
 })

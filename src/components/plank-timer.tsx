@@ -6,8 +6,6 @@ interface PlankTimerProps {
   elapsedMs?: number
   targetSec?: number
   state?: PlankState
-  rpe?: number
-  showRpe?: boolean
   tomorrowTargetSec?: number
   tomorrowDeltaSec?: number
   recommendationReasonText?: string
@@ -16,7 +14,6 @@ interface PlankTimerProps {
   onPause?: () => void
   onResume?: () => void
   onCancel?: () => void
-  onRpeChange?: (rawValue: string) => void
 }
 
 function toElapsedSeconds(elapsedMs: number): number {
@@ -33,12 +30,10 @@ function formatTime(ms: number): string {
 
 export default function PlankTimer({
   title = 'Plank Timer',
-  idPrefix = 'plank',
+  idPrefix: _idPrefix,
   elapsedMs = 0,
   targetSec = 0,
   state = 'IDLE',
-  rpe = 5,
-  showRpe = true,
   tomorrowTargetSec = 0,
   tomorrowDeltaSec = 0,
   recommendationReasonText = '',
@@ -47,12 +42,12 @@ export default function PlankTimer({
   onPause,
   onResume,
   onCancel,
-  onRpeChange,
 }: PlankTimerProps) {
   const progressPercent = targetSec > 0
     ? Math.min(100, Math.max(0, (elapsedMs / (targetSec * 1000)) * 100))
     : 0
   const remainingMs = Math.max(0, targetSec * 1000 - elapsedMs)
+  const showRecommendation = state === 'COMPLETED' || state === 'CANCELLED'
 
   function renderControls() {
     switch (state) {
@@ -97,34 +92,20 @@ export default function PlankTimer({
     <div className={`plank-timer plank-timer--${state.toLowerCase()}`}>
       <h2>{title}</h2>
       <div className="timer-target">Target: {targetSec}s</div>
-      {showRpe
-        ? (
-          <div className="reps-input-row">
-            <label className="reps-input-label" htmlFor={`${idPrefix}-rpe`}>RPE (1-10): {rpe}</label>
-            <input
-              id={`${idPrefix}-rpe`}
-              className="rpe-slider"
-              type="range"
-              min={1}
-              max={10}
-              step={1}
-              aria-label={`${title} RPE`}
-              value={rpe}
-              onInput={(event) => onRpeChange?.((event.currentTarget as HTMLInputElement).value)}
-            />
-          </div>
-        )
-        : null}
       <div className="timer-display" aria-live="polite">{formatTime(remainingMs)}</div>
       <div className="progress-bar">
         <div className="progress-fill" style={{ width: `${progressPercent}%` }} />
       </div>
-      <div className="recommendation-note">
-        <div className="recommendation-note__target">
-          내일 추천: {tomorrowTargetSec}s ({tomorrowDeltaSec > 0 ? '+' : ''}{tomorrowDeltaSec}s)
-        </div>
-        <div className="recommendation-note__reason">{recommendationReasonText}</div>
-      </div>
+      {showRecommendation
+        ? (
+          <div className="recommendation-note">
+            <div className="recommendation-note__target">
+              내일 추천: {tomorrowTargetSec}s ({tomorrowDeltaSec > 0 ? '+' : ''}{tomorrowDeltaSec}s)
+            </div>
+            <div className="recommendation-note__reason">{recommendationReasonText}</div>
+          </div>
+        )
+        : null}
       {renderControls()}
     </div>
   )

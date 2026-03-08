@@ -1,11 +1,10 @@
-import type { DailyRecord, ExerciseRecord, PushupRecord, RpeUnlockRecord, SquatRecord } from '../types'
+import type { DailyRecord, ExerciseRecord, PushupRecord, SquatRecord } from '../types'
 import { getTodayDateKey } from '../utils/date-key'
-import { NEUTRAL_RPE, normalizeRpe } from '../utils/rpe'
 
 const STORAGE_KEY = 'daily-records'
 
-const NEUTRAL_PUSHUP: PushupRecord = { target_reps: 15, actual_reps: 15, success: true, rpe: NEUTRAL_RPE }
-const NEUTRAL_DEADHANG: ExerciseRecord = { target_sec: 30, actual_sec: 30, success: true, rpe: NEUTRAL_RPE }
+const NEUTRAL_PUSHUP: PushupRecord = { target_reps: 15, actual_reps: 15, success: true }
+const NEUTRAL_DEADHANG: ExerciseRecord = { target_sec: 30, actual_sec: 30, success: true }
 
 function hasLocalStorage(): boolean {
   return typeof localStorage !== 'undefined'
@@ -29,7 +28,6 @@ function asExerciseRecord(value: unknown): ExerciseRecord | null {
     target_sec: value.target_sec,
     actual_sec: value.actual_sec,
     success: value.success,
-    rpe: normalizeRpe(value.rpe),
   }
 }
 
@@ -46,7 +44,6 @@ function asSquatRecord(value: unknown): SquatRecord | null {
       target_reps: value.target_reps,
       actual_reps: value.actual_reps,
       success: value.success,
-      rpe: normalizeRpe(value.rpe),
     }
   }
 
@@ -60,7 +57,6 @@ function asSquatRecord(value: unknown): SquatRecord | null {
       target_reps: value.target_count,
       actual_reps: value.actual_count,
       success: value.success,
-      rpe: normalizeRpe(value.rpe),
     }
   }
 
@@ -79,44 +75,10 @@ function asPushupRecord(value: unknown): PushupRecord | null {
       target_reps: value.target_reps,
       actual_reps: value.actual_reps,
       success: value.success,
-      rpe: normalizeRpe(value.rpe),
     }
   }
 
   return null
-}
-
-function asRpeUnlockRecord(value: unknown): RpeUnlockRecord | null {
-  if (!isRecord(value)) return null
-  if (
-    typeof value.plank !== 'boolean'
-    || typeof value.squat !== 'boolean'
-    || typeof value.pushup !== 'boolean'
-    || typeof value.deadhang !== 'boolean'
-  ) {
-    return null
-  }
-
-  return {
-    plank: value.plank,
-    squat: value.squat,
-    pushup: value.pushup,
-    deadhang: value.deadhang,
-  }
-}
-
-function deriveLegacyRpeUnlock(
-  plank: ExerciseRecord,
-  squat: SquatRecord,
-  pushup: PushupRecord,
-  deadhang: ExerciseRecord,
-): RpeUnlockRecord {
-  return {
-    plank: plank.success,
-    squat: squat.actual_reps > 0,
-    pushup: pushup.actual_reps > 0,
-    deadhang: deadhang.success,
-  }
 }
 
 function asDailyRecord(value: unknown): DailyRecord | null {
@@ -137,7 +99,6 @@ function asDailyRecord(value: unknown): DailyRecord | null {
 
   const pushup = asPushupRecord(value.pushup) ?? NEUTRAL_PUSHUP
   const deadhang = asExerciseRecord(value.deadhang) ?? NEUTRAL_DEADHANG
-  const rpeUnlock = asRpeUnlockRecord(value.rpe_unlock) ?? deriveLegacyRpeUnlock(plank, squat, pushup, deadhang)
 
   return {
     date: value.date,
@@ -145,7 +106,6 @@ function asDailyRecord(value: unknown): DailyRecord | null {
     squat,
     pushup,
     deadhang,
-    rpe_unlock: rpeUnlock,
     fatigue: value.fatigue,
     F_P: value.F_P,
     F_S: value.F_S,

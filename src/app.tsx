@@ -23,9 +23,8 @@ import { detectSwipeDirection, getAdjacentView } from './models/swipe-navigation
 import { loadAllRecords, saveRecord } from './storage/daily-record'
 import { buildHealthPayload, buildShortcutRunUrl } from './integrations/apple-health-shortcut'
 import { getRecommendationReasonText } from './locales/ko'
-import type { BaseTargets, DailyRecord, FatigueParams, PlankState, RecommendationReason, RpeUnlockRecord } from './types'
+import type { BaseTargets, DailyRecord, FatigueParams, PlankState, RecommendationReason } from './types'
 import { addDaysToDateKey, getTodayDateKey } from './utils/date-key'
-import { NEUTRAL_RPE, normalizeRpe } from './utils/rpe'
 
 type AppView = 'plank' | 'squat' | 'pushup' | 'deadhang' | 'summary' | 'stats'
 type PersistReason = 'general' | 'squat-complete' | 'pushup-complete'
@@ -72,11 +71,6 @@ interface InitialAppState {
   squatSuccess: boolean
   pushupActualReps: number
   pushupSuccess: boolean
-  plankRpe: number
-  squatRpe: number
-  pushupRpe: number
-  deadhangRpe: number
-  rpeUnlocked: RpeUnlockRecord
   fatigue: number
   overloadWarning: boolean
   suspiciousSession: boolean
@@ -92,6 +86,8 @@ interface InitialAppState {
   deadhangState: PlankState
   alreadyLoggedPlankToday: boolean
   alreadyLoggedDeadhangToday: boolean
+  squatCompleted: boolean
+  pushupCompleted: boolean
 }
 
 const BASE_TARGETS: BaseTargets = {
@@ -272,16 +268,6 @@ function createInitialAppState(initialPlankState?: PlankState): InitialAppState 
     squatSuccess: todayRecord?.squat.success ?? false,
     pushupActualReps: todayRecord?.pushup.actual_reps ?? 0,
     pushupSuccess: todayRecord?.pushup.success ?? false,
-    plankRpe: todayRecord?.plank.rpe ?? NEUTRAL_RPE,
-    squatRpe: todayRecord?.squat.rpe ?? NEUTRAL_RPE,
-    pushupRpe: todayRecord?.pushup.rpe ?? NEUTRAL_RPE,
-    deadhangRpe: todayRecord?.deadhang.rpe ?? NEUTRAL_RPE,
-    rpeUnlocked: {
-      plank: todayRecord?.rpe_unlock.plank ?? false,
-      squat: todayRecord?.rpe_unlock.squat ?? false,
-      pushup: todayRecord?.rpe_unlock.pushup ?? false,
-      deadhang: todayRecord?.rpe_unlock.deadhang ?? false,
-    },
     fatigue: todayRecord?.fatigue ?? todayTargets.fatigue,
     overloadWarning: todayRecord ? tomorrowPlan.overload_warning : false,
     suspiciousSession: todayRecord?.flag_suspicious ?? false,
@@ -297,6 +283,8 @@ function createInitialAppState(initialPlankState?: PlankState): InitialAppState 
     deadhangState: deadhangLoggedToday ? (todayRecord?.deadhang.success ? 'COMPLETED' : 'CANCELLED') : 'IDLE',
     alreadyLoggedPlankToday: plankLoggedToday,
     alreadyLoggedDeadhangToday: deadhangLoggedToday,
+    squatCompleted: todayRecord ? todayRecord.squat.actual_reps > 0 : false,
+    pushupCompleted: todayRecord ? todayRecord.pushup.actual_reps > 0 : false,
   }
 }
 
@@ -338,21 +326,18 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
   const [plankElapsedMs, setPlankElapsedMs] = useState(initial.plankActualSec * 1000)
   const [plankResult, setPlankResult] = useState({ actualSec: initial.plankActualSec, success: initial.plankSuccess })
   const [plankLogged, setPlankLogged] = useState(initial.alreadyLoggedPlankToday)
-  const [plankRpe, setPlankRpe] = useState(initial.plankRpe)
   const [deadhangState, setDeadhangState] = useState<PlankState>(initial.deadhangState)
   const [deadhangElapsedMs, setDeadhangElapsedMs] = useState(initial.deadhangActualSec * 1000)
   const [deadhangResult, setDeadhangResult] = useState({ actualSec: initial.deadhangActualSec, success: initial.deadhangSuccess })
   const [deadhangLogged, setDeadhangLogged] = useState(initial.alreadyLoggedDeadhangToday)
-  const [deadhangRpe, setDeadhangRpe] = useState(initial.deadhangRpe)
 
   const [squatCount, setSquatCount] = useState(initial.squatActualReps)
   const [squatSuccess, setSquatSuccess] = useState(initial.squatSuccess)
-  const [squatRpe, setSquatRpe] = useState(initial.squatRpe)
+  const [squatCompleted, setSquatCompleted] = useState(initial.squatCompleted)
 
   const [pushupCount, setPushupCount] = useState(initial.pushupActualReps)
   const [pushupSuccess, setPushupSuccess] = useState(initial.pushupSuccess)
-  const [pushupRpe, setPushupRpe] = useState(initial.pushupRpe)
-  const [rpeUnlocked, setRpeUnlocked] = useState<RpeUnlockRecord>(initial.rpeUnlocked)
+  const [pushupCompleted, setPushupCompleted] = useState(initial.pushupCompleted)
 
   const [plankTargetSec] = useState(initial.plankTargetSec)
   const [deadhangTargetSec] = useState(initial.deadhangTargetSec)
@@ -502,26 +487,6 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
     requestPersist()
   }
 
-  function handlePlankRpeChange(rawValue: string) {
-    setPlankRpe(normalizeRpe(Number(rawValue)))
-    requestPersist()
-  }
-
-  function handleDeadhangRpeChange(rawValue: string) {
-    setDeadhangRpe(normalizeRpe(Number(rawValue)))
-    requestPersist()
-  }
-
-  function handleSquatRpeChange(rawValue: string) {
-    setSquatRpe(normalizeRpe(Number(rawValue)))
-    requestPersist()
-  }
-
-  function handlePushupRpeChange(rawValue: string) {
-    setPushupRpe(normalizeRpe(Number(rawValue)))
-    requestPersist()
-  }
-
   function handleSquatTargetRepsChange(rawValue: string) {
     const nextTarget = sanitizeTargetReps(Number(rawValue))
     setSquatTargetReps(nextTarget)
@@ -538,7 +503,7 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
     setSquatCount(finalCount)
     goalAlertsRef.current.onSquatProgress(finalCount, squatTargetReps)
     setSquatSuccess(computeSquatSuccess(finalCount, squatTargetReps))
-    setRpeUnlocked((current) => ({ ...current, squat: true }))
+    setSquatCompleted(true)
     clearCompleteSaveFeedbackTimer()
     setCompleteSaveFeedback({ target: 'squat', text: 'Saving...', tone: 'info' })
     requestPersist('squat-complete')
@@ -571,7 +536,7 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
     setPushupCount(finalCount)
     goalAlertsRef.current.onPushupProgress(finalCount, pushupTargetReps)
     setPushupSuccess(computeSquatSuccess(finalCount, pushupTargetReps))
-    setRpeUnlocked((current) => ({ ...current, pushup: true }))
+    setPushupCompleted(true)
     clearCompleteSaveFeedbackTimer()
     setCompleteSaveFeedback({ target: 'pushup', text: 'Saving...', tone: 'info' })
     requestPersist('pushup-complete')
@@ -631,14 +596,6 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
     goalAlertsRef.current.onDeadhangProgress(elapsedSec, deadhangTargetSec)
   }, [deadhangTargetSec])
 
-  const unlockPlankRpe = useCallback(() => {
-    setRpeUnlocked((current) => ({ ...current, plank: true }))
-  }, [])
-
-  const unlockDeadhangRpe = useCallback(() => {
-    setRpeUnlocked((current) => ({ ...current, deadhang: true }))
-  }, [])
-
   useTimedWorkout({
     state: plankState,
     targetSec: plankTargetSec,
@@ -649,7 +606,6 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
     setLogged: setPlankLogged,
     completedElapsedMsRef: completedPlankElapsedMsRef,
     syncState: syncPlankState,
-    onCompleted: unlockPlankRpe,
     requestPersist,
   })
 
@@ -663,7 +619,6 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
     setLogged: setDeadhangLogged,
     completedElapsedMsRef: completedDeadhangElapsedMsRef,
     syncState: syncDeadhangState,
-    onCompleted: unlockDeadhangRpe,
     requestPersist,
   })
 
@@ -760,31 +715,21 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
         target_sec: plankTargetSec,
         actual_sec: plankResult.actualSec,
         success: plankResult.success,
-        rpe: plankRpe,
       },
       squat: {
         target_reps: squatTargetReps,
         actual_reps: squatCount,
         success: squatSuccess,
-        rpe: squatRpe,
       },
       pushup: {
         target_reps: pushupTargetReps,
         actual_reps: pushupCount,
         success: pushupSuccess,
-        rpe: pushupRpe,
       },
       deadhang: {
         target_sec: deadhangTargetSec,
         actual_sec: deadhangResult.actualSec,
         success: deadhangResult.success,
-        rpe: deadhangRpe,
-      },
-      rpe_unlock: {
-        plank: rpeUnlocked.plank,
-        squat: rpeUnlocked.squat,
-        pushup: rpeUnlocked.pushup,
-        deadhang: rpeUnlocked.deadhang,
       },
       fatigue: 0,
       F_P: 0,
@@ -864,11 +809,6 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
     squatSuccess,
     pushupCount,
     pushupSuccess,
-    plankRpe,
-    deadhangRpe,
-    squatRpe,
-    pushupRpe,
-    rpeUnlocked,
     clearCompleteSaveFeedbackTimer,
   ])
 
@@ -885,8 +825,6 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
               elapsedMs={plankElapsedMs}
               targetSec={plankTargetSec}
               state={plankState}
-              rpe={plankRpe}
-              showRpe={rpeUnlocked.plank}
               tomorrowTargetSec={tomorrowTargets.plank}
               tomorrowDeltaSec={tomorrowTargets.plank - plankTargetSec}
               recommendationReasonText={getRecommendationReasonText(tomorrowTargets.plankReason, 'plank')}
@@ -895,7 +833,6 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
               onPause={handlePlankPause}
               onResume={handlePlankResume}
               onCancel={handlePlankCancel}
-              onRpeChange={handlePlankRpeChange}
             />
             {wakeLockNotice ? <div className="wake-lock-notice">{wakeLockNotice}</div> : null}
           </>
@@ -907,8 +844,7 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
             <SquatCounter
               count={squatCount}
               targetReps={squatTargetReps}
-              rpe={squatRpe}
-              showRpe={rpeUnlocked.squat}
+              showRecommendation={squatCompleted}
               tomorrowTargetReps={tomorrowTargets.squat}
               tomorrowDeltaReps={tomorrowTargets.squat - squatTargetReps}
               recommendationReasonText={getRecommendationReasonText(tomorrowTargets.squatReason, 'squat')}
@@ -916,7 +852,6 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
               saveFeedbackTone={squatSaveFeedback?.tone}
               onDoneRepsChange={handleSquatDoneRepsChange}
               onTargetRepsChange={handleSquatTargetRepsChange}
-              onRpeChange={handleSquatRpeChange}
               onComplete={handleSquatComplete}
             />
           )
@@ -931,8 +866,7 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
               exerciseName="pushups"
               count={pushupCount}
               targetReps={pushupTargetReps}
-              rpe={pushupRpe}
-              showRpe={rpeUnlocked.pushup}
+              showRecommendation={pushupCompleted}
               tomorrowTargetReps={tomorrowTargets.pushup}
               tomorrowDeltaReps={tomorrowTargets.pushup - pushupTargetReps}
               recommendationReasonText={getRecommendationReasonText(tomorrowTargets.pushupReason, 'pushup')}
@@ -940,7 +874,6 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
               saveFeedbackTone={pushupSaveFeedback?.tone}
               onDoneRepsChange={handlePushupDoneRepsChange}
               onTargetRepsChange={handlePushupTargetRepsChange}
-              onRpeChange={handlePushupRpeChange}
               onComplete={handlePushupComplete}
             />
           )
@@ -954,8 +887,6 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
               elapsedMs={deadhangElapsedMs}
               targetSec={deadhangTargetSec}
               state={deadhangState}
-              rpe={deadhangRpe}
-              showRpe={rpeUnlocked.deadhang}
               tomorrowTargetSec={tomorrowTargets.deadhang}
               tomorrowDeltaSec={tomorrowTargets.deadhang - deadhangTargetSec}
               recommendationReasonText={getRecommendationReasonText(tomorrowTargets.deadhangReason, 'deadhang')}
@@ -964,7 +895,6 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
               onPause={handleDeadhangPause}
               onResume={handleDeadhangResume}
               onCancel={handleDeadhangCancel}
-              onRpeChange={handleDeadhangRpeChange}
             />
             {wakeLockNotice ? <div className="wake-lock-notice">{wakeLockNotice}</div> : null}
           </>
