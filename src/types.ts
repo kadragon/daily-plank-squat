@@ -44,7 +44,7 @@ export interface DailyRecord {
   squat: SquatRecord
   pushup: PushupRecord
   deadhang: ExerciseRecord
-  dumbbell: DumbbellRecord
+  dumbbell: DumbbellRecord | null
   fatigue: number // sigmoid fatigue score [0, 1]
   F_P: number // plank EWMA fatigue
   F_S: number // squat EWMA fatigue

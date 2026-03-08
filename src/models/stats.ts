@@ -45,7 +45,7 @@ export function computeWorkoutTotals(records: DailyRecord[]): WorkoutTotals {
       squatActualReps: totals.squatActualReps + record.squat.actual_reps,
       pushupActualReps: totals.pushupActualReps + record.pushup.actual_reps,
       deadhangActualSec: totals.deadhangActualSec + record.deadhang.actual_sec,
-      dumbbellActualReps: totals.dumbbellActualReps + record.dumbbell.actual_reps,
+      dumbbellActualReps: totals.dumbbellActualReps + (record.dumbbell?.actual_reps ?? 0),
     }),
     {
       plankActualSec: 0,
@@ -64,6 +64,6 @@ export function buildDailyStatsSeries(records: DailyRecord[]): DailyStatsPoint[]
     squatActualReps: record.squat.actual_reps,
     pushupActualReps: record.pushup.actual_reps,
     deadhangActualSec: record.deadhang.actual_sec,
-    dumbbellActualReps: record.dumbbell.actual_reps,
+    dumbbellActualReps: record.dumbbell?.actual_reps ?? 0,
   }))
 }

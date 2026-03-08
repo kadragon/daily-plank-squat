@@ -5,7 +5,6 @@ const STORAGE_KEY = 'daily-records'
 
 const NEUTRAL_PUSHUP: PushupRecord = { target_reps: 15, actual_reps: 15, success: true }
 const NEUTRAL_DEADHANG: ExerciseRecord = { target_sec: 30, actual_sec: 30, success: true }
-const NEUTRAL_DUMBBELL: DumbbellRecord = { target_reps: 10, actual_reps: 10, success: true }
 
 function hasLocalStorage(): boolean {
   return typeof localStorage !== 'undefined'
@@ -118,7 +117,7 @@ function asDailyRecord(value: unknown): DailyRecord | null {
 
   const pushup = asPushupRecord(value.pushup) ?? NEUTRAL_PUSHUP
   const deadhang = asExerciseRecord(value.deadhang) ?? NEUTRAL_DEADHANG
-  const dumbbell = asDumbbellRecord(value.dumbbell) ?? NEUTRAL_DUMBBELL
+  const dumbbell = asDumbbellRecord(value.dumbbell)
 
   return {
     date: value.date,

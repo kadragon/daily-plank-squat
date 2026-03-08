@@ -10,7 +10,7 @@ export interface AppSettings {
 
 const STORAGE_KEY = 'app-settings'
 
-const ALL_EXERCISES: readonly ExerciseId[] = ['plank', 'squat', 'pushup', 'deadhang', 'dumbbell']
+const ALL_EXERCISES = ['plank', 'squat', 'pushup', 'deadhang', 'dumbbell'] as const satisfies readonly ExerciseId[]
 
 function defaultSettings(): AppSettings {
   return {
@@ -62,7 +62,12 @@ export function loadSettings(): AppSettings {
   }
 }
 
-export function saveSettings(settings: AppSettings): void {
-  if (!hasLocalStorage()) return
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(settings))
+export function saveSettings(settings: AppSettings): boolean {
+  if (!hasLocalStorage()) return false
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(settings))
+    return true
+  } catch {
+    return false
+  }
 }

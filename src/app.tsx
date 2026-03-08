@@ -367,9 +367,12 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
   }
 
   const [records, setRecords] = useState<DailyRecord[]>(initial.records)
-  const [view, setView] = useState<AppView>(initialView)
   const [appSettings, setAppSettings] = useState<AppSettings>(() => loadSettings())
   const activeNavViews = useMemo(() => getActiveNavViews(appSettings), [appSettings])
+  const [view, setView] = useState<AppView>(() => {
+    const active = getActiveNavViews(loadSettings())
+    return active.includes(initialView) ? initialView : (active[0] ?? 'settings')
+  })
   const activeNavItems = useMemo(() => getActiveNavItems(appSettings), [appSettings])
   const [plankState, setPlankState] = useState<PlankState>(initial.plankState)
   const [plankElapsedMs, setPlankElapsedMs] = useState(initial.plankActualSec * 1000)
@@ -392,8 +395,8 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
   const [dumbbellSuccess, setDumbbellSuccess] = useState(initial.dumbbellSuccess)
   const [dumbbellCompleted, setDumbbellCompleted] = useState(initial.dumbbellCompleted)
 
-  const [plankTargetSec] = useState(initial.plankTargetSec)
-  const [deadhangTargetSec] = useState(initial.deadhangTargetSec)
+  const [plankTargetSec, setPlankTargetSec] = useState(initial.plankTargetSec)
+  const [deadhangTargetSec, setDeadhangTargetSec] = useState(initial.deadhangTargetSec)
   const [squatTargetReps, setSquatTargetReps] = useState(initial.squatTargetReps)
   const [pushupTargetReps, setPushupTargetReps] = useState(initial.pushupTargetReps)
   const [dumbbellTargetReps, setDumbbellTargetReps] = useState(initial.dumbbellTargetReps)
@@ -618,10 +621,11 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
   }
 
   function handleDumbbellComplete() {
-    if (dumbbellCount === 0 && dumbbellCounterRef.current) {
+    if (!dumbbellCounterRef.current) return
+    if (dumbbellCount === 0) {
       dumbbellCounterRef.current.count = dumbbellTargetReps
     }
-    const finalCount = completeSquatCounter(dumbbellCounterRef.current as DomainSquatCounter)
+    const finalCount = completeSquatCounter(dumbbellCounterRef.current)
     setDumbbellCount(finalCount)
     goalAlertsRef.current.onDumbbellProgress(finalCount, dumbbellTargetReps)
     setDumbbellSuccess(computeSquatSuccess(finalCount, dumbbellTargetReps))
@@ -650,12 +654,20 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
 
   function handleSettingsTargetChange(id: ExerciseId, value: number) {
     switch (id) {
+      case 'plank':
+        setPlankTargetSec(value)
+        requestPersist()
+        break
       case 'squat':
         setSquatTargetReps(value)
         requestPersist()
         break
       case 'pushup':
         setPushupTargetReps(value)
+        requestPersist()
+        break
+      case 'deadhang':
+        setDeadhangTargetSec(value)
         requestPersist()
         break
       case 'dumbbell':

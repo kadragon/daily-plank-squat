@@ -39,11 +39,12 @@ test('index.css separates content and tabbar visual tokens', async () => {
   expect(css).toContain('--tabbar-border:')
 })
 
-test('bottom tabbar uses 6 equal columns for one-row navigation', async () => {
+test('bottom tabbar uses auto-flow columns for dynamic tab count', async () => {
   const css = await readIndexCss()
   const tabbarBlock = css.match(/\.nav\.app-tabbar\s*\{([\s\S]*?)\}/)?.[1] ?? ''
 
-  expect(tabbarBlock).toMatch(/grid-template-columns:\s*repeat\(6,\s*minmax\(0,\s*1fr\)\);/)
+  expect(tabbarBlock).toMatch(/grid-auto-flow:\s*column;/)
+  expect(tabbarBlock).toMatch(/grid-auto-columns:\s*minmax\(0,\s*1fr\);/)
 })
 
 test('bottom tabbar applies compact spacing rules on narrow screens', async () => {

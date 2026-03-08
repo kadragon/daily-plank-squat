@@ -1,7 +1,6 @@
 import type {
   BaseTargets,
   DailyRecord,
-  DumbbellRecord,
   ExerciseRecord,
   FatigueParams,
   FatigueSnapshot,
@@ -116,7 +115,6 @@ function getRecentMedian(adjustedHistory: number[]): number {
 
 const NEUTRAL_PUSHUP: PushupRecord = { target_reps: 15, actual_reps: 15, success: true }
 const NEUTRAL_DEADHANG: ExerciseRecord = { target_sec: 30, actual_sec: 30, success: true }
-const NEUTRAL_DUMBBELL: DumbbellRecord = { target_reps: 10, actual_reps: 10, success: true }
 
 export function computeConsecutiveDays(records: DailyRecord[], currentDate: string): number {
   const filtered = records
@@ -169,13 +167,13 @@ export function computeFatigueSeries(
 
     const pushup = record.pushup ?? NEUTRAL_PUSHUP
     const deadhang = record.deadhang ?? NEUTRAL_DEADHANG
-    const dumbbell = record.dumbbell ?? NEUTRAL_DUMBBELL
+    const dumbbell = record.dumbbell
 
     const plankLoad = computeLoad(record.plank.actual_sec, record.plank.target_sec, baseTargets.base_P)
     const squatLoad = computeLoad(record.squat.actual_reps, record.squat.target_reps, baseTargets.base_S)
     const pushupLoad = computeLoad(pushup.actual_reps, pushup.target_reps, baseTargets.base_U)
     const deadhangLoad = computeLoad(deadhang.actual_sec, deadhang.target_sec, baseTargets.base_D)
-    const dumbbellLoad = computeLoad(dumbbell.actual_reps, dumbbell.target_reps, baseTargets.base_DB)
+    const dumbbellLoad = dumbbell ? computeLoad(dumbbell.actual_reps, dumbbell.target_reps, baseTargets.base_DB) : 0
 
     const plankRampPenalty = previous
       ? computeRampPenalty(previous.plank.target_sec, record.plank.target_sec)
@@ -189,7 +187,7 @@ export function computeFatigueSeries(
     const deadhangRampPenalty = previous
       ? computeRampPenalty((previous.deadhang ?? { target_sec: 30 }).target_sec, deadhang.target_sec)
       : 0
-    const dumbbellRampPenalty = previous
+    const dumbbellRampPenalty = (previous && dumbbell)
       ? computeRampPenalty((previous.dumbbell ?? { target_reps: 10 }).target_reps, dumbbell.target_reps)
       : 0
 
@@ -232,7 +230,7 @@ function hasFailureStreak(records: DailyRecord[], exercise: 'plank' | 'squat' | 
     if (exercise === 'plank') return !record.plank.success
     if (exercise === 'squat') return !record.squat.success
     if (exercise === 'pushup') return !(record.pushup ?? { success: true }).success
-    if (exercise === 'dumbbell') return !(record.dumbbell ?? { success: true }).success
+    if (exercise === 'dumbbell') return record.dumbbell ? !record.dumbbell.success : false
     return !(record.deadhang ?? { success: true }).success
   })
 }
@@ -382,7 +380,7 @@ export function computeTomorrowPlan(
     missedDays,
     baseTargets.base_D,
   )
-  const lastDumbbell = lastRecord.dumbbell ?? { target_reps: baseTargets.base_DB, actual_reps: baseTargets.base_DB, success: true }
+  const lastDumbbell = lastRecord.dumbbell ?? { target_reps: baseTargets.base_DB, actual_reps: 0, success: false }
   const dumbbellRecommendation = computeNextTargetValue(
     lastDumbbell.target_reps,
     latest.fatigue,
