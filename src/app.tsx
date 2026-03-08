@@ -283,8 +283,8 @@ function createInitialAppState(initialPlankState?: PlankState): InitialAppState 
     deadhangState: deadhangLoggedToday ? (todayRecord?.deadhang.success ? 'COMPLETED' : 'CANCELLED') : 'IDLE',
     alreadyLoggedPlankToday: plankLoggedToday,
     alreadyLoggedDeadhangToday: deadhangLoggedToday,
-    squatCompleted: todayRecord ? todayRecord.squat.actual_reps > 0 : false,
-    pushupCompleted: todayRecord ? todayRecord.pushup.actual_reps > 0 : false,
+    squatCompleted: todayRecord?.squat_completed ?? false,
+    pushupCompleted: todayRecord?.pushup_completed ?? false,
   }
 }
 
@@ -739,6 +739,8 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
       F_total_raw: 0,
       inactive_time_ratio: inactiveTimeRatio,
       flag_suspicious: flagSuspicious,
+      squat_completed: squatCompleted,
+      pushup_completed: pushupCompleted,
     }
 
     const withoutToday = records.filter((record) => record.date !== today)
@@ -809,6 +811,8 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
     squatSuccess,
     pushupCount,
     pushupSuccess,
+    squatCompleted,
+    pushupCompleted,
     clearCompleteSaveFeedbackTimer,
   ])
 
@@ -883,7 +887,6 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
           <>
             <PlankTimer
               title="Deadhang Timer"
-              idPrefix="deadhang"
               elapsedMs={deadhangElapsedMs}
               targetSec={deadhangTargetSec}
               state={deadhangState}

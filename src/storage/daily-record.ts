@@ -114,6 +114,8 @@ function asDailyRecord(value: unknown): DailyRecord | null {
     F_total_raw: typeof value.F_total_raw === 'number' ? value.F_total_raw : 0,
     inactive_time_ratio: typeof value.inactive_time_ratio === 'number' ? value.inactive_time_ratio : 0,
     flag_suspicious: typeof value.flag_suspicious === 'boolean' ? value.flag_suspicious : false,
+    squat_completed: typeof value.squat_completed === 'boolean' ? value.squat_completed : false,
+    pushup_completed: typeof value.pushup_completed === 'boolean' ? value.pushup_completed : false,
   }
 }
 

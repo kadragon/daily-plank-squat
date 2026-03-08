@@ -78,6 +78,8 @@ function dailyRecord(
     F_total_raw: 0,
     inactive_time_ratio: 0,
     flag_suspicious: false,
+    squat_completed: false,
+    pushup_completed: false,
   }
 }
 

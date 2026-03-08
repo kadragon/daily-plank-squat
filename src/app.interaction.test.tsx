@@ -72,6 +72,8 @@ function seedTodayRecord(overrides: Partial<DailyRecord> = {}) {
     F_total_raw: 0.2,
     inactive_time_ratio: 0.1,
     flag_suspicious: false,
+    squat_completed: false,
+    pushup_completed: false,
     ...overrides,
   }
 
@@ -406,6 +408,39 @@ test('Save failure on complete shows inline error feedback', async () => {
       value: originalSetItem,
     })
   }
+})
+
+test('In-progress squat draft with reps does not show recommendation on reload', () => {
+  seedTodayRecord({
+    squat: { target_reps: 20, actual_reps: 12, success: false },
+    squat_completed: false,
+  })
+
+  const view = render(<App initialView="squat" />)
+
+  expect(view.container.querySelector('.recommendation-note')).toBeNull()
+})
+
+test('Completed squat record shows recommendation on reload', () => {
+  seedTodayRecord({
+    squat: { target_reps: 20, actual_reps: 21, success: true },
+    squat_completed: true,
+  })
+
+  const view = render(<App initialView="squat" />)
+
+  expect(view.container.querySelector('.recommendation-note')).toBeTruthy()
+})
+
+test('In-progress pushup draft with reps does not show recommendation on reload', () => {
+  seedTodayRecord({
+    pushup: { target_reps: 15, actual_reps: 10, success: false },
+    pushup_completed: false,
+  })
+
+  const view = render(<App initialView="pushup" />)
+
+  expect(view.container.querySelector('.recommendation-note')).toBeNull()
 })
 
 test('Partial today record without plank log keeps plank view in IDLE', () => {

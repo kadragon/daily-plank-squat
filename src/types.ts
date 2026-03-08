@@ -46,6 +46,8 @@ export interface DailyRecord {
   F_total_raw: number
   inactive_time_ratio: number
   flag_suspicious: boolean
+  squat_completed: boolean
+  pushup_completed: boolean
 }
 
 export interface HealthShortcutPayload {

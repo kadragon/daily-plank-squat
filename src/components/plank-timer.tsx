@@ -2,7 +2,6 @@ import type { PlankState } from '../types'
 
 interface PlankTimerProps {
   title?: string
-  idPrefix?: string
   elapsedMs?: number
   targetSec?: number
   state?: PlankState
@@ -30,7 +29,6 @@ function formatTime(ms: number): string {
 
 export default function PlankTimer({
   title = 'Plank Timer',
-  idPrefix: _idPrefix,
   elapsedMs = 0,
   targetSec = 0,
   state = 'IDLE',

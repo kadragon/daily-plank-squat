@@ -17,6 +17,8 @@ function sampleRecord(): DailyRecord {
     F_total_raw: 0.5,
     inactive_time_ratio: 0.1,
     flag_suspicious: true,
+    squat_completed: false,
+    pushup_completed: false,
   }
 }
 

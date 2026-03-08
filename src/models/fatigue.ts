@@ -448,6 +448,8 @@ export function computeNextTarget(
     F_total_raw: 0,
     inactive_time_ratio: 0,
     flag_suspicious: false,
+    squat_completed: false,
+    pushup_completed: false,
   }))
 
   return computeTomorrowPlan(synthetic, params, { base_P: baseTarget, base_S: 20, base_U: 15, base_D: 30 }).plank_target_sec
@@ -484,6 +486,8 @@ export function computeSquatTarget(
     F_total_raw: 0,
     inactive_time_ratio: 0,
     flag_suspicious: false,
+    squat_completed: false,
+    pushup_completed: false,
   }))
 
   return computeTomorrowPlan(synthetic, params, { base_P: 60, base_S: baseTarget, base_U: 15, base_D: 30 }).squat_target_reps
@@ -520,6 +524,8 @@ export function computePushupTarget(
     F_total_raw: 0,
     inactive_time_ratio: 0,
     flag_suspicious: false,
+    squat_completed: false,
+    pushup_completed: false,
   }))
 
   return computeTomorrowPlan(synthetic, params, { base_P: 60, base_S: 20, base_U: baseTarget, base_D: 30 }).pushup_target_reps
