@@ -64,16 +64,19 @@ function seedTodayRecord(overrides: Partial<DailyRecord> = {}) {
     squat: { target_reps: 20, actual_reps: 21, success: true },
     pushup: { target_reps: 15, actual_reps: 16, success: true },
     deadhang: { target_sec: 30, actual_sec: 31, success: true },
+    dumbbell: { target_reps: 10, actual_reps: 10, success: true },
     fatigue: 0.2,
     F_P: 0.2,
     F_S: 0.2,
     F_U: 0.2,
     F_D: 0.2,
+    F_DB: 0.2,
     F_total_raw: 0.2,
     inactive_time_ratio: 0.1,
     flag_suspicious: false,
     squat_completed: false,
     pushup_completed: false,
+    dumbbell_completed: false,
     ...overrides,
   }
 
@@ -133,16 +136,16 @@ test('Tap navigation fallback switches tabs and updates active state', () => {
   expect(pushupTab.getAttribute('aria-current')).toBe('page')
 })
 
-test('Tap navigation can open stats tab', () => {
+test('Tap navigation can open overview tab', () => {
   const view = render(<App initialView="plank" />)
-  const statsTab = Array.from(view.container.querySelectorAll('button'))
-    .find((button) => button.querySelector('.app-tabbar__label')?.textContent?.trim() === 'Stats')
-  if (!statsTab) throw new Error('stats tab button not found')
+  const overviewTab = Array.from(view.container.querySelectorAll('button'))
+    .find((button) => button.querySelector('.app-tabbar__label')?.textContent?.trim() === 'Overview')
+  if (!overviewTab) throw new Error('overview tab button not found')
 
-  fireEvent.click(statsTab)
+  fireEvent.click(overviewTab)
 
   expect(view.getByText('Workout Stats')).toBeTruthy()
-  expect(statsTab.getAttribute('aria-current')).toBe('page')
+  expect(overviewTab.getAttribute('aria-current')).toBe('page')
 })
 
 test('Tap navigation can open deadhang tab', () => {
@@ -178,20 +181,17 @@ test('Pointer up from a different pointer id does not trigger swipe navigation',
   expect(view.getByText('Plank Timer')).toBeTruthy()
 })
 
-test('Swipe order includes stats after summary', () => {
-  const view = render(<App initialView="summary" />)
+test('Swipe right from overview goes to dumbbell', () => {
+  const view = render(<App initialView="overview" />)
   const main = view.container.querySelector('main')
   if (!main) throw new Error('main element not found')
 
-  swipe(main, 260, 120)
-  expect(view.getByText('Workout Stats')).toBeTruthy()
-
   swipe(main, 120, 260)
-  expect(view.getByText('Daily Summary')).toBeTruthy()
+  expect(view.getByText('Dumbbell Counter')).toBeTruthy()
 })
 
 test('Summary export button is disabled when there is no today record', () => {
-  const view = render(<App initialView="summary" />)
+  const view = render(<App initialView="overview" />)
   const button = view.getByRole('button', { name: 'Apple 건강에 기록' })
 
   expect(button.hasAttribute('disabled')).toBe(true)
@@ -459,7 +459,7 @@ test('Partial today record without plank log keeps plank view in IDLE', () => {
 
 test('Summary export navigates to shortcuts URL when today record exists', () => {
   seedTodayRecord()
-  const view = render(<App initialView="summary" />)
+  const view = render(<App initialView="overview" />)
   const button = view.getByRole('button', { name: 'Apple 건강에 기록' })
 
   fireEvent.click(button)
@@ -488,7 +488,7 @@ test('Summary export shows hint when opening Shortcuts throws', () => {
   })
 
   try {
-    const view = render(<App initialView="summary" />)
+    const view = render(<App initialView="overview" />)
     const button = view.getByRole('button', { name: 'Apple 건강에 기록' })
 
     fireEvent.click(button)

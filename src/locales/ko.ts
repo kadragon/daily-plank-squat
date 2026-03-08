@@ -1,6 +1,6 @@
 import type { RecommendationReason } from '../types'
 
-type RecommendationExercise = 'plank' | 'squat' | 'pushup' | 'deadhang'
+type RecommendationExercise = 'plank' | 'squat' | 'pushup' | 'deadhang' | 'dumbbell'
 
 const RECOMMENDATION_REASON_TEXT: Record<RecommendationReason, string> = {
   failure_streak: '최근 3일 미달성으로 회복을 위해 감량',

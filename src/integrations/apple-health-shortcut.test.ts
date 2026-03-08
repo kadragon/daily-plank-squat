@@ -9,22 +9,25 @@ function sampleRecord(): DailyRecord {
     squat: { target_reps: 20, actual_reps: 18, success: false },
     pushup: { target_reps: 15, actual_reps: 12, success: false },
     deadhang: { target_sec: 30, actual_sec: 40, success: true },
+    dumbbell: { target_reps: 10, actual_reps: 8, success: false },
     fatigue: 0.42,
     F_P: 0.31,
     F_S: 0.28,
     F_U: 0.33,
     F_D: 0.2,
+    F_DB: 0.15,
     F_total_raw: 0.5,
     inactive_time_ratio: 0.1,
     flag_suspicious: true,
     squat_completed: false,
     pushup_completed: false,
+    dumbbell_completed: false,
   }
 }
 
 test('buildHealthPayload computes duration with reps conversion (2 sec per rep)', () => {
   const payload = buildHealthPayload(sampleRecord())
-  const expectedDuration = 75 + 40 + 2 * (18 + 12)
+  const expectedDuration = 75 + 40 + 2 * (18 + 12 + 8)
 
   expect(payload.duration_sec).toBe(expectedDuration)
   expect(payload.plank_actual_sec).toBe(75)

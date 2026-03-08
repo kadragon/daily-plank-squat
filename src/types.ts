@@ -32,22 +32,31 @@ export interface PushupRecord {
   success: boolean
 }
 
+export interface DumbbellRecord {
+  target_reps: number
+  actual_reps: number
+  success: boolean
+}
+
 export interface DailyRecord {
   date: string // YYYY-MM-DD
   plank: ExerciseRecord
   squat: SquatRecord
   pushup: PushupRecord
   deadhang: ExerciseRecord
+  dumbbell: DumbbellRecord
   fatigue: number // sigmoid fatigue score [0, 1]
   F_P: number // plank EWMA fatigue
   F_S: number // squat EWMA fatigue
   F_U: number // pushup EWMA fatigue
   F_D: number // deadhang EWMA fatigue
+  F_DB: number // dumbbell EWMA fatigue
   F_total_raw: number
   inactive_time_ratio: number
   flag_suspicious: boolean
   squat_completed: boolean
   pushup_completed: boolean
+  dumbbell_completed: boolean
 }
 
 export interface HealthShortcutPayload {
@@ -59,6 +68,7 @@ export interface HealthShortcutPayload {
   squat_actual_reps: number
   pushup_actual_reps: number
   deadhang_actual_sec: number
+  dumbbell_actual_reps: number
   fatigue: number
   flag_suspicious: boolean
   source: string
@@ -85,6 +95,7 @@ export interface BaseTargets {
   base_S: number
   base_U: number
   base_D: number
+  base_DB: number
 }
 
 export interface FatigueSnapshot {
@@ -92,6 +103,7 @@ export interface FatigueSnapshot {
   F_S: number
   F_U: number
   F_D: number
+  F_DB: number
   F_total_raw: number
   F_total_adj: number
   fatigue: number
@@ -111,15 +123,18 @@ export interface TomorrowPlan {
   squat_target_reps: number
   pushup_target_reps: number
   deadhang_target_sec: number
+  dumbbell_target_reps: number
   plank_reason: RecommendationReason
   squat_reason: RecommendationReason
   pushup_reason: RecommendationReason
   deadhang_reason: RecommendationReason
+  dumbbell_reason: RecommendationReason
   fatigue: number
   F_P: number
   F_S: number
   F_U: number
   F_D: number
+  F_DB: number
   F_total_raw: number
   overload_warning: boolean
 }

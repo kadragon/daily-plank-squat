@@ -95,6 +95,10 @@ export default function WorkoutStats({ records = [] }: WorkoutStatsProps) {
           <span className="workout-stats__total-label">Total deadhang</span>
           <span className="workout-stats__total-value">{totals.deadhangActualSec}s</span>
         </div>
+        <div className="workout-stats__total-card">
+          <span className="workout-stats__total-label">Total dumbbell</span>
+          <span className="workout-stats__total-value">{totals.dumbbellActualReps}</span>
+        </div>
       </section>
 
       <ExerciseChart
@@ -116,6 +120,11 @@ export default function WorkoutStats({ records = [] }: WorkoutStatsProps) {
         title="Deadhang"
         unit="s"
         series={series.map((point) => ({ date: point.date, value: point.deadhangActualSec }))}
+      />
+      <ExerciseChart
+        title="Dumbbell"
+        unit=""
+        series={series.map((point) => ({ date: point.date, value: point.dumbbellActualReps }))}
       />
     </div>
   )

@@ -8,6 +8,7 @@ export interface WorkoutTotals {
   squatActualReps: number
   pushupActualReps: number
   deadhangActualSec: number
+  dumbbellActualReps: number
 }
 
 export interface DailyStatsPoint {
@@ -16,6 +17,7 @@ export interface DailyStatsPoint {
   squatActualReps: number
   pushupActualReps: number
   deadhangActualSec: number
+  dumbbellActualReps: number
 }
 
 function toSortedRecords(records: DailyRecord[]): DailyRecord[] {
@@ -43,12 +45,14 @@ export function computeWorkoutTotals(records: DailyRecord[]): WorkoutTotals {
       squatActualReps: totals.squatActualReps + record.squat.actual_reps,
       pushupActualReps: totals.pushupActualReps + record.pushup.actual_reps,
       deadhangActualSec: totals.deadhangActualSec + record.deadhang.actual_sec,
+      dumbbellActualReps: totals.dumbbellActualReps + record.dumbbell.actual_reps,
     }),
     {
       plankActualSec: 0,
       squatActualReps: 0,
       pushupActualReps: 0,
       deadhangActualSec: 0,
+      dumbbellActualReps: 0,
     },
   )
 }
@@ -60,5 +64,6 @@ export function buildDailyStatsSeries(records: DailyRecord[]): DailyStatsPoint[]
     squatActualReps: record.squat.actual_reps,
     pushupActualReps: record.pushup.actual_reps,
     deadhangActualSec: record.deadhang.actual_sec,
+    dumbbellActualReps: record.dumbbell.actual_reps,
   }))
 }

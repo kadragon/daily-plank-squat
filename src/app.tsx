@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
-import DailySummary from './components/daily-summary'
 import PlankTimer from './components/plank-timer'
 import RepsCounter from './components/reps-counter'
+import Settings from './components/settings'
 import SquatCounter from './components/squat-counter'
-import WorkoutStats from './components/workout-stats'
+import WorkoutOverview from './components/workout-overview'
 import { getInactiveTimeRatio, onVisibilityChange, createVisibilityTracker } from './hooks/use-visibility'
 import { getWakeLock, syncWakeLock, type WakeLockSentinelLike } from './hooks/use-wake-lock'
 import {
@@ -23,12 +23,13 @@ import { detectSwipeDirection, getAdjacentView } from './models/swipe-navigation
 import { loadAllRecords, saveRecord } from './storage/daily-record'
 import { buildHealthPayload, buildShortcutRunUrl } from './integrations/apple-health-shortcut'
 import { getRecommendationReasonText } from './locales/ko'
+import { loadSettings, saveSettings, type AppSettings, type ExerciseId } from './storage/settings'
 import type { BaseTargets, DailyRecord, FatigueParams, PlankState, RecommendationReason } from './types'
 import { addDaysToDateKey, getTodayDateKey } from './utils/date-key'
 
-type AppView = 'plank' | 'squat' | 'pushup' | 'deadhang' | 'summary' | 'stats'
-type PersistReason = 'general' | 'squat-complete' | 'pushup-complete'
-type CompleteSaveFeedbackTarget = 'squat' | 'pushup'
+type AppView = 'plank' | 'squat' | 'pushup' | 'deadhang' | 'dumbbell' | 'overview' | 'settings'
+type PersistReason = 'general' | 'squat-complete' | 'pushup-complete' | 'dumbbell-complete'
+type CompleteSaveFeedbackTarget = 'squat' | 'pushup' | 'dumbbell'
 type SaveFeedbackTone = 'info' | 'success' | 'error'
 type TimedWorkoutResult = { actualSec: number, success: boolean }
 
@@ -71,6 +72,9 @@ interface InitialAppState {
   squatSuccess: boolean
   pushupActualReps: number
   pushupSuccess: boolean
+  dumbbellTargetReps: number
+  dumbbellActualReps: number
+  dumbbellSuccess: boolean
   fatigue: number
   overloadWarning: boolean
   suspiciousSession: boolean
@@ -78,16 +82,19 @@ interface InitialAppState {
   tomorrowSquatTargetReps: number
   tomorrowPushupTargetReps: number
   tomorrowDeadhangTargetSec: number
+  tomorrowDumbbellTargetReps: number
   tomorrowPlankReason: RecommendationReason
   tomorrowSquatReason: RecommendationReason
   tomorrowPushupReason: RecommendationReason
   tomorrowDeadhangReason: RecommendationReason
+  tomorrowDumbbellReason: RecommendationReason
   plankState: PlankState
   deadhangState: PlankState
   alreadyLoggedPlankToday: boolean
   alreadyLoggedDeadhangToday: boolean
   squatCompleted: boolean
   pushupCompleted: boolean
+  dumbbellCompleted: boolean
 }
 
 const BASE_TARGETS: BaseTargets = {
@@ -95,6 +102,7 @@ const BASE_TARGETS: BaseTargets = {
   base_S: 20,
   base_U: 15,
   base_D: 30,
+  base_DB: 10,
 }
 
 const DEFAULT_PARAMS: FatigueParams = {
@@ -103,27 +111,50 @@ const DEFAULT_PARAMS: FatigueParams = {
   gender: 'other',
 }
 
-const NAV_VIEWS = ['plank', 'squat', 'pushup', 'deadhang', 'summary', 'stats'] as const satisfies readonly AppView[]
+const ALL_NAV_VIEWS: readonly AppView[] = ['plank', 'squat', 'pushup', 'deadhang', 'dumbbell', 'overview', 'settings']
 
-const NAV_ITEMS: readonly NavItemMeta[] = [
+const ALL_NAV_ITEMS: readonly NavItemMeta[] = [
   { view: 'plank', label: 'Plank' },
   { view: 'squat', label: 'Squat' },
   { view: 'pushup', label: 'Pushup' },
   { view: 'deadhang', label: 'Deadhang' },
-  { view: 'summary', label: 'Summary' },
-  { view: 'stats', label: 'Stats' },
+  { view: 'dumbbell', label: 'Dumbbell' },
+  { view: 'overview', label: 'Overview' },
+  { view: 'settings', label: 'Settings' },
 ]
+
+const EXERCISE_VIEW_MAP: Record<ExerciseId, AppView> = {
+  plank: 'plank',
+  squat: 'squat',
+  pushup: 'pushup',
+  deadhang: 'deadhang',
+  dumbbell: 'dumbbell',
+}
+
+function getActiveNavViews(settings: AppSettings): AppView[] {
+  return ALL_NAV_VIEWS.filter((v) => {
+    if (v === 'overview' || v === 'settings') return true
+    const exerciseId = Object.entries(EXERCISE_VIEW_MAP).find(([, view]) => view === v)?.[0] as ExerciseId | undefined
+    if (!exerciseId) return true
+    return settings.exercises[exerciseId].enabled
+  })
+}
+
+function getActiveNavItems(settings: AppSettings): NavItemMeta[] {
+  const activeViews = getActiveNavViews(settings)
+  return ALL_NAV_ITEMS.filter((item) => activeViews.includes(item.view))
+}
 
 const APPLE_HEALTH_SHORTCUT_NAME = 'DailyPlankSquatToHealth'
 const HEALTH_EXPORT_ERROR_HINT = 'Could not open Shortcuts. Check that Apple Shortcuts is available on this device.'
 const SUSPICIOUS_EXPORT_HINT = '기록은 가능하지만 측정 환경 경고'
 
 function isWorkoutView(view: AppView): boolean {
-  return view === 'plank' || view === 'squat' || view === 'pushup' || view === 'deadhang'
+  return view === 'plank' || view === 'squat' || view === 'pushup' || view === 'deadhang' || view === 'dumbbell'
 }
 
 function isScrollableView(view: AppView): boolean {
-  return view === 'summary' || view === 'stats'
+  return view === 'overview' || view === 'settings'
 }
 
 function isSwipeIgnoredTarget(target: EventTarget | null): boolean {
@@ -134,6 +165,7 @@ function isSwipeIgnoredTarget(target: EventTarget | null): boolean {
 function getCompleteSaveFeedbackTarget(reason: PersistReason): CompleteSaveFeedbackTarget | null {
   if (reason === 'squat-complete') return 'squat'
   if (reason === 'pushup-complete') return 'pushup'
+  if (reason === 'dumbbell-complete') return 'dumbbell'
   return null
 }
 
@@ -147,10 +179,12 @@ function TabIcon({ view }: { view: AppView }) {
       return <span className="app-tabbar__icon" aria-hidden="true">💪</span>
     case 'deadhang':
       return <span className="app-tabbar__icon" aria-hidden="true">🧗</span>
-    case 'summary':
-      return <span className="app-tabbar__icon" aria-hidden="true">📝</span>
-    case 'stats':
-      return <span className="app-tabbar__icon" aria-hidden="true">📈</span>
+    case 'dumbbell':
+      return <span className="app-tabbar__icon" aria-hidden="true">🏋️‍♂️</span>
+    case 'overview':
+      return <span className="app-tabbar__icon" aria-hidden="true">📊</span>
+    case 'settings':
+      return <span className="app-tabbar__icon" aria-hidden="true">⚙️</span>
     default:
       return null
   }
@@ -246,6 +280,7 @@ function createInitialAppState(initialPlankState?: PlankState): InitialAppState 
       squat_target_reps: todayRecord.squat.target_reps,
       pushup_target_reps: todayRecord.pushup.target_reps,
       deadhang_target_sec: todayRecord.deadhang.target_sec,
+      dumbbell_target_reps: todayRecord.dumbbell.target_reps,
       fatigue: todayRecord.fatigue,
     }
     : computeTomorrowPlan(historyBeforeToday, DEFAULT_PARAMS, BASE_TARGETS, today)
@@ -260,6 +295,7 @@ function createInitialAppState(initialPlankState?: PlankState): InitialAppState 
     squatTargetReps: todayTargets.squat_target_reps,
     pushupTargetReps: todayTargets.pushup_target_reps,
     deadhangTargetSec: todayTargets.deadhang_target_sec,
+    dumbbellTargetReps: todayTargets.dumbbell_target_reps,
     plankActualSec: todayRecord?.plank.actual_sec ?? 0,
     plankSuccess: todayRecord?.plank.success ?? false,
     deadhangActualSec: todayRecord?.deadhang.actual_sec ?? 0,
@@ -268,6 +304,8 @@ function createInitialAppState(initialPlankState?: PlankState): InitialAppState 
     squatSuccess: todayRecord?.squat.success ?? false,
     pushupActualReps: todayRecord?.pushup.actual_reps ?? 0,
     pushupSuccess: todayRecord?.pushup.success ?? false,
+    dumbbellActualReps: todayRecord?.dumbbell.actual_reps ?? 0,
+    dumbbellSuccess: todayRecord?.dumbbell.success ?? false,
     fatigue: todayRecord?.fatigue ?? todayTargets.fatigue,
     overloadWarning: todayRecord ? tomorrowPlan.overload_warning : false,
     suspiciousSession: todayRecord?.flag_suspicious ?? false,
@@ -275,16 +313,19 @@ function createInitialAppState(initialPlankState?: PlankState): InitialAppState 
     tomorrowSquatTargetReps: tomorrowPlan.squat_target_reps,
     tomorrowPushupTargetReps: tomorrowPlan.pushup_target_reps,
     tomorrowDeadhangTargetSec: tomorrowPlan.deadhang_target_sec,
+    tomorrowDumbbellTargetReps: tomorrowPlan.dumbbell_target_reps,
     tomorrowPlankReason: tomorrowPlan.plank_reason,
     tomorrowSquatReason: tomorrowPlan.squat_reason,
     tomorrowPushupReason: tomorrowPlan.pushup_reason,
     tomorrowDeadhangReason: tomorrowPlan.deadhang_reason,
+    tomorrowDumbbellReason: tomorrowPlan.dumbbell_reason,
     plankState: initialPlankState ?? (plankLoggedToday ? (todayRecord?.plank.success ? 'COMPLETED' : 'CANCELLED') : 'IDLE'),
     deadhangState: deadhangLoggedToday ? (todayRecord?.deadhang.success ? 'COMPLETED' : 'CANCELLED') : 'IDLE',
     alreadyLoggedPlankToday: plankLoggedToday,
     alreadyLoggedDeadhangToday: deadhangLoggedToday,
     squatCompleted: todayRecord?.squat_completed ?? false,
     pushupCompleted: todayRecord?.pushup_completed ?? false,
+    dumbbellCompleted: todayRecord?.dumbbell_completed ?? false,
   }
 }
 
@@ -296,6 +337,7 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
   const deadhangTimerRef = useRef<DomainPlankTimer | null>(null)
   const squatCounterRef = useRef<DomainSquatCounter | null>(null)
   const pushupCounterRef = useRef<DomainSquatCounter | null>(null)
+  const dumbbellCounterRef = useRef<DomainSquatCounter | null>(null)
   const plankVisibilityTrackerRef = useRef(createVisibilityTracker())
   const deadhangVisibilityTrackerRef = useRef(createVisibilityTracker())
   const wakeLockSentinelRef = useRef<WakeLockSentinelLike | null>(null)
@@ -319,9 +361,16 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
     pushupCounterRef.current = createSquatCounter()
     pushupCounterRef.current.count = initial.pushupActualReps
   }
+  if (dumbbellCounterRef.current === null) {
+    dumbbellCounterRef.current = createSquatCounter()
+    dumbbellCounterRef.current.count = initial.dumbbellActualReps
+  }
 
   const [records, setRecords] = useState<DailyRecord[]>(initial.records)
   const [view, setView] = useState<AppView>(initialView)
+  const [appSettings, setAppSettings] = useState<AppSettings>(() => loadSettings())
+  const activeNavViews = useMemo(() => getActiveNavViews(appSettings), [appSettings])
+  const activeNavItems = useMemo(() => getActiveNavItems(appSettings), [appSettings])
   const [plankState, setPlankState] = useState<PlankState>(initial.plankState)
   const [plankElapsedMs, setPlankElapsedMs] = useState(initial.plankActualSec * 1000)
   const [plankResult, setPlankResult] = useState({ actualSec: initial.plankActualSec, success: initial.plankSuccess })
@@ -339,10 +388,15 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
   const [pushupSuccess, setPushupSuccess] = useState(initial.pushupSuccess)
   const [pushupCompleted, setPushupCompleted] = useState(initial.pushupCompleted)
 
+  const [dumbbellCount, setDumbbellCount] = useState(initial.dumbbellActualReps)
+  const [dumbbellSuccess, setDumbbellSuccess] = useState(initial.dumbbellSuccess)
+  const [dumbbellCompleted, setDumbbellCompleted] = useState(initial.dumbbellCompleted)
+
   const [plankTargetSec] = useState(initial.plankTargetSec)
   const [deadhangTargetSec] = useState(initial.deadhangTargetSec)
   const [squatTargetReps, setSquatTargetReps] = useState(initial.squatTargetReps)
   const [pushupTargetReps, setPushupTargetReps] = useState(initial.pushupTargetReps)
+  const [dumbbellTargetReps, setDumbbellTargetReps] = useState(initial.dumbbellTargetReps)
   const [fatigue, setFatigue] = useState(initial.fatigue)
   const [overloadWarning, setOverloadWarning] = useState(initial.overloadWarning)
   const [suspiciousSession, setSuspiciousSession] = useState(initial.suspiciousSession)
@@ -353,10 +407,12 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
     squat: initial.tomorrowSquatTargetReps,
     pushup: initial.tomorrowPushupTargetReps,
     deadhang: initial.tomorrowDeadhangTargetSec,
+    dumbbell: initial.tomorrowDumbbellTargetReps,
     plankReason: initial.tomorrowPlankReason,
     squatReason: initial.tomorrowSquatReason,
     pushupReason: initial.tomorrowPushupReason,
     deadhangReason: initial.tomorrowDeadhangReason,
+    dumbbellReason: initial.tomorrowDumbbellReason,
   })
   const todayRecord = useMemo(() => records.find((record) => record.date === today) ?? null, [records, today])
   const summaryHealthHint = healthExportHint || (todayRecord?.flag_suspicious ? SUSPICIOUS_EXPORT_HINT : '')
@@ -542,6 +598,73 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
     requestPersist('pushup-complete')
   }
 
+  function handleDumbbellDoneRepsChange(rawValue: string) {
+    const nextCount = sanitizeDoneReps(Number(rawValue))
+    if (dumbbellCounterRef.current) {
+      dumbbellCounterRef.current.count = nextCount
+    }
+    setDumbbellCount(nextCount)
+    setDumbbellSuccess(computeSquatSuccess(nextCount, dumbbellTargetReps))
+    goalAlertsRef.current.onDumbbellProgress(nextCount, dumbbellTargetReps)
+    requestPersist()
+  }
+
+  function handleDumbbellTargetRepsChange(rawValue: string) {
+    const nextTarget = sanitizeTargetReps(Number(rawValue))
+    setDumbbellTargetReps(nextTarget)
+    setDumbbellSuccess(computeSquatSuccess(dumbbellCount, nextTarget))
+    goalAlertsRef.current.onDumbbellProgress(dumbbellCount, nextTarget)
+    requestPersist()
+  }
+
+  function handleDumbbellComplete() {
+    if (dumbbellCount === 0 && dumbbellCounterRef.current) {
+      dumbbellCounterRef.current.count = dumbbellTargetReps
+    }
+    const finalCount = completeSquatCounter(dumbbellCounterRef.current as DomainSquatCounter)
+    setDumbbellCount(finalCount)
+    goalAlertsRef.current.onDumbbellProgress(finalCount, dumbbellTargetReps)
+    setDumbbellSuccess(computeSquatSuccess(finalCount, dumbbellTargetReps))
+    setDumbbellCompleted(true)
+    clearCompleteSaveFeedbackTimer()
+    setCompleteSaveFeedback({ target: 'dumbbell', text: 'Saving...', tone: 'info' })
+    requestPersist('dumbbell-complete')
+  }
+
+  function handleToggleExercise(id: ExerciseId, enabled: boolean) {
+    const next: AppSettings = {
+      ...appSettings,
+      exercises: {
+        ...appSettings.exercises,
+        [id]: { enabled },
+      },
+    }
+    setAppSettings(next)
+    saveSettings(next)
+    // If current view is being disabled, navigate to first enabled view
+    const nextActiveViews = getActiveNavViews(next)
+    if (!nextActiveViews.includes(view)) {
+      setView(nextActiveViews[0] ?? 'settings')
+    }
+  }
+
+  function handleSettingsTargetChange(id: ExerciseId, value: number) {
+    switch (id) {
+      case 'squat':
+        setSquatTargetReps(value)
+        requestPersist()
+        break
+      case 'pushup':
+        setPushupTargetReps(value)
+        requestPersist()
+        break
+      case 'dumbbell':
+        setDumbbellTargetReps(value)
+        requestPersist()
+        break
+    }
+  }
+
   function handleMainPointerDown(event: ReactPointerEvent<HTMLElement>) {
     swipeStartRef.current = {
       x: event.clientX,
@@ -570,7 +693,7 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
     })
     if (!direction) return
 
-    const nextView = getAdjacentView(NAV_VIEWS, view, direction)
+    const nextView = getAdjacentView(activeNavViews, view, direction)
     if (nextView) {
       setView(nextView)
     }
@@ -731,16 +854,23 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
         actual_sec: deadhangResult.actualSec,
         success: deadhangResult.success,
       },
+      dumbbell: {
+        target_reps: dumbbellTargetReps,
+        actual_reps: dumbbellCount,
+        success: dumbbellSuccess,
+      },
       fatigue: 0,
       F_P: 0,
       F_S: 0,
       F_U: 0,
       F_D: 0,
+      F_DB: 0,
       F_total_raw: 0,
       inactive_time_ratio: inactiveTimeRatio,
       flag_suspicious: flagSuspicious,
       squat_completed: squatCompleted,
       pushup_completed: pushupCompleted,
+      dumbbell_completed: dumbbellCompleted,
     }
 
     const withoutToday = records.filter((record) => record.date !== today)
@@ -753,6 +883,7 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
       F_S: snapshot.F_S,
       F_U: snapshot.F_U,
       F_D: snapshot.F_D,
+      F_DB: snapshot.F_DB,
       F_total_raw: snapshot.F_total_raw,
     }
 
@@ -787,10 +918,12 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
       squat: tomorrowPlan.squat_target_reps,
       pushup: tomorrowPlan.pushup_target_reps,
       deadhang: tomorrowPlan.deadhang_target_sec,
+      dumbbell: tomorrowPlan.dumbbell_target_reps,
       plankReason: tomorrowPlan.plank_reason,
       squatReason: tomorrowPlan.squat_reason,
       pushupReason: tomorrowPlan.pushup_reason,
       deadhangReason: tomorrowPlan.deadhang_reason,
+      dumbbellReason: tomorrowPlan.dumbbell_reason,
     })
     if (feedbackTarget) {
       scheduleCompleteSaveFeedbackSuccess(feedbackTarget)
@@ -811,8 +944,12 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
     squatSuccess,
     pushupCount,
     pushupSuccess,
+    dumbbellTargetReps,
+    dumbbellCount,
+    dumbbellSuccess,
     squatCompleted,
     pushupCompleted,
+    dumbbellCompleted,
     clearCompleteSaveFeedbackTimer,
   ])
 
@@ -902,31 +1039,70 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
             {wakeLockNotice ? <div className="wake-lock-notice">{wakeLockNotice}</div> : null}
           </>
         )
-      case 'summary':
+      case 'dumbbell':
+        {
+          const dumbbellSaveFeedback = completeSaveFeedback?.target === 'dumbbell' ? completeSaveFeedback : null
+          return (
+            <RepsCounter
+              title="Dumbbell Counter"
+              idPrefix="dumbbell"
+              exerciseName="dumbbell curls"
+              count={dumbbellCount}
+              targetReps={dumbbellTargetReps}
+              showRecommendation={dumbbellCompleted}
+              tomorrowTargetReps={tomorrowTargets.dumbbell}
+              tomorrowDeltaReps={tomorrowTargets.dumbbell - dumbbellTargetReps}
+              recommendationReasonText={getRecommendationReasonText(tomorrowTargets.dumbbellReason, 'dumbbell')}
+              saveFeedbackText={dumbbellSaveFeedback?.text}
+              saveFeedbackTone={dumbbellSaveFeedback?.tone}
+              onDoneRepsChange={handleDumbbellDoneRepsChange}
+              onTargetRepsChange={handleDumbbellTargetRepsChange}
+              onComplete={handleDumbbellComplete}
+            />
+          )
+        }
+      case 'overview':
         return (
-          <DailySummary
+          <WorkoutOverview
             plankTargetSec={plankTargetSec}
             squatTargetReps={squatTargetReps}
             pushupTargetReps={pushupTargetReps}
             deadhangTargetSec={deadhangTargetSec}
+            dumbbellTargetReps={dumbbellTargetReps}
             tomorrowPlankTargetSec={tomorrowTargets.plank}
             tomorrowSquatTargetReps={tomorrowTargets.squat}
             tomorrowPushupTargetReps={tomorrowTargets.pushup}
             tomorrowDeadhangTargetSec={tomorrowTargets.deadhang}
+            tomorrowDumbbellTargetReps={tomorrowTargets.dumbbell}
             plankSuccess={plankResult.success}
             squatSuccess={squatSuccess}
             pushupSuccess={pushupSuccess}
             deadhangSuccess={deadhangResult.success}
+            dumbbellSuccess={dumbbellSuccess}
             fatigue={fatigue}
             overloadWarning={overloadWarning}
             suspiciousSession={suspiciousSession}
             onExportToHealth={handleExportToHealth}
             healthExportEnabled={todayRecord !== null}
             healthExportHint={summaryHealthHint}
+            records={records}
           />
         )
-      case 'stats':
-        return <WorkoutStats records={records} />
+      case 'settings':
+        return (
+          <Settings
+            settings={appSettings}
+            exerciseTargets={[
+              { id: 'plank', label: 'Plank', currentTarget: plankTargetSec, unit: 's' },
+              { id: 'squat', label: 'Squat', currentTarget: squatTargetReps, unit: 'reps' },
+              { id: 'pushup', label: 'Pushup', currentTarget: pushupTargetReps, unit: 'reps' },
+              { id: 'deadhang', label: 'Deadhang', currentTarget: deadhangTargetSec, unit: 's' },
+              { id: 'dumbbell', label: 'Dumbbell', currentTarget: dumbbellTargetReps, unit: 'reps' },
+            ]}
+            onToggleExercise={handleToggleExercise}
+            onChangeTarget={handleSettingsTargetChange}
+          />
+        )
       default:
         return null
     }
@@ -952,7 +1128,7 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
           </div>
         </main>
         <nav className="nav app-tabbar" aria-label="Exercise navigation" data-swipe-ignore="true">
-          {NAV_ITEMS.map((item) => (
+          {activeNavItems.map((item) => (
             <button
               key={item.view}
               type="button"

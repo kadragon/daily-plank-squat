@@ -2,18 +2,17 @@ import { expect, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
 import App, { computeSquatSuccess } from './app'
 
-test('App navigates between plank/squat/deadhang/summary/stats views', () => {
+test('App navigates between plank/squat/deadhang/overview views', () => {
   const plankHtml = renderToStaticMarkup(<App initialView="plank" />)
   const squatHtml = renderToStaticMarkup(<App initialView="squat" />)
   const deadhangHtml = renderToStaticMarkup(<App initialView="deadhang" />)
-  const summaryHtml = renderToStaticMarkup(<App initialView="summary" />)
-  const statsHtml = renderToStaticMarkup(<App initialView="stats" />)
+  const overviewHtml = renderToStaticMarkup(<App initialView="overview" />)
 
   expect(plankHtml).toContain('Start')
   expect(squatHtml).toContain('Done reps')
   expect(deadhangHtml).toContain('Deadhang Timer')
-  expect(summaryHtml).toContain('Plank target:')
-  expect(statsHtml).toContain('Workout Stats')
+  expect(overviewHtml).toContain('Plank target:')
+  expect(overviewHtml).toContain('Workout Stats')
 })
 
 test('App drives plank view from live plank state', () => {
@@ -25,11 +24,11 @@ test('App drives plank view from live plank state', () => {
   expect(runningHtml).toContain('Cancel')
 })
 
-test('App passes computed summary targets into summary view', () => {
-  const summaryHtml = renderToStaticMarkup(<App initialView="summary" />)
+test('App passes computed summary targets into overview view', () => {
+  const overviewHtml = renderToStaticMarkup(<App initialView="overview" />)
 
-  expect(summaryHtml).toContain('Plank target: 60s')
-  expect(summaryHtml).toContain('Squat target: 20')
+  expect(overviewHtml).toContain('Plank target: 60s')
+  expect(overviewHtml).toContain('Squat target: 20')
 })
 
 test('App wraps active view in <main> landmark', () => {
@@ -73,31 +72,31 @@ test('computeSquatSuccess recalculates status when target changes', () => {
   expect(computeSquatSuccess(10, 20)).toBe(false)
 })
 
-test('App nav includes pushup and deadhang tabs between squat and summary', () => {
+test('App nav includes pushup, deadhang, and dumbbell tabs between squat and overview', () => {
   const html = renderToStaticMarkup(<App initialView="plank" />)
 
   expect(html).toContain('Pushup')
   expect(html).toContain('Deadhang')
-  // Nav order: Plank, Squat, Pushup, Deadhang, Summary
+  expect(html).toContain('Dumbbell')
+  // Nav order: Plank, Squat, Pushup, Deadhang, Dumbbell, Overview
   const plankIdx = html.indexOf('Plank')
   const squatIdx = html.indexOf('Squat')
   const pushupIdx = html.indexOf('Pushup')
   const deadhangIdx = html.indexOf('Deadhang')
-  const summaryIdx = html.indexOf('Summary')
+  const dumbbellIdx = html.indexOf('Dumbbell')
+  const overviewIdx = html.indexOf('Overview')
 
   expect(plankIdx).toBeLessThan(squatIdx)
   expect(squatIdx).toBeLessThan(pushupIdx)
   expect(pushupIdx).toBeLessThan(deadhangIdx)
-  expect(deadhangIdx).toBeLessThan(summaryIdx)
+  expect(deadhangIdx).toBeLessThan(dumbbellIdx)
+  expect(dumbbellIdx).toBeLessThan(overviewIdx)
 })
 
-test('App nav includes stats tab after summary', () => {
+test('App nav includes overview tab', () => {
   const html = renderToStaticMarkup(<App initialView="plank" />)
 
-  const summaryIdx = html.indexOf('Summary')
-  const statsIdx = html.indexOf('Stats')
-
-  expect(summaryIdx).toBeLessThan(statsIdx)
+  expect(html).toContain('Overview')
 })
 
 test('App renders RepsCounter for pushup view with correct props', () => {
@@ -114,14 +113,14 @@ test('App renders pushup view with editable reps inputs before completion', () =
   expect(html).toContain('id="pushup-done-reps"')
 })
 
-test('App applies swipe-priority main classes for workout views and scrollable stage for summary', () => {
+test('App applies swipe-priority main classes for workout views and scrollable stage for overview', () => {
   const workoutHtml = renderToStaticMarkup(<App initialView="squat" />)
-  const summaryHtml = renderToStaticMarkup(<App initialView="summary" />)
+  const overviewHtml = renderToStaticMarkup(<App initialView="overview" />)
 
   expect(workoutHtml).toContain('main-content--swipe')
   expect(workoutHtml).not.toContain('view-stage--scrollable')
-  expect(summaryHtml).toContain('view-stage--scrollable')
-  expect(summaryHtml).not.toContain('main-content--swipe')
+  expect(overviewHtml).toContain('view-stage--scrollable')
+  expect(overviewHtml).not.toContain('main-content--swipe')
 })
 
 test('computeSquatSuccess (reused) computes pushup success correctly', () => {
