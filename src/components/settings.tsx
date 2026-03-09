@@ -35,6 +35,7 @@ export default function Settings({
                   checked={enabled}
                   onChange={(e) => onToggleExercise(exercise.id, e.currentTarget.checked)}
                 />
+                <span className="settings__toggle-track" />
                 {exercise.label}
               </label>
               <div className="settings__target-row">
