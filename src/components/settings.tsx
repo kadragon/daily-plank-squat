@@ -32,6 +32,7 @@ export default function Settings({
               <label className="settings__toggle-label">
                 <input
                   type="checkbox"
+                  aria-label={`${exercise.label} 활성화`}
                   checked={enabled}
                   onChange={(e) => onToggleExercise(exercise.id, e.currentTarget.checked)}
                 />
