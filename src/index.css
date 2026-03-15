@@ -443,9 +443,9 @@ body {
 
 .workout-stats__svg-chart {
   width: 100%;
-  height: auto;
+  aspect-ratio: 100 / 160;
   overflow: visible;
-  touch-action: none;
+  touch-action: pan-y;
 }
 
 .workout-stats__svg-label {

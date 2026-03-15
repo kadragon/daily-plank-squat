@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { buildDailyStatsSeries, computeWorkoutTotals, filterRecordsByRange, type StatsRange } from '../models/stats'
 import type { DailyRecord } from '../types'
 
@@ -19,36 +19,40 @@ const GRID_LINES = 4
 function ExerciseChart({ title, unit, series }: ExerciseChartProps) {
   const [hoverIndex, setHoverIndex] = useState<number | null>(null)
 
-  if (series.length === 0) return null
+  const { toX, toY, linePoints, areaPoints, xLabelStep, gridValues, innerW, innerH } = useMemo(() => {
+    const maxValue = Math.max(1, ...series.map((p) => p.value))
+    const yMax = Math.ceil(maxValue * 1.15) || 1
 
-  const maxValue = Math.max(1, ...series.map((p) => p.value))
-  const yMax = Math.ceil(maxValue * 1.15) || 1
+    const innerW = 100 - CHART_PADDING.left - CHART_PADDING.right
+    const innerH = CHART_HEIGHT - CHART_PADDING.top - CHART_PADDING.bottom
 
-  const innerW = 100 - CHART_PADDING.left - CHART_PADDING.right
-  const innerH = CHART_HEIGHT - CHART_PADDING.top - CHART_PADDING.bottom
+    const toX = (i: number) =>
+      CHART_PADDING.left + (series.length === 1 ? innerW / 2 : (i / (series.length - 1)) * innerW)
+    const toY = (v: number) =>
+      CHART_PADDING.top + innerH - (v / yMax) * innerH
 
-  const toX = (i: number) =>
-    CHART_PADDING.left + (series.length === 1 ? innerW / 2 : (i / (series.length - 1)) * innerW)
-  const toY = (v: number) =>
-    CHART_PADDING.top + innerH - (v / yMax) * innerH
+    const linePoints = series.map((p, i) => `${toX(i)},${toY(p.value)}`).join(' ')
+    const areaPoints = [
+      `${toX(0)},${toY(0)}`,
+      ...series.map((p, i) => `${toX(i)},${toY(p.value)}`),
+      `${toX(series.length - 1)},${toY(0)}`,
+    ].join(' ')
 
-  const linePoints = series.map((p, i) => `${toX(i)},${toY(p.value)}`).join(' ')
-  const areaPoints = [
-    `${toX(0)},${toY(0)}`,
-    ...series.map((p, i) => `${toX(i)},${toY(p.value)}`),
-    `${toX(series.length - 1)},${toY(0)}`,
-  ].join(' ')
+    const xLabelCount = Math.min(series.length, 7)
+    const xLabelStep = series.length <= 7 ? 1 : Math.ceil(series.length / xLabelCount)
 
-  const xLabelCount = Math.min(series.length, 7)
-  const xLabelStep = series.length <= 7 ? 1 : Math.ceil(series.length / xLabelCount)
+    const gridValues = [...new Set(
+      Array.from({ length: GRID_LINES }, (_, i) =>
+        Math.round((yMax / GRID_LINES) * (i + 1))
+      )
+    )]
 
-  const gridValues = Array.from({ length: GRID_LINES }, (_, i) =>
-    Math.round((yMax / GRID_LINES) * (i + 1))
-  )
+    return { toX, toY, linePoints, areaPoints, xLabelStep, gridValues, innerW, innerH }
+  }, [series])
 
   const chartId = `chart-${title.toLowerCase()}`
 
-  const handlePointer = (e: React.PointerEvent<SVGSVGElement>) => {
+  const handlePointer = useCallback((e: React.PointerEvent<SVGSVGElement>) => {
     const svg = e.currentTarget
     const rect = svg.getBoundingClientRect()
     const xPct = ((e.clientX - rect.left) / rect.width) * 100
@@ -56,7 +60,9 @@ function ExerciseChart({ title, unit, series }: ExerciseChartProps) {
       ? 0
       : Math.round(((xPct - CHART_PADDING.left) / innerW) * (series.length - 1))
     setHoverIndex(Math.max(0, Math.min(series.length - 1, idx)))
-  }
+  }, [series.length, innerW])
+
+  if (series.length === 0) return null
 
   return (
     <section className="workout-stats__chart">
@@ -64,7 +70,7 @@ function ExerciseChart({ title, unit, series }: ExerciseChartProps) {
       <svg
         className="workout-stats__svg-chart"
         viewBox={`0 0 100 ${CHART_HEIGHT}`}
-        preserveAspectRatio="none"
+        preserveAspectRatio="xMidYMid meet"
         role="img"
         aria-label={`${title} chart`}
         onPointerMove={handlePointer}
