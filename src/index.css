@@ -441,41 +441,25 @@ body {
   font-weight: 600;
 }
 
-.workout-stats__chart-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 0.38rem;
+.workout-stats__svg-chart {
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  touch-action: none;
 }
 
-.workout-stats__chart-row {
-  display: grid;
-  grid-template-columns: 46px 1fr auto;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.workout-stats__chart-date {
-  color: var(--text-muted);
-  font-size: 0.78rem;
+.workout-stats__svg-label {
+  fill: var(--text-muted);
+  font-size: 3.2px;
+  font-family: 'Barlow', sans-serif;
   font-variant-numeric: tabular-nums;
 }
 
-.workout-stats__chart-track {
-  height: 10px;
-  border-radius: 999px;
-  overflow: hidden;
-  background: rgba(248, 250, 252, 0.08);
-}
-
-.workout-stats__chart-bar {
-  height: 100%;
-  border-radius: 999px;
-  background: linear-gradient(90deg, var(--secondary), var(--primary));
-}
-
-.workout-stats__chart-value {
-  font-size: 0.78rem;
-  color: var(--text);
+.workout-stats__svg-tooltip {
+  fill: var(--text);
+  font-size: 3.6px;
+  font-family: 'Barlow', sans-serif;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 

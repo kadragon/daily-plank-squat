@@ -18,6 +18,7 @@ export default defineConfig({
         theme_color: APP_CHROME_COLOR,
         background_color: APP_CHROME_COLOR,
         display: 'standalone',
+        orientation: 'portrait',
         icons: [
           {
             src: 'favicon.svg',
