@@ -128,6 +128,7 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
     initialSuccess: initial.plankSuccess,
     initialLogged: initial.alreadyLoggedPlankToday,
     targetSec: plankTargetSec,
+    countdownSec: appSettings.countdownSec,
     otherTimerRunning: false,
     onProgressSeconds: onPlankProgressSeconds,
     requestPersist,
@@ -140,6 +141,7 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
     initialSuccess: initial.deadhangSuccess,
     initialLogged: initial.alreadyLoggedDeadhangToday,
     targetSec: deadhangTargetSec,
+    countdownSec: appSettings.countdownSec,
     otherTimerRunning: false,
     onProgressSeconds: onDeadhangProgressSeconds,
     requestPersist,
@@ -148,12 +150,12 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
 
   // Mutual exclusion: only one timed exercise can run at a time
   const handlePlankStart = useCallback(() => {
-    if (deadhang.state === 'RUNNING') return
+    if (deadhang.state === 'RUNNING' || deadhang.state === 'COUNTDOWN') return
     plank.handleStart()
   }, [deadhang.state, plank.handleStart])
 
   const handleDeadhangStart = useCallback(() => {
-    if (plank.state === 'RUNNING') return
+    if (plank.state === 'RUNNING' || plank.state === 'COUNTDOWN') return
     deadhang.handleStart()
   }, [plank.state, deadhang.handleStart])
 
@@ -402,10 +404,11 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
               elapsedMs={plank.elapsedMs}
               targetSec={plankTargetSec}
               state={plank.state}
+              countdownMs={plank.countdownMs}
               tomorrowTargetSec={tomorrowTargets.plank}
               tomorrowDeltaSec={tomorrowTargets.plank - plankTargetSec}
               recommendationReasonText={getRecommendationReasonText(tomorrowTargets.plankReason, 'plank')}
-              startDisabled={deadhang.state === 'RUNNING'}
+              startDisabled={deadhang.state === 'RUNNING' || deadhang.state === 'COUNTDOWN'}
               onStart={handlePlankStart}
               onPause={plank.handlePause}
               onResume={plank.handleResume}
@@ -463,10 +466,11 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
               elapsedMs={deadhang.elapsedMs}
               targetSec={deadhangTargetSec}
               state={deadhang.state}
+              countdownMs={deadhang.countdownMs}
               tomorrowTargetSec={tomorrowTargets.deadhang}
               tomorrowDeltaSec={tomorrowTargets.deadhang - deadhangTargetSec}
               recommendationReasonText={getRecommendationReasonText(tomorrowTargets.deadhangReason, 'deadhang')}
-              startDisabled={plank.state === 'RUNNING'}
+              startDisabled={plank.state === 'RUNNING' || plank.state === 'COUNTDOWN'}
               onStart={handleDeadhangStart}
               onPause={deadhang.handlePause}
               onResume={deadhang.handleResume}
@@ -537,6 +541,11 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
             ]}
             onToggleExercise={handleToggleExercise}
             onChangeTarget={handleSettingsTargetChange}
+            onChangeCountdownSec={(value) => {
+              const next: AppSettings = { ...appSettings, countdownSec: value }
+              setAppSettings(next)
+              saveSettings(next)
+            }}
           />
         )
       default:

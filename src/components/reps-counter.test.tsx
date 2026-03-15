@@ -82,3 +82,12 @@ test('RepsCounter does not render RPE input', () => {
   expect(html).not.toContain('RPE')
   expect(html).not.toContain('rpe')
 })
+
+test('RepsCounter renders type="text" with inputMode="numeric" and pattern', () => {
+  const html = renderToStaticMarkup(<RepsCounter count={0} />)
+
+  expect(html).toContain('type="text"')
+  expect(html).toContain('inputMode="numeric"')
+  expect(html).toContain('pattern="[0-9]*"')
+  expect(html).not.toContain('type="number"')
+})

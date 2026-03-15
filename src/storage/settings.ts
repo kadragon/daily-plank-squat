@@ -6,6 +6,7 @@ export interface ExerciseSettings {
 
 export interface AppSettings {
   exercises: Record<ExerciseId, ExerciseSettings>
+  countdownSec: number
 }
 
 const STORAGE_KEY = 'app-settings'
@@ -21,6 +22,7 @@ function defaultSettings(): AppSettings {
       deadhang: { enabled: true },
       dumbbell: { enabled: true },
     },
+    countdownSec: 5,
   }
 }
 
@@ -37,13 +39,17 @@ function parseSettings(value: unknown): AppSettings {
   if (!isRecord(value)) return defaults
 
   const exercises = value.exercises
-  if (!isRecord(exercises)) return defaults
-
-  for (const id of ALL_EXERCISES) {
-    const entry = exercises[id]
-    if (isRecord(entry) && typeof entry.enabled === 'boolean') {
-      defaults.exercises[id] = { enabled: entry.enabled }
+  if (isRecord(exercises)) {
+    for (const id of ALL_EXERCISES) {
+      const entry = exercises[id]
+      if (isRecord(entry) && typeof entry.enabled === 'boolean') {
+        defaults.exercises[id] = { enabled: entry.enabled }
+      }
     }
+  }
+
+  if (typeof value.countdownSec === 'number' && Number.isFinite(value.countdownSec)) {
+    defaults.countdownSec = Math.max(0, Math.min(10, Math.floor(value.countdownSec)))
   }
 
   return defaults

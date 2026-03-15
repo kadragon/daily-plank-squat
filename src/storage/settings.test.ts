@@ -73,3 +73,39 @@ test('loadSettings handles missing exercises gracefully', () => {
   expect(settings.exercises.plank.enabled).toBe(false)
   expect(settings.exercises.squat.enabled).toBe(true)
 })
+
+test('loadSettings returns countdownSec default of 5', () => {
+  const settings = loadSettings()
+  expect(settings.countdownSec).toBe(5)
+})
+
+test('loadSettings parses saved countdownSec', () => {
+  localStorage.setItem('app-settings', JSON.stringify({
+    exercises: { plank: { enabled: true }, squat: { enabled: true }, pushup: { enabled: true }, deadhang: { enabled: true }, dumbbell: { enabled: true } },
+    countdownSec: 3,
+  }))
+  const settings = loadSettings()
+  expect(settings.countdownSec).toBe(3)
+})
+
+test('loadSettings clamps countdownSec to 0-10 range', () => {
+  localStorage.setItem('app-settings', JSON.stringify({
+    exercises: { plank: { enabled: true }, squat: { enabled: true }, pushup: { enabled: true }, deadhang: { enabled: true }, dumbbell: { enabled: true } },
+    countdownSec: -1,
+  }))
+  expect(loadSettings().countdownSec).toBe(0)
+
+  localStorage.setItem('app-settings', JSON.stringify({
+    exercises: { plank: { enabled: true }, squat: { enabled: true }, pushup: { enabled: true }, deadhang: { enabled: true }, dumbbell: { enabled: true } },
+    countdownSec: 15,
+  }))
+  expect(loadSettings().countdownSec).toBe(10)
+})
+
+test('loadSettings defaults countdownSec for non-number values', () => {
+  localStorage.setItem('app-settings', JSON.stringify({
+    exercises: { plank: { enabled: true }, squat: { enabled: true }, pushup: { enabled: true }, deadhang: { enabled: true }, dumbbell: { enabled: true } },
+    countdownSec: 'abc',
+  }))
+  expect(loadSettings().countdownSec).toBe(5)
+})

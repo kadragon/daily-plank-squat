@@ -6,4 +6,5 @@ export {
   complete,
   sanitizeDoneReps,
   sanitizeTargetReps,
+  sanitizeRawInput,
 } from './reps-counter'

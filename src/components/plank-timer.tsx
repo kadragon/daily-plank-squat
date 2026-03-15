@@ -5,6 +5,7 @@ interface PlankTimerProps {
   elapsedMs?: number
   targetSec?: number
   state?: PlankState
+  countdownMs?: number
   tomorrowTargetSec?: number
   tomorrowDeltaSec?: number
   recommendationReasonText?: string
@@ -32,6 +33,7 @@ export default function PlankTimer({
   elapsedMs = 0,
   targetSec = 0,
   state = 'IDLE',
+  countdownMs = 0,
   tomorrowTargetSec = 0,
   tomorrowDeltaSec = 0,
   recommendationReasonText = '',
@@ -53,6 +55,12 @@ export default function PlankTimer({
         return (
           <div className="timer-controls">
             <button type="button" className="btn btn--primary" onClick={onStart} disabled={startDisabled}>Start</button>
+          </div>
+        )
+      case 'COUNTDOWN':
+        return (
+          <div className="timer-controls">
+            <button type="button" className="btn btn--danger" onClick={onCancel}>Cancel</button>
           </div>
         )
       case 'RUNNING':
@@ -90,7 +98,9 @@ export default function PlankTimer({
     <div className={`plank-timer plank-timer--${state.toLowerCase()}`}>
       <h2>{title}</h2>
       <div className="timer-target">Target: {targetSec}s</div>
-      <div className="timer-display" aria-live="polite">{formatTime(remainingMs)}</div>
+      {state === 'COUNTDOWN'
+        ? <div className="countdown-display" aria-live="polite">{Math.ceil(countdownMs / 1000)}</div>
+        : <div className="timer-display" aria-live="polite">{formatTime(remainingMs)}</div>}
       <div className="progress-bar">
         <div className="progress-fill" style={{ width: `${progressPercent}%` }} />
       </div>

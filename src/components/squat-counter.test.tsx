@@ -7,7 +7,8 @@ test('Squat view shows Target reps and Done reps numeric inputs', () => {
 
   expect(html).toContain('Target reps')
   expect(html).toContain('Done reps')
-  expect(html).toContain('type="number"')
+  expect(html).toContain('type="text"')
+  expect(html).toContain('inputMode="numeric"')
 })
 
 test('Squat view shows complete button', () => {

@@ -12,6 +12,7 @@ interface SettingsProps {
   exerciseTargets: ExerciseTarget[]
   onToggleExercise: (id: ExerciseId, enabled: boolean) => void
   onChangeTarget: (id: ExerciseId, value: number) => void
+  onChangeCountdownSec?: (value: number) => void
 }
 
 export default function Settings({
@@ -19,6 +20,7 @@ export default function Settings({
   exerciseTargets,
   onToggleExercise,
   onChangeTarget,
+  onChangeCountdownSec,
 }: SettingsProps) {
   return (
     <div className="settings">
@@ -46,10 +48,9 @@ export default function Settings({
                 <input
                   id={`settings-target-${exercise.id}`}
                   className="settings__target-input"
-                  type="number"
-                  min={1}
-                  step={1}
+                  type="text"
                   inputMode="numeric"
+                  pattern="[0-9]*"
                   value={exercise.currentTarget}
                   disabled={!enabled}
                   onInput={(e) => {
@@ -62,6 +63,29 @@ export default function Settings({
             </div>
           )
         })}
+      </section>
+      <section className="settings__timer">
+        <h3>Timer</h3>
+        <div className="settings__target-row">
+          <label className="settings__target-label" htmlFor="settings-countdown-sec">
+            Countdown
+          </label>
+          <input
+            id="settings-countdown-sec"
+            className="settings__target-input"
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            value={settings.countdownSec}
+            onInput={(e) => {
+              const raw = (e.currentTarget as HTMLInputElement).value
+              if (raw === '') return
+              const val = Number(raw)
+              if (Number.isFinite(val) && val >= 0 && val <= 10) onChangeCountdownSec?.(val)
+            }}
+          />
+          <span className="settings__target-unit">s</span>
+        </div>
       </section>
     </div>
   )
