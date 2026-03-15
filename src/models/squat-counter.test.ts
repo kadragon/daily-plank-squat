@@ -6,6 +6,7 @@ import {
   increment,
   sanitizeDoneReps,
   sanitizeTargetReps,
+  sanitizeRawInput,
 } from './squat-counter'
 
 describe('Squat Counter', () => {
@@ -53,5 +54,30 @@ describe('Squat Counter', () => {
     expect(sanitizeTargetReps(0)).toBe(1)
     expect(sanitizeTargetReps(-3)).toBe(1)
     expect(sanitizeTargetReps(Number.NaN)).toBe(1)
+  })
+
+  test('sanitizeRawInput returns error for empty string', () => {
+    const result = sanitizeRawInput('')
+    expect(result).toEqual({ value: 0, error: '값을 입력해 주세요' })
+  })
+
+  test('sanitizeRawInput returns error for non-numeric string', () => {
+    const result = sanitizeRawInput('abc')
+    expect(result).toEqual({ value: 0, error: '숫자만 입력해 주세요' })
+  })
+
+  test('sanitizeRawInput strips leading zeros', () => {
+    const result = sanitizeRawInput('038')
+    expect(result).toEqual({ value: 38, error: null })
+  })
+
+  test('sanitizeRawInput handles "0" as valid input', () => {
+    const result = sanitizeRawInput('0')
+    expect(result).toEqual({ value: 0, error: null })
+  })
+
+  test('sanitizeRawInput handles normal number string', () => {
+    const result = sanitizeRawInput('100')
+    expect(result).toEqual({ value: 100, error: null })
   })
 })

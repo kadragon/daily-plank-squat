@@ -288,6 +288,7 @@ test('Pushup complete shows recommendation', async () => {
 })
 
 test('Plank complete and cancel both save/update today record', async () => {
+  happyWindow.localStorage.setItem('app-settings', JSON.stringify({ countdownSec: 0 }))
   const cancelView = render(<App initialView="plank" />)
   fireEvent.click(cancelView.getByRole('button', { name: 'Start' }))
   fireEvent.click(cancelView.getByRole('button', { name: 'Cancel' }))
@@ -302,6 +303,7 @@ test('Plank complete and cancel both save/update today record', async () => {
   cleanup()
   happyWindow.localStorage.clear()
 
+  happyWindow.localStorage.setItem('app-settings', JSON.stringify({ countdownSec: 0 }))
   seedTodayRecord({
     plank: { target_sec: 0, actual_sec: 0, success: false },
     squat: { target_reps: 20, actual_reps: 12, success: false },

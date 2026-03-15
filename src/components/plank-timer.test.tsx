@@ -141,3 +141,18 @@ test('PlankTimer does not render RPE input', () => {
   expect(html).not.toContain('RPE')
   expect(html).not.toContain('rpe')
 })
+
+test('PlankTimer COUNTDOWN state shows countdown number', () => {
+  const html = renderToStaticMarkup(<PlankTimer state="COUNTDOWN" countdownMs={3000} />)
+
+  expect(html).toContain('3')
+  expect(html).toContain('countdown-display')
+})
+
+test('PlankTimer COUNTDOWN state shows Cancel button', () => {
+  const html = renderToStaticMarkup(<PlankTimer state="COUNTDOWN" countdownMs={5000} />)
+
+  expect(html).toContain('Cancel')
+  expect(html).not.toContain('Pause')
+  expect(html).not.toContain('Start')
+})

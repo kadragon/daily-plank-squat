@@ -41,10 +41,9 @@ export default function RepsCounter({
         <input
           id={`${idPrefix}-target-reps`}
           className="reps-input"
-          type="number"
-          min={1}
-          step={1}
+          type="text"
           inputMode="numeric"
+          pattern="[0-9]*"
           aria-label="Target reps"
           value={targetReps}
           onInput={(event) => onTargetRepsChange?.((event.currentTarget as HTMLInputElement).value)}
@@ -55,10 +54,9 @@ export default function RepsCounter({
         <input
           id={`${idPrefix}-done-reps`}
           className="reps-input"
-          type="number"
-          min={0}
-          step={1}
+          type="text"
           inputMode="numeric"
+          pattern="[0-9]*"
           aria-label="Done reps"
           value={count}
           onInput={(event) => onDoneRepsChange?.((event.currentTarget as HTMLInputElement).value)}

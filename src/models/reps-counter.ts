@@ -27,3 +27,18 @@ export function sanitizeTargetReps(value: number): number {
   if (!Number.isFinite(value)) return 1
   return Math.max(1, Math.floor(value))
 }
+
+export interface SanitizeResult {
+  value: number
+  error: string | null
+}
+
+export function sanitizeRawInput(rawValue: string): SanitizeResult {
+  if (rawValue === '') {
+    return { value: 0, error: '값을 입력해 주세요' }
+  }
+  if (!/^\d+$/.test(rawValue)) {
+    return { value: 0, error: '숫자만 입력해 주세요' }
+  }
+  return { value: Number(rawValue), error: null }
+}

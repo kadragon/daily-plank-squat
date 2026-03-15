@@ -11,6 +11,7 @@ interface UseTimedExerciseOptions {
   initialSuccess: boolean
   initialLogged: boolean
   targetSec: number
+  countdownSec: number
   otherTimerRunning: boolean
   onProgressSeconds: (elapsedSec: number) => void
   onCompleted?: () => void
@@ -21,6 +22,7 @@ interface UseTimedExerciseOptions {
 export interface UseTimedExerciseReturn {
   state: PlankState
   elapsedMs: number
+  countdownMs: number
   result: TimedWorkoutResult
   logged: boolean
   timerRef: React.RefObject<DomainPlankTimer | null>
@@ -39,6 +41,7 @@ export function useTimedExercise({
   initialSuccess,
   initialLogged,
   targetSec,
+  countdownSec,
   otherTimerRunning,
   onProgressSeconds,
   onCompleted,
@@ -55,6 +58,8 @@ export function useTimedExercise({
 
   const [state, setState] = useState<PlankState>(initialState)
   const [elapsedMs, setElapsedMs] = useState(initialActualSec * 1000)
+  const [countdownMs, setCountdownMs] = useState(0)
+  const countdownStartRef = useRef(0)
   const [result, setResult] = useState<TimedWorkoutResult>({ actualSec: initialActualSec, success: initialSuccess })
   const [logged, setLogged] = useState(initialLogged)
 
@@ -66,13 +71,20 @@ export function useTimedExercise({
   const handleStart = useCallback(() => {
     if (otherTimerRunning) return
     visibilityTrackerRef.current = createVisibilityTracker()
-    timerRef.current?.start(nowMs())
     setResult({ actualSec: 0, success: false })
     setLogged(false)
     setSuspiciousSession(false)
     completedElapsedMsRef.current = 0
+    if (countdownSec > 0) {
+      const now = nowMs()
+      timerRef.current?.startCountdown(now)
+      countdownStartRef.current = now
+      setCountdownMs(countdownSec * 1000)
+    } else {
+      timerRef.current?.start(nowMs())
+    }
     syncState()
-  }, [otherTimerRunning, setSuspiciousSession, syncState])
+  }, [otherTimerRunning, countdownSec, setSuspiciousSession, syncState])
 
   const handlePause = useCallback(() => {
     timerRef.current?.pause(nowMs())
@@ -96,6 +108,31 @@ export function useTimedExercise({
     }
     syncState()
   }, [requestPersist, syncState])
+
+  // Animation frame loop for countdown
+  useEffect(() => {
+    if (state !== 'COUNTDOWN') return undefined
+
+    let frameId = 0
+    const tick = () => {
+      const now = nowMs()
+      const elapsed = now - countdownStartRef.current
+      const remaining = countdownSec * 1000 - elapsed
+
+      if (remaining <= 0) {
+        setCountdownMs(0)
+        timerRef.current?.countdownDone(now)
+        syncState(now)
+        return
+      }
+
+      setCountdownMs(remaining)
+      frameId = requestAnimationFrame(tick)
+    }
+
+    frameId = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(frameId)
+  }, [state, countdownSec, syncState])
 
   // Animation frame loop for running timer
   useEffect(() => {
@@ -131,6 +168,7 @@ export function useTimedExercise({
   return {
     state,
     elapsedMs,
+    countdownMs,
     result,
     logged,
     timerRef,
