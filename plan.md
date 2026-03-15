@@ -20,7 +20,7 @@
 > 카운트다운 시간 설정을 AppSettings에 추가
 
 - [x] AppSettings에 countdownSec 필드 존재 (기본값 5)
-- [x] parseSettings에서 countdownSec 파싱 및 범위 검증 (1~10)
+- [x] parseSettings에서 countdownSec 파싱 및 범위 검증 (0~10)
 
 ## 타이머 카운트다운 - Hook
 

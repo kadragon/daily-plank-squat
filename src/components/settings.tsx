@@ -78,7 +78,9 @@ export default function Settings({
             pattern="[0-9]*"
             value={settings.countdownSec}
             onInput={(e) => {
-              const val = Number((e.currentTarget as HTMLInputElement).value)
+              const raw = (e.currentTarget as HTMLInputElement).value
+              if (raw === '') return
+              const val = Number(raw)
               if (Number.isFinite(val) && val >= 0 && val <= 10) onChangeCountdownSec?.(val)
             }}
           />

@@ -60,6 +60,7 @@ export function useTimedExercise({
   const [elapsedMs, setElapsedMs] = useState(initialActualSec * 1000)
   const [countdownMs, setCountdownMs] = useState(0)
   const countdownStartRef = useRef(0)
+  const countdownDurationRef = useRef(0)
   const [result, setResult] = useState<TimedWorkoutResult>({ actualSec: initialActualSec, success: initialSuccess })
   const [logged, setLogged] = useState(initialLogged)
 
@@ -79,6 +80,7 @@ export function useTimedExercise({
       const now = nowMs()
       timerRef.current?.startCountdown(now)
       countdownStartRef.current = now
+      countdownDurationRef.current = countdownSec * 1000
       setCountdownMs(countdownSec * 1000)
     } else {
       timerRef.current?.start(nowMs())
@@ -98,8 +100,9 @@ export function useTimedExercise({
 
   const handleCancel = useCallback(() => {
     const now = nowMs()
+    const wasCountdown = timerRef.current?.state() === 'COUNTDOWN'
     const cancelResult = timerRef.current?.cancel(now)
-    if (cancelResult) {
+    if (cancelResult && !wasCountdown) {
       const elapsed = timerRef.current?.getCurrentElapsed(now) ?? 0
       completedElapsedMsRef.current = elapsed
       setResult({ actualSec: cancelResult.actual_sec, success: false })
@@ -117,7 +120,7 @@ export function useTimedExercise({
     const tick = () => {
       const now = nowMs()
       const elapsed = now - countdownStartRef.current
-      const remaining = countdownSec * 1000 - elapsed
+      const remaining = countdownDurationRef.current - elapsed
 
       if (remaining <= 0) {
         setCountdownMs(0)
@@ -132,7 +135,7 @@ export function useTimedExercise({
 
     frameId = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(frameId)
-  }, [state, countdownSec, syncState])
+  }, [state, syncState])
 
   // Animation frame loop for running timer
   useEffect(() => {
