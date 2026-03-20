@@ -9,7 +9,8 @@ export function useWorkoutWakeLock(plankState: PlankState, deadhangState: PlankS
   useEffect(() => {
     let isDisposed = false
     const wakeLock = getWakeLock()
-    const hasRunningTimer = plankState === 'RUNNING' || deadhangState === 'RUNNING'
+    const hasRunningTimer = plankState === 'RUNNING' || plankState === 'COUNTDOWN'
+      || deadhangState === 'RUNNING' || deadhangState === 'COUNTDOWN'
     const wakeLockState: PlankState = hasRunningTimer ? 'RUNNING' : 'COMPLETED'
 
     async function sync() {
@@ -32,8 +33,17 @@ export function useWorkoutWakeLock(plankState: PlankState, deadhangState: PlankS
     }
 
     void sync()
+
+    function handleVisibilityChange() {
+      if (document.visibilityState === 'visible' && hasRunningTimer && !isDisposed) {
+        void sync()
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
     return () => {
       isDisposed = true
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
   }, [plankState, deadhangState])
 

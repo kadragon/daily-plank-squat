@@ -221,7 +221,8 @@ body {
   color: var(--text-muted);
 }
 
-.timer-display {
+.timer-display,
+.countdown-display {
   font-family: 'Barlow Condensed', ui-monospace, monospace;
   font-size: clamp(4rem, 16vw, 5.25rem);
   font-weight: 700;
