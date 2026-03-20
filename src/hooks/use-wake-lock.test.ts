@@ -41,6 +41,28 @@ test('Wake Lock requested on COUNTDOWN state', async () => {
   expect(sentinel).not.toBeNull()
 })
 
+test('Wake Lock re-acquired when sentinel was auto-released by browser', async () => {
+  let requestCount = 0
+  const wakeLock = {
+    async request(type: string) {
+      requestCount++
+      return {
+        released: false,
+        async release() {
+          this.released = true
+        },
+      }
+    },
+  }
+
+  const releasedSentinel = { released: true, async release() {} }
+  const sentinel = await syncWakeLock('RUNNING', releasedSentinel, wakeLock)
+
+  expect(requestCount).toBe(1)
+  expect(sentinel).not.toBeNull()
+  expect(sentinel!.released).toBe(false)
+})
+
 test('Wake Lock released on complete/cancel', async () => {
   let releaseCalls = 0
   const createSentinel = () => ({
