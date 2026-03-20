@@ -21,6 +21,26 @@ test('Wake Lock requested on timer start', async () => {
   expect(sentinel).not.toBeNull()
 })
 
+test('Wake Lock requested on COUNTDOWN state', async () => {
+  let requestedType: string | null = null
+  const wakeLock = {
+    async request(type: string) {
+      requestedType = type
+      return {
+        released: false,
+        async release() {
+          this.released = true
+        },
+      }
+    },
+  }
+
+  const sentinel = await syncWakeLock('COUNTDOWN', null, wakeLock)
+
+  expect(requestedType).toBe('screen')
+  expect(sentinel).not.toBeNull()
+})
+
 test('Wake Lock released on complete/cancel', async () => {
   let releaseCalls = 0
   const createSentinel = () => ({

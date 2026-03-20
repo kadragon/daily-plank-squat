@@ -20,7 +20,7 @@ export async function syncWakeLock(
   sentinel: WakeLockSentinelLike | null,
   wakeLock?: WakeLockLike,
 ): Promise<WakeLockSentinelLike | null> {
-  if (plankState === 'RUNNING' && sentinel === null && wakeLock) {
+  if ((plankState === 'RUNNING' || plankState === 'COUNTDOWN') && sentinel === null && wakeLock) {
     return wakeLock.request('screen')
   }
 
