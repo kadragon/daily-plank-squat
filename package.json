@@ -15,7 +15,7 @@
     "check:no-focused-tests": "bash scripts/check-no-focused-tests.sh",
     "check:merge-conflicts": "bash scripts/check-merge-conflicts.sh",
     "precommit": "bun run lint && bun run typecheck && bun run test && bun run check:no-focused-tests && bun run check:merge-conflicts",
-    "prepare": "husky"
+    "prepare": "lefthook install"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.7",
@@ -26,7 +26,6 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
     "happy-dom": "^20.8.4",
-    "husky": "^9.1.7",
     "vite": "^8.0.0",
     "vite-plugin-pwa": "^1.2.0",
     "vitest": "^4.1.0",
