@@ -22,15 +22,15 @@
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@types/bun": "latest",
-    "@types/react": "^19.2.14",
+    "@types/react": "^19.2.15",
     "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^6.0.1",
+    "@vitejs/plugin-react": "^6.0.2",
     "happy-dom": "^20.9.0",
     "husky": "^9.1.7",
-    "vite": "^8.0.12",
+    "vite": "^8.0.13",
     "vite-plugin-pwa": "^1.3.0",
-    "vitest": "^4.1.6",
-    "wrangler": "^4.90.1"
+    "vitest": "^4.1.7",
+    "wrangler": "^4.93.0"
   },
   "peerDependencies": {
     "typescript": "^5.9.3"
