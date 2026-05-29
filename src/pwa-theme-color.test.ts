@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test'
 
-const APP_CHROME_COLOR = '#0f172a'
+const APP_CHROME_COLOR = '#ffffff'
 
 async function readRootFile(path: string) {
   return Bun.file(new URL(path, import.meta.url)).text()
