@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "FILE=\"$CLAUDE_FILE_PATH\"; case \"$FILE\" in *.ts|*.tsx|*.js|*.jsx|*.css|*.json|*.jsonc) cd /Users/kadragon/Dev/daily-plank-squat && bunx biome lint --write \"$FILE\" 2>/dev/null ;; esac"
+            "command": "FILE=\"$CLAUDE_FILE_PATH\"; case \"$FILE\" in *.ts|*.tsx|*.js|*.jsx|*.css|*.json|*.jsonc) bunx biome lint --write \"$FILE\" 2>/dev/null ;; esac"
           }
         ]
       }
@@ -17,7 +17,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "cd /Users/kadragon/Dev/daily-plank-squat && bunx tsc --noEmit 2>&1 | tail -20"
+            "command": "bunx tsc --noEmit 2>&1 | tail -20"
           }
         ]
       }
