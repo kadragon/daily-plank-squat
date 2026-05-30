@@ -1,5 +1,4 @@
-## [2026-02-19] Fix intervalId ref in SquatCounter long-press
+## [2026-04-07] React mutable timer handles
 
-- **Problem**: `let intervalId` inside a React component re-initializes on every render, so `clearInterval` is called with `null` after any re-render, leaking intervals.
-- **Rule**: Use `useRef` for any mutable value that must survive re-renders (timers, DOM refs, flags).
-- **Why**: SSR tests (`renderToStaticMarkup`) cannot cover this bug — it only manifests with live DOM interaction; note this test gap if adding long-press logic elsewhere.
+- Use `useRef` for mutable timer handles or flags that must survive React re-renders.
+- `renderToStaticMarkup` tests do not catch live DOM timer leaks or stale cleanup handles; cover that gap explicitly when adding interaction-driven timer logic.
