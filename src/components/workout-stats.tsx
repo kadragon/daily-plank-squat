@@ -88,7 +88,7 @@ function ExerciseChart({ title, unit, series }: ExerciseChartProps) {
             <line
               x1={CHART_PADDING.left} y1={toY(v)}
               x2={100 - CHART_PADDING.right} y2={toY(v)}
-              stroke="rgba(248,250,252,0.08)" strokeWidth="0.3"
+              stroke="var(--chart-grid)" strokeWidth="0.3"
               vectorEffect="non-scaling-stroke"
             />
             <text
@@ -134,7 +134,7 @@ function ExerciseChart({ title, unit, series }: ExerciseChartProps) {
             <line
               x1={toX(hoverIndex)} y1={CHART_PADDING.top}
               x2={toX(hoverIndex)} y2={CHART_PADDING.top + innerH}
-              stroke="rgba(248,250,252,0.2)" strokeWidth="0.3"
+              stroke="var(--chart-cursor)" strokeWidth="0.3"
               vectorEffect="non-scaling-stroke"
             />
             <text
