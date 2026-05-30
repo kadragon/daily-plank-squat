@@ -29,6 +29,7 @@
 
   /* ── Radius: pills for CTAs, square for cards (Nike geometry) ── */
   --radius-pill: 9999px;
+  /* Cards stay square in Nike flat geometry; legacy "lg" var name kept, mapped to 0px (DESIGN.md rounded.lg=30px does not apply here). */
   --radius-lg: 0px;
   --radius-field: 16px;
 
@@ -162,13 +163,13 @@ body {
   font-weight: 600;
   letter-spacing: 0.01em;
   cursor: pointer;
-  background: var(--ink);
+  background-color: var(--ink);
   color: var(--on-primary);
-  transition: transform 140ms ease, background-color 140ms ease, opacity 140ms ease;
+  transition: transform 140ms ease, background-color 140ms ease, border-color 140ms ease, opacity 140ms ease;
 }
 
 .btn:hover {
-  background: var(--charcoal);
+  background-color: var(--charcoal);
   border-color: var(--charcoal);
 }
 
@@ -186,27 +187,27 @@ body {
 }
 
 .btn:disabled {
-  background: var(--soft-cloud);
+  background-color: var(--soft-cloud);
   border-color: var(--hairline);
   color: var(--stone);
   cursor: not-allowed;
 }
 
 .btn--primary {
-  background: var(--ink);
+  background-color: var(--ink);
   border-color: var(--ink);
   color: var(--on-primary);
 }
 
 /* Cancel / decline = soft secondary pill (Nike has no red CTA) */
 .btn--danger {
-  background: var(--soft-cloud);
+  background-color: var(--soft-cloud);
   border-color: var(--soft-cloud);
   color: var(--ink);
 }
 
 .btn--danger:hover {
-  background: var(--hairline-soft);
+  background-color: var(--hairline-soft);
   border-color: var(--hairline-soft);
 }
 
@@ -446,7 +447,7 @@ body {
   padding: 0 1rem;
   border: 1px solid var(--hairline);
   border-radius: var(--radius-pill);
-  background: var(--canvas);
+  background-color: var(--canvas);
   color: var(--ink);
   font-family: var(--font-ui);
   font-weight: 600;
@@ -459,7 +460,7 @@ body {
 .workout-stats__range-btn--active {
   color: var(--on-primary);
   border-color: var(--ink);
-  background: var(--ink);
+  background-color: var(--ink);
 }
 
 .workout-stats__totals {
@@ -643,7 +644,7 @@ body {
 
 .app-tabbar__label {
   max-width: 100%;
-  font-size: 0.62rem;
+  font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: 0;
   white-space: nowrap;
