@@ -1,6 +1,7 @@
 import type {
   BaseTargets,
   DailyRecord,
+  DayType,
   ExerciseRecord,
   FatigueParams,
   FatigueSnapshot,
@@ -9,6 +10,7 @@ import type {
   SquatRecord,
   TomorrowPlan,
 } from '../types'
+import { addDaysToDateKey } from '../utils/date-key'
 
 export const ALPHA_P = 0.35
 export const ALPHA_S = 0.40
@@ -20,12 +22,23 @@ export const MEDIAN_INITIAL = 0.9
 const FATIGUE_SCALE = 2.2
 const FATIGUE_HOLD_THRESHOLD = 0.85
 export const SUCCESS_INCREASE_FACTOR = 1.05
+export const BEGINNER_INCREASE_FACTOR = 1.03
 export const STREAK_MODERATE_FACTOR = 1.03
 const FAILURE_DECREASE_FACTOR = 0.9
 const FAILURE_STREAK_DAYS = 3
 const MEDIAN_WINDOW = 14
 export const MISSED_DAY_DECAY_PER_DAY = 0.05
 export const MAX_MISSED_DAY_DECAY = 0.30
+
+// Recovery cadence
+export const BEGINNER_DAYS = 21 // records threshold for beginner phase
+export const TRAINING_DAYS_BEFORE_RECOVERY = 5 // consecutive successful training days before recovery
+export const TRAINING_DAYS_BEFORE_RECOVERY_BEGINNER = 4 // r/bwf-aligned: ~4 on / 1 off for beginners
+export const RECOVERY_LOAD_FACTOR = 0.5 // recovery day target = last target * this
+
+// Weekly progression cap (prevents ratchet-to-failure)
+export const WEEKLY_CAP_TIMED = 0.20 // max 20% increase per week for timed exercises
+export const WEEKLY_CAP_REPS = 0.15 // max 15% increase per week for rep exercises
 
 function clip(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value))
@@ -134,6 +147,58 @@ export function computeConsecutiveDays(records: DailyRecord[], currentDate: stri
   }
 
   return count
+}
+
+// Counts consecutive *successful* training records walking backward from the most recent.
+// "Successful" = plank or squat completed — the core exercises. This ensures recovery is
+// prescribed only when fatigue is actually accumulating (not after repeated failures).
+// A gap in dates also breaks the streak.
+// Expects records pre-sorted ascending by date (caller is responsible).
+function computeConsecutiveTrainingDays(records: DailyRecord[]): number {
+  const reversed = [...records].reverse()
+  let count = 0
+
+  for (let i = 0; i < reversed.length; i++) {
+    const record = reversed[i]!
+
+    // Gap check: previous entry in the backward walk should be exactly 1 calendar day after this one
+    if (i > 0) {
+      const newer = reversed[i - 1]!
+      if (computeMissedDays(record.date, newer.date) !== 0) break
+    }
+
+    if ((record.day_type ?? 'training') !== 'training') break
+
+    // Only count days where at least one core exercise succeeded (fatigue accumulates on success)
+    if (!record.plank.success && !record.squat.success) break
+
+    count++
+  }
+
+  return count
+}
+
+// Determines whether the given targetDate should be a training or recovery day.
+// Recovery fires when the user has hit the consecutive-successful-training threshold.
+// A gap (missed days) before targetDate means the gap itself was rest — no extra recovery needed.
+export function computeDayType(
+  records: DailyRecord[],
+  targetDate: string,
+  isBeginnerPhase: boolean,
+): DayType {
+  const recordsBeforeTarget = records.filter((r) => r.date < targetDate)
+  if (recordsBeforeTarget.length === 0) return 'training'
+
+  const sorted = sortByDateAscending(recordsBeforeTarget)
+  const lastRecord = sorted.at(-1)!
+
+  // Gap before targetDate already served as rest — don't double up recovery
+  if (computeMissedDays(lastRecord.date, targetDate) > 0) return 'training'
+
+  const threshold = isBeginnerPhase
+    ? TRAINING_DAYS_BEFORE_RECOVERY_BEGINNER
+    : TRAINING_DAYS_BEFORE_RECOVERY
+  return computeConsecutiveTrainingDays(sorted) >= threshold ? 'recovery' : 'training'
 }
 
 export function computeFatigueSeries(
@@ -253,6 +318,9 @@ function computeNextTargetValue(
   consecutiveDays: number,
   missedDays: number,
   baseTarget: number,
+  weeklyBaseline: number | null,
+  isBeginnerPhase: boolean,
+  weeklyCap: number,
 ): { target: number, reason: RecommendationReason } {
   if (failureStreak) {
     return {
@@ -277,17 +345,37 @@ function computeNextTargetValue(
     return { target: lastTarget, reason: 'not_met_hold' }
   }
 
-  if (consecutiveDays >= 7) {
-    return {
-      target: Math.max(1, Math.round(lastTarget * STREAK_MODERATE_FACTOR)),
-      reason: 'streak_moderate',
-    }
+  // Success progression — choose factor based on phase/streak
+  let factor: number
+  let reason: RecommendationReason
+
+  if (isBeginnerPhase) {
+    factor = BEGINNER_INCREASE_FACTOR
+    reason = 'beginner_ramp'
+  } else if (consecutiveDays >= 7) {
+    factor = STREAK_MODERATE_FACTOR
+    reason = 'streak_moderate'
+  } else {
+    factor = SUCCESS_INCREASE_FACTOR
+    reason = 'success_progression'
   }
 
-  return {
-    target: Math.max(1, Math.round(lastTarget * SUCCESS_INCREASE_FACTOR)),
-    reason: 'success_progression',
-  }
+  // Ensure at least +1 so small base targets always progress
+  const rawTarget = Math.max(lastTarget + 1, Math.round(lastTarget * factor))
+
+  // Weekly cap: clamp to baseline * (1 + cap) to prevent ratchet-to-failure.
+  // Never force a decrease via the cap (hold at lastTarget if growth already exceeded cap).
+  const capCeiling = weeklyBaseline !== null
+    ? Math.max(lastTarget, Math.round(weeklyBaseline * (1 + weeklyCap)))
+    : null
+  const capped = capCeiling !== null ? Math.min(rawTarget, capCeiling) : rawTarget
+  const target = Math.max(1, capped)
+  // Override reason when the cap fully suppresses growth (cap ceiling ≤ last target, raw wanted more).
+  const effectiveReason: RecommendationReason = (capCeiling !== null && capped === lastTarget && rawTarget > lastTarget)
+    ? 'weekly_cap_hold'
+    : reason
+
+  return { target, reason: effectiveReason }
 }
 
 export function computeTomorrowPlan(
@@ -315,6 +403,7 @@ export function computeTomorrowPlan(
     F_DB: 0,
     F_total_raw: 0,
     overload_warning: false,
+    day_type: 'training',
   }
 
   if (records.length === 0) {
@@ -330,6 +419,12 @@ export function computeTomorrowPlan(
     return emptyPlan
   }
 
+  const isBeginnerPhase = sorted.length < BEGINNER_DAYS
+
+  // Determine the effective target date for day-type classification
+  const effectiveTargetDate = targetDate ?? addDaysToDateKey(lastRecord.date, 1)
+  const dayType = computeDayType(sorted, effectiveTargetDate, isBeginnerPhase)
+
   const plankFailureStreak = hasFailureStreak(sorted, 'plank')
   const squatFailureStreak = hasFailureStreak(sorted, 'squat')
   const pushupFailureStreak = hasFailureStreak(sorted, 'pushup')
@@ -342,24 +437,69 @@ export function computeTomorrowPlan(
   const F_total_raw_history = snapshots.map((snapshot) => snapshot.F_total_raw)
   const previousThreshold = percentile(F_total_raw_history.slice(0, -1), 95)
 
-  const lastPushup = lastRecord.pushup ?? { target_reps: baseTargets.base_U, actual_reps: baseTargets.base_U, success: true }
+  // Weekly baseline: most recent training record from 7+ calendar days ago.
+  // Training-only filter prevents a recovery day's 50% targets from artifically lowering the cap ceiling.
+  const sevenDaysAgo = addDaysToDateKey(effectiveTargetDate, -7)
+  const weeklyRecord = sorted.filter(r => r.date <= sevenDaysAgo && (r.day_type ?? 'training') === 'training').at(-1) ?? null
+
+  // Use the most recent training record as baseline for target calculations.
+  // After a recovery day, lastRecord carries 50% targets; look back to the preceding training record.
+  const lastTrainingRecord = [...sorted].reverse().find(r => (r.day_type ?? 'training') === 'training') ?? lastRecord
+
+  const lastPushup = lastTrainingRecord.pushup ?? { target_reps: baseTargets.base_U, actual_reps: baseTargets.base_U, success: true }
+  const lastDeadhang = lastTrainingRecord.deadhang ?? { target_sec: baseTargets.base_D, actual_sec: baseTargets.base_D, success: true }
+  const lastDumbbell = lastTrainingRecord.dumbbell ?? { target_reps: baseTargets.base_DB, actual_reps: 0, success: false }
+
+  // On recovery days, override all targets with reduced load
+  if (dayType === 'recovery') {
+    const recoveryTarget = (last: number, base: number) =>
+      Math.max(base, Math.round(last * RECOVERY_LOAD_FACTOR))
+    return {
+      plank_target_sec: recoveryTarget(lastRecord.plank.target_sec, baseTargets.base_P),
+      squat_target_reps: recoveryTarget(lastRecord.squat.target_reps, baseTargets.base_S),
+      pushup_target_reps: recoveryTarget(lastPushup.target_reps, baseTargets.base_U),
+      deadhang_target_sec: recoveryTarget(lastDeadhang.target_sec, baseTargets.base_D),
+      dumbbell_target_reps: recoveryTarget(lastDumbbell.target_reps, baseTargets.base_DB),
+      plank_reason: 'recovery_day',
+      squat_reason: 'recovery_day',
+      pushup_reason: 'recovery_day',
+      deadhang_reason: 'recovery_day',
+      dumbbell_reason: 'recovery_day',
+      fatigue: latest.fatigue,
+      F_P: latest.F_P,
+      F_S: latest.F_S,
+      F_U: latest.F_U,
+      F_D: latest.F_D,
+      F_DB: latest.F_DB,
+      F_total_raw: latest.F_total_raw,
+      overload_warning: false,
+      day_type: 'recovery',
+    }
+  }
+
   const plankRecommendation = computeNextTargetValue(
-    lastRecord.plank.target_sec,
+    lastTrainingRecord.plank.target_sec,
     latest.fatigue,
     plankFailureStreak,
-    lastRecord.plank.success,
+    lastTrainingRecord.plank.success,
     consecutiveDays,
     missedDays,
     baseTargets.base_P,
+    weeklyRecord?.plank.target_sec ?? null,
+    isBeginnerPhase,
+    WEEKLY_CAP_TIMED,
   )
   const squatRecommendation = computeNextTargetValue(
-    lastRecord.squat.target_reps,
+    lastTrainingRecord.squat.target_reps,
     latest.fatigue,
     squatFailureStreak,
-    lastRecord.squat.success,
+    lastTrainingRecord.squat.success,
     consecutiveDays,
     missedDays,
     baseTargets.base_S,
+    weeklyRecord?.squat.target_reps ?? null,
+    isBeginnerPhase,
+    WEEKLY_CAP_REPS,
   )
   const pushupRecommendation = computeNextTargetValue(
     lastPushup.target_reps,
@@ -369,8 +509,10 @@ export function computeTomorrowPlan(
     consecutiveDays,
     missedDays,
     baseTargets.base_U,
+    weeklyRecord?.pushup?.target_reps ?? null,
+    isBeginnerPhase,
+    WEEKLY_CAP_REPS,
   )
-  const lastDeadhang = lastRecord.deadhang ?? { target_sec: baseTargets.base_D, actual_sec: baseTargets.base_D, success: true }
   const deadhangRecommendation = computeNextTargetValue(
     lastDeadhang.target_sec,
     latest.fatigue,
@@ -379,8 +521,10 @@ export function computeTomorrowPlan(
     consecutiveDays,
     missedDays,
     baseTargets.base_D,
+    weeklyRecord?.deadhang?.target_sec ?? null,
+    isBeginnerPhase,
+    WEEKLY_CAP_TIMED,
   )
-  const lastDumbbell = lastRecord.dumbbell ?? { target_reps: baseTargets.base_DB, actual_reps: 0, success: false }
   const dumbbellRecommendation = computeNextTargetValue(
     lastDumbbell.target_reps,
     latest.fatigue,
@@ -389,6 +533,9 @@ export function computeTomorrowPlan(
     consecutiveDays,
     missedDays,
     baseTargets.base_DB,
+    weeklyRecord?.dumbbell?.target_reps ?? null,
+    isBeginnerPhase,
+    WEEKLY_CAP_REPS,
   )
 
   return {
@@ -410,6 +557,7 @@ export function computeTomorrowPlan(
     F_DB: latest.F_DB,
     F_total_raw: latest.F_total_raw,
     overload_warning: F_total_raw_history.length > 1 && latest.F_total_raw > previousThreshold,
+    day_type: 'training',
   }
 }
 

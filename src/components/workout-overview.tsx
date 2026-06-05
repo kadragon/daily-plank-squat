@@ -1,4 +1,4 @@
-import type { DailyRecord } from '../types'
+import type { DailyRecord, DayType } from '../types'
 import DailySummary from './daily-summary'
 import WorkoutStats from './workout-stats'
 
@@ -13,6 +13,7 @@ interface WorkoutOverviewProps {
   tomorrowPushupTargetReps?: number
   tomorrowDeadhangTargetSec?: number
   tomorrowDumbbellTargetReps?: number
+  tomorrowDayType?: DayType
   plankSuccess?: boolean
   squatSuccess?: boolean
   pushupSuccess?: boolean
@@ -38,6 +39,7 @@ export default function WorkoutOverview({
   tomorrowPushupTargetReps,
   tomorrowDeadhangTargetSec,
   tomorrowDumbbellTargetReps,
+  tomorrowDayType,
   plankSuccess,
   squatSuccess,
   pushupSuccess,
@@ -64,6 +66,7 @@ export default function WorkoutOverview({
         tomorrowPushupTargetReps={tomorrowPushupTargetReps}
         tomorrowDeadhangTargetSec={tomorrowDeadhangTargetSec}
         tomorrowDumbbellTargetReps={tomorrowDumbbellTargetReps}
+        tomorrowDayType={tomorrowDayType}
         plankSuccess={plankSuccess}
         squatSuccess={squatSuccess}
         pushupSuccess={pushupSuccess}

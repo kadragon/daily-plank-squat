@@ -1,3 +1,6 @@
+import type { DayType } from '../types'
+import { DAY_TYPE_LABEL, RECOVERY_DAY_SUBTITLE, RECOVERY_GUIDE_ITEMS, TOMORROW_LABEL } from '../locales/ko'
+
 interface DailySummaryProps {
   plankTargetSec?: number
   squatTargetReps?: number
@@ -9,6 +12,7 @@ interface DailySummaryProps {
   tomorrowPushupTargetReps?: number
   tomorrowDeadhangTargetSec?: number
   tomorrowDumbbellTargetReps?: number
+  tomorrowDayType?: DayType
   plankSuccess?: boolean
   squatSuccess?: boolean
   pushupSuccess?: boolean
@@ -33,6 +37,7 @@ export default function DailySummary({
   tomorrowPushupTargetReps = 0,
   tomorrowDeadhangTargetSec = 0,
   tomorrowDumbbellTargetReps = 0,
+  tomorrowDayType = 'training',
   plankSuccess = false,
   squatSuccess = false,
   pushupSuccess = false,
@@ -46,6 +51,7 @@ export default function DailySummary({
   healthExportHint = '',
 }: DailySummaryProps) {
   const canExportToHealth = healthExportEnabled && typeof onExportToHealth === 'function'
+  const isRecoveryDay = tomorrowDayType === 'recovery'
 
   return (
     <div className="daily-summary">
@@ -64,11 +70,27 @@ export default function DailySummary({
         <div className="summary-stat">Fatigue: {fatigue.toFixed(3)}</div>
       </section>
       <section>
-        <div className="summary-stat">Tomorrow plank target: {tomorrowPlankTargetSec}s</div>
-        <div className="summary-stat">Tomorrow squat target: {tomorrowSquatTargetReps}</div>
-        <div className="summary-stat">Tomorrow pushup target: {tomorrowPushupTargetReps}</div>
-        <div className="summary-stat">Tomorrow deadhang target: {tomorrowDeadhangTargetSec}s</div>
-        <div className="summary-stat">Tomorrow dumbbell target: {tomorrowDumbbellTargetReps}</div>
+        <div className="summary-stat summary-day-type">
+          {TOMORROW_LABEL}: <span className={`day-type-badge day-type-${tomorrowDayType}`}>{DAY_TYPE_LABEL[tomorrowDayType]}</span>
+        </div>
+        {isRecoveryDay ? (
+          <div className="recovery-guide">
+            <div className="summary-stat">{RECOVERY_DAY_SUBTITLE}</div>
+            <ul className="recovery-guide-list">
+              {RECOVERY_GUIDE_ITEMS.map((item) => (
+                <li key={item} className="recovery-guide-item">{item}</li>
+              ))}
+            </ul>
+          </div>
+        ) : (
+          <>
+            <div className="summary-stat">Tomorrow plank target: {tomorrowPlankTargetSec}s</div>
+            <div className="summary-stat">Tomorrow squat target: {tomorrowSquatTargetReps}</div>
+            <div className="summary-stat">Tomorrow pushup target: {tomorrowPushupTargetReps}</div>
+            <div className="summary-stat">Tomorrow deadhang target: {tomorrowDeadhangTargetSec}s</div>
+            <div className="summary-stat">Tomorrow dumbbell target: {tomorrowDumbbellTargetReps}</div>
+          </>
+        )}
       </section>
       <section>
         <button

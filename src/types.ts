@@ -57,6 +57,7 @@ export interface DailyRecord {
   squat_completed: boolean
   pushup_completed: boolean
   dumbbell_completed: boolean
+  day_type?: DayType // optional for backward compatibility; undefined = 'training'
 }
 
 export interface HealthShortcutPayload {
@@ -114,9 +115,14 @@ export type RecommendationReason =
   | 'failure_streak'
   | 'missed_day_decay'
   | 'high_fatigue_hold'
+  | 'weekly_cap_hold'
   | 'success_progression'
   | 'not_met_hold'
   | 'streak_moderate'
+  | 'recovery_day'
+  | 'beginner_ramp'
+
+export type DayType = 'training' | 'recovery'
 
 export interface TomorrowPlan {
   plank_target_sec: number
@@ -137,4 +143,5 @@ export interface TomorrowPlan {
   F_DB: number
   F_total_raw: number
   overload_warning: boolean
+  day_type: DayType
 }
