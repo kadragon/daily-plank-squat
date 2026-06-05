@@ -862,14 +862,15 @@ test('computeTomorrowPlan — recovery day record preserves consecutive streak (
   expect(computeConsecutiveDays(records, '2026-02-06')).toBe(6)
 })
 
-test('computeTomorrowPlan — weekly cap holds target when growth already exceeded WEEKLY_CAP_TIMED', () => {
+test('computeTomorrowPlan — weekly cap limits growth toward date-based baseline', () => {
   // Setup: 22 records (non-beginner), targets growing in blocks with gaps between blocks.
-  // Gaps prevent consecutive training streak from hitting TRAINING_DAYS_BEFORE_RECOVERY=5,
-  // and also break recovery prescriptions so we reach the cap check.
+  // Gaps prevent consecutive training streak from hitting TRAINING_DAYS_BEFORE_RECOVERY=5.
   // Block targets: Jan1-4=60, Jan6-9=80, Jan11-14=100, Jan16-19=120, Jan21-24=140, Jan26-27=160
-  // sorted[14]=Jan18(120) = weekly baseline for sorted[22-8]=sorted[14]
-  // lastRecord=Jan27(160), weeklyRecord=sorted[14]=Jan18(120)
-  // capCeiling = max(160, round(120 * 1.20)) = max(160, 144) = 160 → hold at 160
+  // Date-based baseline (7 days before Jan28 = Jan21): most recent training record ≤ Jan21
+  // = Jan21 with plank=140.
+  // capCeiling = max(160, round(140 * 1.20)) = max(160, 168) = 168
+  // rawTarget (success_progression +5%): max(161, round(160*1.05)) = max(161, 168) = 168
+  // cap equals rawTarget → no excess growth blocked
   const records: DailyRecord[] = [
     ...Array.from({ length: 4 }, (_, i) => dailyRecord(`2026-01-${String(i + 1).padStart(2, '0')}`, 60, 60, true, 20, 20, true)),
     // gap Jan5
@@ -883,16 +884,93 @@ test('computeTomorrowPlan — weekly cap holds target when growth already exceed
     // gap Jan25
     ...Array.from({ length: 2 }, (_, i) => dailyRecord(`2026-01-${String(i + 26).padStart(2, '0')}`, 160, 160, true, 20, 20, true)),
   ] // 4+4+4+4+4+2 = 22 records
-  // Target Jan28: last 2 consecutive training days (Jan26-Jan27) < TRAINING_DAYS_BEFORE_RECOVERY=5
-  // AND the gap before Jan26 resets consecutive count → training day
   const plan = computeTomorrowPlan(records, params, baseTargets, '2026-01-28')
 
-  // weeklyRecord = records[22-8] = records[14] = Jan18 with plank=120
-  // capCeiling = max(160, round(120 * 1.20)) = max(160, 144) = 160 (growth already exceeded cap)
-  // rawTarget (success_progression +5%): max(161, round(160*1.05)) = max(161, 168) = 168
-  // capped to 160 → holds
-  expect(plan.plank_target_sec).toBe(160)
+  expect(plan.plank_target_sec).toBe(168)
   expect(plan.day_type).toBe('training')
+})
+
+test('computeTomorrowPlan — weekly cap holds target when 7-day baseline is well below current load', () => {
+  // Setup: 21 records (non-beginner). First 19 records (Jan1-Jan20 with gaps) have plank=60.
+  // Last 2 records (Jan26-Jan27) jump to plank=250 — rapid ramp.
+  // Date-based baseline (7 days before Jan28 = Jan21): most recent training record ≤ Jan21
+  // = Jan20 with plank=60.
+  // capCeiling = max(250, round(60 * 1.20)) = max(250, 72) = 250 → holds at lastTarget
+  // rawTarget (success_progression +5%): max(251, round(250*1.05)) = 263
+  // capped to 250 → holds
+  const records: DailyRecord[] = [
+    ...Array.from({ length: 4 }, (_, i) => dailyRecord(`2026-01-${String(i + 1).padStart(2, '0')}`, 60, 60, true, 20, 20, true)),
+    // gap Jan5
+    ...Array.from({ length: 4 }, (_, i) => dailyRecord(`2026-01-${String(i + 6).padStart(2, '0')}`, 60, 60, true, 20, 20, true)),
+    // gap Jan10
+    ...Array.from({ length: 4 }, (_, i) => dailyRecord(`2026-01-${String(i + 11).padStart(2, '0')}`, 60, 60, true, 20, 20, true)),
+    // gap Jan15
+    ...Array.from({ length: 2 }, (_, i) => dailyRecord(`2026-01-${String(i + 16).padStart(2, '0')}`, 60, 60, true, 20, 20, true)),
+    // gap Jan18
+    ...Array.from({ length: 2 }, (_, i) => dailyRecord(`2026-01-${String(i + 19).padStart(2, '0')}`, 60, 60, true, 20, 20, true)),
+    // gap Jan21 (sevenDaysAgo boundary)
+    ...Array.from({ length: 3 }, (_, i) => dailyRecord(`2026-01-${String(i + 22).padStart(2, '0')}`, 60, 60, true, 20, 20, true)),
+    // gap Jan25
+    ...Array.from({ length: 2 }, (_, i) => dailyRecord(`2026-01-${String(i + 26).padStart(2, '0')}`, 250, 250, true, 20, 20, true)),
+  ] // 4+4+4+2+2+3+2 = 21 records, non-beginner
+  // Target Jan28: last 2 consecutive (Jan26-27) < 5 → training day; gap before Jan26 resets
+  const plan = computeTomorrowPlan(records, params, baseTargets, '2026-01-28')
+
+  expect(plan.plank_target_sec).toBe(250)
+  expect(plan.plank_reason).toBe('weekly_cap_hold')
+  expect(plan.day_type).toBe('training')
+})
+
+test('computeTomorrowPlan — weekly cap does not apply when fewer than 7-day-old baseline exists', () => {
+  // 3 records Jan1-Jan3, target Jan4: sevenDaysAgo = Dec28, no records before Dec28 → no cap.
+  // 3 consecutive < TRAINING_DAYS_BEFORE_RECOVERY_BEGINNER(4) → training day (no recovery)
+  const records = [
+    dailyRecord('2026-01-01', 69, 69, true, 20, 20, true),
+    dailyRecord('2026-01-02', 69, 69, true, 20, 20, true),
+    dailyRecord('2026-01-03', 69, 69, true, 20, 20, true),
+  ]
+  const plan = computeTomorrowPlan(records, params, baseTargets, '2026-01-04')
+  // No weekly cap (no baseline 7+ days ago) → raw beginner_ramp applies
+  expect(plan.plank_reason).toBe('beginner_ramp')
+  expect(plan.plank_target_sec).toBeGreaterThan(69) // progression without cap
+})
+
+test('computeTomorrowPlan — day_type is training after 20 records (beginner boundary)', () => {
+  // 20 records → sorted.length < BEGINNER_DAYS (21 < 21 = false would be 21 records)
+  // With 20 records: 20 < 21 = true → still beginner phase
+  const records = Array.from({ length: 20 }, (_, i) => ({
+    ...dailyRecord(`2026-01-${String(i + 1).padStart(2, '0')}`, 60, 60, true, 20, 20, true),
+    day_type: 'training' as const,
+  }))
+  const plan = computeTomorrowPlan(records, params, baseTargets, '2026-01-21')
+  // 20 records < 21 = beginner phase → reason is beginner_ramp (if in training day)
+  // 20 consecutive days hits beginner threshold (4), so this would be recovery...
+  // But these 20 records are all consecutive → computeConsecutiveTrainingDays = 20 ≥ TRAINING_DAYS_BEFORE_RECOVERY_BEGINNER(4)
+  // → recovery day
+  expect(plan.day_type).toBe('recovery')
+  expect(plan.plank_reason).toBe('recovery_day')
+})
+
+test('computeTomorrowPlan — day_type uses non-beginner threshold at exactly BEGINNER_DAYS records', () => {
+  // 21 records → sorted.length < BEGINNER_DAYS = 21 < 21 = false → non-beginner phase
+  // Use gaps to keep consecutive training < TRAINING_DAYS_BEFORE_RECOVERY(5)
+  const records = [
+    ...Array.from({ length: 4 }, (_, i) => ({
+      ...dailyRecord(`2026-01-${String(i + 1).padStart(2, '0')}`, 100, 100, true, 20, 20, true),
+      day_type: 'training' as const,
+    })),
+    // gap Jan5
+    ...Array.from({ length: 17 }, (_, i) => ({
+      ...dailyRecord(`2026-01-${String(i + 6).padStart(2, '0')}`, 100, 100, true, 20, 20, true),
+      day_type: 'training' as const,
+    })),
+  ] // 4 + 17 = 21 records, gap at Jan5 breaks consecutive streak
+  // Target Jan23: last 17 consecutive training (Jan6-Jan22) ≥ TRAINING_DAYS_BEFORE_RECOVERY(5) → recovery
+  const plan = computeTomorrowPlan(records, params, baseTargets, '2026-01-23')
+  expect(plan.day_type).toBe('recovery')
+  // With 20 records (beginner) it would use threshold=4, with 21 (non-beginner) threshold=5
+  // Both would still prescribe recovery since consecutive=17 exceeds both thresholds
+  expect(plan.plank_reason).toBe('recovery_day')
 })
 
 test('computeTomorrowPlan — day_type is training for normal progression', () => {

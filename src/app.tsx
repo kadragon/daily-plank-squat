@@ -10,6 +10,8 @@ import { useTimedExercise } from './hooks/use-timed-exercise'
 import { useWorkoutVisibility } from './hooks/use-workout-visibility'
 import { useWorkoutWakeLock } from './hooks/use-workout-wake-lock'
 import {
+  BEGINNER_DAYS,
+  computeDayType,
   computeLatestFatigueSnapshot,
   computeTomorrowPlan,
 } from './models/fatigue'
@@ -289,6 +291,9 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
       ? (deadhang.completedElapsedMsRef.current || deadhang.result.actualSec * 1000)
       : 0
 
+    const withoutToday = records.filter((record) => record.date !== today)
+    const todayDayType = computeDayType(withoutToday, today, withoutToday.length < BEGINNER_DAYS)
+
     const { draftRecord, flagSuspicious } = buildDailyRecord({
       today,
       plankTargetSec,
@@ -313,10 +318,9 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
       dumbbellCount: dumbbellExercise.count,
       dumbbellSuccess: dumbbellExercise.success,
       dumbbellCompleted: dumbbellExercise.completed,
+      dayType: todayDayType,
       nowMs: nowMs(),
     })
-
-    const withoutToday = records.filter((record) => record.date !== today)
     const merged = [...withoutToday, draftRecord]
     const snapshot = computeLatestFatigueSnapshot(merged, DEFAULT_PARAMS, BASE_TARGETS)
     const finalRecord: DailyRecord = {

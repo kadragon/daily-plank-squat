@@ -115,6 +115,7 @@ export type RecommendationReason =
   | 'failure_streak'
   | 'missed_day_decay'
   | 'high_fatigue_hold'
+  | 'weekly_cap_hold'
   | 'success_progression'
   | 'not_met_hold'
   | 'streak_moderate'

@@ -1,5 +1,5 @@
 import { getInactiveTimeRatio, type VisibilityTracker } from '../hooks/use-visibility'
-import type { DailyRecord } from '../types'
+import type { DailyRecord, DayType } from '../types'
 
 export type PersistReason = 'general' | 'squat-complete' | 'pushup-complete' | 'dumbbell-complete'
 export type CompleteSaveFeedbackTarget = 'squat' | 'pushup' | 'dumbbell'
@@ -41,6 +41,7 @@ export interface BuildDailyRecordInput {
   dumbbellCount: number
   dumbbellSuccess: boolean
   dumbbellCompleted: boolean
+  dayType: DayType
   nowMs: number
 }
 
@@ -99,6 +100,7 @@ export function buildDailyRecord(input: BuildDailyRecordInput): BuildDailyRecord
     squat_completed: input.squatCompleted,
     pushup_completed: input.pushupCompleted,
     dumbbell_completed: input.dumbbellCompleted,
+    day_type: input.dayType,
   }
 
   return { draftRecord, inactiveTimeRatio, flagSuspicious }

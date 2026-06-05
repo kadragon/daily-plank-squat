@@ -1,5 +1,5 @@
 import type { DayType } from '../types'
-import { DAY_TYPE_LABEL, RECOVERY_GUIDE_ITEMS } from '../locales/ko'
+import { DAY_TYPE_LABEL, RECOVERY_DAY_SUBTITLE, RECOVERY_GUIDE_ITEMS, TOMORROW_LABEL } from '../locales/ko'
 
 interface DailySummaryProps {
   plankTargetSec?: number
@@ -71,11 +71,11 @@ export default function DailySummary({
       </section>
       <section>
         <div className="summary-stat summary-day-type">
-          내일: <span className={`day-type-badge day-type-${tomorrowDayType}`}>{DAY_TYPE_LABEL[tomorrowDayType]}</span>
+          {TOMORROW_LABEL}: <span className={`day-type-badge day-type-${tomorrowDayType}`}>{DAY_TYPE_LABEL[tomorrowDayType]}</span>
         </div>
         {isRecoveryDay ? (
           <div className="recovery-guide">
-            <div className="summary-stat">회복일 — 스트레칭 & 모빌리티 루틴</div>
+            <div className="summary-stat">{RECOVERY_DAY_SUBTITLE}</div>
             <ul className="recovery-guide-list">
               {RECOVERY_GUIDE_ITEMS.map((item) => (
                 <li key={item} className="recovery-guide-item">{item}</li>
