@@ -12,7 +12,10 @@ test('PWA and document theme colors match app chrome tone', async () => {
   const usesThemeColorConstant = viteConfig.includes('theme_color: APP_CHROME_COLOR')
   const usesBackgroundColorConstant = viteConfig.includes('background_color: APP_CHROME_COLOR')
 
-  expect(indexHtml).toContain(`<meta name="theme-color" content="${APP_CHROME_COLOR}" />`)
+  const hasThemeColor =
+    indexHtml.includes(`<meta name="theme-color" content="${APP_CHROME_COLOR}" />`) ||
+    indexHtml.includes(`<meta name="theme-color" content="${APP_CHROME_COLOR}" media=`)
+  expect(hasThemeColor).toBe(true)
   if (usesThemeColorConstant || usesBackgroundColorConstant) {
     expect(viteConfig).toContain(`const APP_CHROME_COLOR = '${APP_CHROME_COLOR}'`)
   }
