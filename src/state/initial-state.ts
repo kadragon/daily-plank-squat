@@ -2,7 +2,7 @@ import {
   computeTomorrowPlan,
 } from '../models/fatigue'
 import { loadAllRecords } from '../storage/daily-record'
-import type { BaseTargets, DailyRecord, FatigueParams, PlankState, RecommendationReason } from '../types'
+import type { BaseTargets, DailyRecord, DayType, FatigueParams, PlankState, RecommendationReason } from '../types'
 import { addDaysToDateKey, getTodayDateKey } from '../utils/date-key'
 
 export interface InitialAppState {
@@ -35,6 +35,7 @@ export interface InitialAppState {
   tomorrowPushupReason: RecommendationReason
   tomorrowDeadhangReason: RecommendationReason
   tomorrowDumbbellReason: RecommendationReason
+  tomorrowDayType: DayType
   plankState: PlankState
   deadhangState: PlankState
   alreadyLoggedPlankToday: boolean
@@ -134,6 +135,7 @@ export function createInitialAppState(initialPlankState?: PlankState): InitialAp
     tomorrowPushupReason: tomorrowPlan.pushup_reason,
     tomorrowDeadhangReason: tomorrowPlan.deadhang_reason,
     tomorrowDumbbellReason: tomorrowPlan.dumbbell_reason,
+    tomorrowDayType: tomorrowPlan.day_type,
     plankState: initialPlankState ?? resolveTimedExerciseState(plankLoggedToday, todayRecord?.plank.success),
     deadhangState: resolveTimedExerciseState(deadhangLoggedToday, todayRecord?.deadhang.success),
     alreadyLoggedPlankToday: plankLoggedToday,

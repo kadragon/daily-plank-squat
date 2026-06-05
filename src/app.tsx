@@ -89,6 +89,7 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
     pushupReason: initial.tomorrowPushupReason,
     deadhangReason: initial.tomorrowDeadhangReason,
     dumbbellReason: initial.tomorrowDumbbellReason,
+    dayType: initial.tomorrowDayType,
   })
   const todayRecord = useMemo(() => records.find((record) => record.date === today) ?? null, [records, today])
   const summaryHealthHint = healthExportHint || (todayRecord?.flag_suspicious ? SUSPICIOUS_EXPORT_HINT : '')
@@ -364,6 +365,7 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
       pushupReason: tomorrowPlan.pushup_reason,
       deadhangReason: tomorrowPlan.deadhang_reason,
       dumbbellReason: tomorrowPlan.dumbbell_reason,
+      dayType: tomorrowPlan.day_type,
     })
     if (feedbackTarget) scheduleCompleteSaveFeedbackSuccess(feedbackTarget)
   }, [
@@ -514,6 +516,7 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
             tomorrowPushupTargetReps={tomorrowTargets.pushup}
             tomorrowDeadhangTargetSec={tomorrowTargets.deadhang}
             tomorrowDumbbellTargetReps={tomorrowTargets.dumbbell}
+            tomorrowDayType={tomorrowTargets.dayType}
             plankSuccess={plank.result.success}
             squatSuccess={squat.success}
             pushupSuccess={pushup.success}

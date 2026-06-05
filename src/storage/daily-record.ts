@@ -1,4 +1,4 @@
-import type { DailyRecord, DumbbellRecord, ExerciseRecord, PushupRecord, SquatRecord } from '../types'
+import type { DailyRecord, DayType, DumbbellRecord, ExerciseRecord, PushupRecord, SquatRecord } from '../types'
 import { getTodayDateKey } from '../utils/date-key'
 
 const STORAGE_KEY = 'daily-records'
@@ -119,6 +119,11 @@ function asDailyRecord(value: unknown): DailyRecord | null {
   const deadhang = asExerciseRecord(value.deadhang) ?? NEUTRAL_DEADHANG
   const dumbbell = asDumbbellRecord(value.dumbbell)
 
+  const rawDayType = value.day_type
+  const day_type: DayType | undefined = rawDayType === 'recovery' ? 'recovery'
+    : rawDayType === 'training' ? 'training'
+    : undefined
+
   return {
     date: value.date,
     plank,
@@ -138,6 +143,7 @@ function asDailyRecord(value: unknown): DailyRecord | null {
     squat_completed: typeof value.squat_completed === 'boolean' ? value.squat_completed : false,
     pushup_completed: typeof value.pushup_completed === 'boolean' ? value.pushup_completed : false,
     dumbbell_completed: typeof value.dumbbell_completed === 'boolean' ? value.dumbbell_completed : false,
+    day_type,
   }
 }
 
