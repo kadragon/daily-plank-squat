@@ -337,6 +337,10 @@ function computeNextTargetValue(
     }
   }
 
+  // Systemic-fatigue hold (intentional): `fatigue` is the shared aggregate score, so a high
+  // total holds every exercise even one whose own EWMA is fresh. Per-exercise F_* are NOT used
+  // as the hold gate by design — load on any group taxes systemic recovery. Do not "fix" to a
+  // per-exercise gate without changing the model.
   if (fatigue > FATIGUE_HOLD_THRESHOLD) {
     return { target: lastTarget, reason: 'high_fatigue_hold' }
   }
@@ -455,8 +459,8 @@ export function computeTomorrowPlan(
     const recoveryTarget = (last: number, base: number) =>
       Math.max(base, Math.round(last * RECOVERY_LOAD_FACTOR))
     return {
-      plank_target_sec: recoveryTarget(lastRecord.plank.target_sec, baseTargets.base_P),
-      squat_target_reps: recoveryTarget(lastRecord.squat.target_reps, baseTargets.base_S),
+      plank_target_sec: recoveryTarget(lastTrainingRecord.plank.target_sec, baseTargets.base_P),
+      squat_target_reps: recoveryTarget(lastTrainingRecord.squat.target_reps, baseTargets.base_S),
       pushup_target_reps: recoveryTarget(lastPushup.target_reps, baseTargets.base_U),
       deadhang_target_sec: recoveryTarget(lastDeadhang.target_sec, baseTargets.base_D),
       dumbbell_target_reps: recoveryTarget(lastDumbbell.target_reps, baseTargets.base_DB),
