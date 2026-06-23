@@ -7,5 +7,7 @@ dist/
 .wrangler/
 .serena/
 .agents/
+.pnpm-store/
+.playwright-mcp/
 .claude/*
 !.claude/settings.json

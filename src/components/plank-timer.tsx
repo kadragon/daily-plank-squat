@@ -97,7 +97,6 @@ export default function PlankTimer({
   return (
     <div className={`plank-timer plank-timer--${state.toLowerCase()}`}>
       <h2>{title}</h2>
-      <div className="timer-target">Target: {targetSec}s</div>
       {state === 'COUNTDOWN'
         ? <div className="countdown-display" aria-live="polite">{Math.ceil(countdownMs / 1000)}</div>
         : <div className="timer-display" aria-live="polite">{formatTime(remainingMs)}</div>}

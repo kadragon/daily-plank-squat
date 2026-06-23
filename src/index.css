@@ -251,14 +251,6 @@ body {
   letter-spacing: 0.06em;
 }
 
-.timer-target {
-  font-size: 0.8rem;
-  font-weight: 500;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--mute);
-}
-
 /* The hero numeral: campaign display tier, staged on soft-cloud */
 .timer-display,
 .countdown-display {
@@ -669,32 +661,36 @@ body {
 }
 
 .app-tabbar__icon {
-  width: 22px;
   height: 22px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.1rem;
+  font-size: 0.95rem;
+  font-weight: 700;
   line-height: 1;
-  filter: grayscale(1);
-  opacity: 0.65;
-  transition: opacity 140ms ease, filter 140ms ease;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.7;
+  transition: opacity 140ms ease;
 }
 
 .nav-btn.app-tabbar__button--active .app-tabbar__icon,
 .nav-btn.app-tabbar__button[aria-current='page'] .app-tabbar__icon {
   opacity: 1;
-  filter: grayscale(0);
 }
 
+/* Label kept in DOM for screen readers + test hooks; monogram is the visible element. */
 .app-tabbar__label {
-  max-width: 100%;
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0;
-  white-space: nowrap;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
   overflow: hidden;
-  text-overflow: ellipsis;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 @media (max-width: 360px) {
