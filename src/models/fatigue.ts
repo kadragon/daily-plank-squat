@@ -155,17 +155,15 @@ export function computeConsecutiveDays(records: DailyRecord[], currentDate: stri
 // A gap in dates also breaks the streak.
 // Expects records pre-sorted ascending by date (caller is responsible).
 function computeConsecutiveTrainingDays(records: DailyRecord[]): number {
-  const reversed = [...records].reverse()
   let count = 0
+  let newer: DailyRecord | null = null
 
-  for (let i = 0; i < reversed.length; i++) {
-    const record = reversed[i]!
+  for (let i = records.length - 1; i >= 0; i--) {
+    const record = records[i]
+    if (!record) break
 
-    // Gap check: previous entry in the backward walk should be exactly 1 calendar day after this one
-    if (i > 0) {
-      const newer = reversed[i - 1]!
-      if (computeMissedDays(record.date, newer.date) !== 0) break
-    }
+    // Gap check: the previously counted (newer) record should be exactly 1 calendar day after this one
+    if (newer && computeMissedDays(record.date, newer.date) !== 0) break
 
     if ((record.day_type ?? 'training') !== 'training') break
 
@@ -173,6 +171,7 @@ function computeConsecutiveTrainingDays(records: DailyRecord[]): number {
     if (!record.plank.success && !record.squat.success) break
 
     count++
+    newer = record
   }
 
   return count
@@ -190,7 +189,8 @@ export function computeDayType(
   if (recordsBeforeTarget.length === 0) return 'training'
 
   const sorted = sortByDateAscending(recordsBeforeTarget)
-  const lastRecord = sorted.at(-1)!
+  const lastRecord = sorted.at(-1)
+  if (!lastRecord) return 'training'
 
   // Gap before targetDate already served as rest — don't double up recovery
   if (computeMissedDays(lastRecord.date, targetDate) > 0) return 'training'
@@ -337,6 +337,10 @@ function computeNextTargetValue(
     }
   }
 
+  // Systemic-fatigue hold (intentional): `fatigue` is the shared aggregate score, so a high
+  // total holds every exercise even one whose own EWMA is fresh. Per-exercise F_* are NOT used
+  // as the hold gate by design — load on any group taxes systemic recovery. Do not "fix" to a
+  // per-exercise gate without changing the model.
   if (fatigue > FATIGUE_HOLD_THRESHOLD) {
     return { target: lastTarget, reason: 'high_fatigue_hold' }
   }
@@ -455,8 +459,8 @@ export function computeTomorrowPlan(
     const recoveryTarget = (last: number, base: number) =>
       Math.max(base, Math.round(last * RECOVERY_LOAD_FACTOR))
     return {
-      plank_target_sec: recoveryTarget(lastRecord.plank.target_sec, baseTargets.base_P),
-      squat_target_reps: recoveryTarget(lastRecord.squat.target_reps, baseTargets.base_S),
+      plank_target_sec: recoveryTarget(lastTrainingRecord.plank.target_sec, baseTargets.base_P),
+      squat_target_reps: recoveryTarget(lastTrainingRecord.squat.target_reps, baseTargets.base_S),
       pushup_target_reps: recoveryTarget(lastPushup.target_reps, baseTargets.base_U),
       deadhang_target_sec: recoveryTarget(lastDeadhang.target_sec, baseTargets.base_D),
       dumbbell_target_reps: recoveryTarget(lastDumbbell.target_reps, baseTargets.base_DB),

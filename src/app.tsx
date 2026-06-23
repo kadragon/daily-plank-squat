@@ -564,7 +564,7 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
     <div className="app">
       <div className="app-shell">
         <header className="app-header" data-swipe-ignore="true">
-          <h1 className="app-title">Daily Plank, Squat, Pushup &amp; Deadhang</h1>
+          <h1 className="app-title">Daily Training</h1>
           <p className="app-subtitle">Train consistently. Recover intelligently.</p>
         </header>
         <main
