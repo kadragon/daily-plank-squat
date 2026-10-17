@@ -129,3 +129,85 @@ test('invalid file shows an error and changes nothing', async () => {
   expect(view.queryByRole('region', { name: 'Restore preview' })).toBeNull()
   expect(localStorage.getItem('daily-records')).toBe(before)
 })
+
+function chooseFakeFile(input: HTMLElement, text: () => Promise<string>) {
+  Object.defineProperty(input, 'files', { value: [{ text }], configurable: true })
+  fireEvent.change(input)
+}
+
+test('stale read is ignored and the preview is withdrawn while reading', async () => {
+  saveRecord(sampleRecord('2026-09-01', 90))
+  const firstText = exportBackupText()
+  saveRecord(sampleRecord('2026-09-02', 45))
+  const secondText = exportBackupText()
+  localStorage.clear()
+
+  let resolveFirst: (text: string) => void = () => {}
+  let resolveSecond: (text: string) => void = () => {}
+  const view = render(<BackupRestore onRestored={() => {}} />)
+  const input = view.getByLabelText('Backup file')
+
+  chooseFile(input, firstText)
+  const firstPreview = await waitFor(() => view.getByRole('region', { name: 'Restore preview' }))
+  expect(firstPreview.textContent).toContain('1 new')
+
+  chooseFakeFile(input, () => new Promise((resolve) => { resolveFirst = resolve }))
+  chooseFakeFile(input, () => new Promise((resolve) => { resolveSecond = resolve }))
+  // The earlier preview is withdrawn while reading, so it cannot be applied meanwhile.
+  expect(view.queryByRole('region', { name: 'Restore preview' })).toBeNull()
+  expect(view.getByRole('status').textContent).toBe('Reading file…')
+
+  resolveSecond(secondText)
+  await waitFor(() => expect(view.getByRole('region', { name: 'Restore preview' }).textContent).toContain('2 new'))
+  resolveFirst(firstText)
+  await new Promise((resolve) => setTimeout(resolve, 0))
+
+  expect(view.getByRole('region', { name: 'Restore preview' }).textContent).toContain('2 new')
+  expect(view.queryByRole('status')).toBeNull()
+})
+
+test('unreadable file shows an error', async () => {
+  const view = render(<BackupRestore onRestored={() => {}} />)
+  chooseFakeFile(view.getByLabelText('Backup file'), () => Promise.reject(new Error('NotReadableError')))
+
+  await waitFor(() => expect(view.getByRole('status').textContent).toContain('Could not read the file — nothing was changed.'))
+  expect(view.queryByRole('region', { name: 'Restore preview' })).toBeNull()
+})
+
+test('conflict labels show the fields that differ', async () => {
+  saveRecord({ ...sampleRecord('2026-09-01', 60), deadhang: { target_sec: 30, actual_sec: 40, success: true }, squat_completed: true })
+  const text = exportBackupText()
+  saveRecord(sampleRecord('2026-09-01', 60))
+
+  const view = render(<BackupRestore onRestored={() => {}} />)
+  chooseFile(view.getByLabelText('Backup file'), text)
+  await waitFor(() => view.getByRole('region', { name: 'Restore preview' }))
+
+  expect(view.getByLabelText(/Keep current/).parentElement?.textContent).toBe('Keep current — Deadhang 30s · Squat done: no')
+  expect(view.getByLabelText(/Use backup/).parentElement?.textContent).toBe('Use backup — Deadhang 40s · Squat done: yes')
+})
+
+test('conflict labels fall back to the main summary when only derived fields differ', async () => {
+  saveRecord({ ...sampleRecord('2026-09-01', 60), fatigue: 0.9 })
+  const text = exportBackupText()
+  saveRecord(sampleRecord('2026-09-01', 60))
+
+  const view = render(<BackupRestore onRestored={() => {}} />)
+  chooseFile(view.getByLabelText('Backup file'), text)
+  await waitFor(() => view.getByRole('region', { name: 'Restore preview' }))
+
+  expect(view.getByLabelText(/Use backup/).parentElement?.textContent).toBe('Use backup — Plank 60s · Squat 20 · Pushup 15')
+})
+
+test('conflict labels show non-summary fields such as success flags', async () => {
+  saveRecord({ ...sampleRecord('2026-09-01', 60), plank: { target_sec: 60, actual_sec: 60, success: false } })
+  const text = exportBackupText()
+  saveRecord(sampleRecord('2026-09-01', 60))
+
+  const view = render(<BackupRestore onRestored={() => {}} />)
+  chooseFile(view.getByLabelText('Backup file'), text)
+  await waitFor(() => view.getByRole('region', { name: 'Restore preview' }))
+
+  expect(view.getByLabelText(/Keep current/).parentElement?.textContent).toBe('Keep current — Plank success: yes')
+  expect(view.getByLabelText(/Use backup/).parentElement?.textContent).toBe('Use backup — Plank success: no')
+})

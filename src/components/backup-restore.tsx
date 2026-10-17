@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import {
   applyRestore,
   backupDateKey,
@@ -37,13 +37,63 @@ function downloadViaBlob(fileName: string, contents: string): void {
   setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
 
-function describeRecord(record: DailyRecord): string {
-  return `Plank ${record.plank.actual_sec}s · Squat ${record.squat.actual_reps} · Pushup ${record.pushup.actual_reps}`
+function yesNo(value: boolean): string {
+  return value ? 'yes' : 'no'
+}
+
+interface ExerciseResult {
+  actual: number
+  target: number
+  success: boolean
+}
+
+function exerciseParts(name: string, unit: string, result: ExerciseResult | null): string[] {
+  if (!result) return [`${name} none`]
+  return [
+    `${name} ${result.actual}${unit}`,
+    `${name} target ${result.target}${unit}`,
+    `${name} success: ${yesNo(result.success)}`,
+  ]
+}
+
+// The leading three parts are the main summary; the rest cover every other stored, non-derived field.
+function recordParts(record: DailyRecord): string[] {
+  const reps = (r: { target_reps: number, actual_reps: number, success: boolean }) =>
+    ({ actual: r.actual_reps, target: r.target_reps, success: r.success })
+  const secs = (r: { target_sec: number, actual_sec: number, success: boolean }) =>
+    ({ actual: r.actual_sec, target: r.target_sec, success: r.success })
+  const [plank, ...plankRest] = exerciseParts('Plank', 's', secs(record.plank))
+  const [squat, ...squatRest] = exerciseParts('Squat', '', reps(record.squat))
+  const [pushup, ...pushupRest] = exerciseParts('Pushup', '', reps(record.pushup))
+  return [
+    plank,
+    squat,
+    pushup,
+    ...plankRest,
+    ...squatRest,
+    ...pushupRest,
+    ...exerciseParts('Deadhang', 's', secs(record.deadhang)),
+    ...exerciseParts('Dumbbell', '', record.dumbbell && reps(record.dumbbell)),
+    `Squat done: ${yesNo(record.squat_completed)}`,
+    `Pushup done: ${yesNo(record.pushup_completed)}`,
+    `Dumbbell done: ${yesNo(record.dumbbell_completed)}`,
+    `Day: ${record.day_type ?? 'training'}`,
+    `Flagged: ${yesNo(record.flag_suspicious)}`,
+  ]
+}
+
+// Show only the parts that differ; when only derived fields (fatigue) differ, fall back to the main summary.
+function describeConflict(record: DailyRecord, other: DailyRecord): string {
+  const parts = recordParts(record)
+  const otherParts = recordParts(other)
+  const differing = parts.filter((part, i) => part !== otherParts[i])
+  return (differing.length > 0 ? differing : parts.slice(0, 3)).join(' · ')
 }
 
 export default function BackupRestore({ onRestored, downloadFile = downloadViaBlob }: BackupRestoreProps) {
   const [pending, setPending] = useState<PendingRestore | null>(null)
   const [message, setMessage] = useState('')
+  const readIdRef = useRef(0)
 
   function handleExport() {
     const { backup, skippedDates } = exportBackup()
@@ -58,9 +108,23 @@ export default function BackupRestore({ onRestored, downloadFile = downloadViaBl
     input.value = ''
     if (!file) return
 
-    const result = parseBackup(await file.text())
+    // A later pick supersedes any read still in flight; the old preview goes away so it cannot be applied meanwhile.
+    const readId = ++readIdRef.current
+    setPending(null)
+    setMessage('Reading file…')
+    let text: string
+    try {
+      text = await file.text()
+    } catch (err) {
+      if (readId !== readIdRef.current) return
+      console.warn('[BackupRestore] file read failed:', err)
+      setMessage('Could not read the file — nothing was changed.')
+      return
+    }
+    if (readId !== readIdRef.current) return
+
+    const result = parseBackup(text)
     if (!result.ok) {
-      setPending(null)
       setMessage(`Invalid backup file — nothing was changed. (${result.error})`)
       return
     }
@@ -130,7 +194,7 @@ export default function BackupRestore({ onRestored, downloadFile = downloadViaBl
                     checked={choice === 'keep'}
                     onChange={() => setChoice(conflict.date, 'keep')}
                   />
-                  Keep current — {describeRecord(conflict.existing)}
+                  Keep current — {describeConflict(conflict.existing, conflict.incoming)}
                 </label>
                 <label>
                   <input
@@ -139,7 +203,7 @@ export default function BackupRestore({ onRestored, downloadFile = downloadViaBl
                     checked={choice === 'replace'}
                     onChange={() => setChoice(conflict.date, 'replace')}
                   />
-                  Use backup — {describeRecord(conflict.incoming)}
+                  Use backup — {describeConflict(conflict.incoming, conflict.existing)}
                 </label>
               </fieldset>
             )
