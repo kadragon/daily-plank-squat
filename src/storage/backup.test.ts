@@ -2,7 +2,9 @@ import { beforeEach, expect, test } from 'bun:test'
 import {
   applyRestore,
   BACKUP_SCHEMA_VERSION,
+  backupFileName,
   createBackup,
+  exportBackup,
   parseBackup,
   PRE_RESTORE_BACKUP_KEY,
   previewRestore,
@@ -207,6 +209,25 @@ test('apply rolls back when a storage write fails', () => {
   expect(localStorage.getItem('app-settings')).toBe(before['app-settings'])
 })
 
+test('export skips stored records that would fail import, so every export restores', () => {
+  const valid = sampleRecord('2026-09-01', 1)
+  localStorage.setItem('daily-records', JSON.stringify([
+    valid,
+    { ...sampleRecord('2026-09-02', 2), date: '2026-9-2' },
+    { ...sampleRecord('2026-09-03', 3), fatigue: 1.2 },
+  ]))
+
+  const { backup, skippedDates } = exportBackup()
+
+  expect(skippedDates).toEqual(['2026-09-03', '2026-9-2'])
+  expect(parseOk(serializeBackup(backup)).records).toEqual([valid])
+})
+
+test('backup file name uses the local export date', () => {
+  const exportedAt = new Date(2026, 9, 17, 0, 30)
+  expect(backupFileName(createBackup(exportedAt))).toBe('daily-plank-squat-backup-2026-10-17.json')
+})
+
 const validEnvelope = () => JSON.parse(serializeBackup({
   ...createBackup(),
   records: [sampleRecord('2026-09-01', 1)],
@@ -218,6 +239,7 @@ const invalidCases: Array<[string, () => string]> = [
   ['JSON array', () => '[]'],
   ['missing schema_version', () => JSON.stringify({ ...validEnvelope(), schema_version: undefined })],
   ['future schema_version', () => JSON.stringify({ ...validEnvelope(), schema_version: 999 })],
+  ['unparseable exported_at', () => JSON.stringify({ ...validEnvelope(), exported_at: 'yesterday' })],
   ['wrong app id', () => JSON.stringify({ ...validEnvelope(), app: 'other-app' })],
   ['records not an array', () => JSON.stringify({ ...validEnvelope(), records: {} })],
   ['malformed date', () => JSON.stringify({ ...validEnvelope(), records: [{ ...sampleRecord('2026-9-1'), date: '2026-9-1' }] })],

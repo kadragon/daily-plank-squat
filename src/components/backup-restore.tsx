@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import {
   applyRestore,
+  backupDateKey,
   backupFileName,
   type BackupFile,
   type ConflictChoice,
-  createBackup,
+  exportBackup,
   parseBackup,
   previewRestore,
   type RestorePreview,
@@ -29,8 +30,11 @@ function downloadViaBlob(fileName: string, contents: string): void {
   const anchor = document.createElement('a')
   anchor.href = url
   anchor.download = fileName
+  // Safari ignores clicks on detached anchors and aborts downloads whose URL is revoked immediately.
+  document.body.appendChild(anchor)
   anchor.click()
-  URL.revokeObjectURL(url)
+  anchor.remove()
+  setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
 
 function describeRecord(record: DailyRecord): string {
@@ -42,9 +46,11 @@ export default function BackupRestore({ onRestored, downloadFile = downloadViaBl
   const [message, setMessage] = useState('')
 
   function handleExport() {
-    const backup = createBackup()
+    const { backup, skippedDates } = exportBackup()
     downloadFile(backupFileName(backup), serializeBackup(backup))
-    setMessage(`Exported ${backup.records.length} records.`)
+    setMessage(skippedDates.length > 0
+      ? `Exported ${backup.records.length} records. Skipped invalid records: ${skippedDates.join(', ')}.`
+      : `Exported ${backup.records.length} records.`)
   }
 
   async function handleFileChange(input: HTMLInputElement) {
@@ -107,7 +113,7 @@ export default function BackupRestore({ onRestored, downloadFile = downloadViaBl
       {pending ? (
         <section className="settings__backup-preview" aria-label="Restore preview">
           <p>
-            {`Backup from ${pending.backup.exported_at.slice(0, 10)}: `
+            {`Backup from ${backupDateKey(pending.backup)}: `
               + `${pending.preview.newDates.length} new, `
               + `${pending.preview.identicalDates.length} unchanged, `
               + `${pending.preview.conflicts.length} conflicting days.`}

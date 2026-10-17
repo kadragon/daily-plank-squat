@@ -1,4 +1,5 @@
 import type { DailyRecord, DayType, DumbbellRecord, ExerciseRecord, SquatRecord } from '../types'
+import { toLocalDateKey } from '../utils/date-key'
 import { DAILY_RECORDS_STORAGE_KEY, loadAllRecords } from './daily-record'
 import { ALL_EXERCISES, loadSettings, SETTINGS_STORAGE_KEY, type AppSettings, type ExerciseId } from './settings'
 
@@ -144,7 +145,9 @@ function readBackup(value: unknown): BackupFile {
   const obj = readObject(value, 'backup')
   if (obj.app !== BACKUP_APP_ID) fail('not a daily-plank-squat backup file')
   if (obj.schema_version !== BACKUP_SCHEMA_VERSION) fail(`unsupported schema_version: ${String(obj.schema_version)}`)
-  if (typeof obj.exported_at !== 'string') fail('exported_at must be a string')
+  if (typeof obj.exported_at !== 'string' || Number.isNaN(Date.parse(obj.exported_at))) {
+    fail('exported_at must be an ISO date-time string')
+  }
   if (!Array.isArray(obj.records)) fail('records must be an array')
 
   const seen = new Set<string>()
@@ -173,22 +176,50 @@ function canonicalRecord(record: DailyRecord): string {
   }
 }
 
-export function createBackup(now = new Date()): BackupFile {
-  return {
-    schema_version: BACKUP_SCHEMA_VERSION,
-    app: BACKUP_APP_ID,
-    exported_at: now.toISOString(),
-    records: loadAllRecords(),
-    settings: loadSettings(),
+export interface BackupExport {
+  backup: BackupFile
+  // Stored records that would fail import validation are left out so every export restores.
+  skippedDates: string[]
+}
+
+export function exportBackup(now = new Date()): BackupExport {
+  const records: DailyRecord[] = []
+  const skippedDates: string[] = []
+  for (const record of loadAllRecords()) {
+    try {
+      records.push(readDailyRecord(record, 'record'))
+    } catch {
+      skippedDates.push(record.date)
+    }
   }
+
+  return {
+    backup: {
+      schema_version: BACKUP_SCHEMA_VERSION,
+      app: BACKUP_APP_ID,
+      exported_at: now.toISOString(),
+      records,
+      settings: loadSettings(),
+    },
+    skippedDates,
+  }
+}
+
+export function createBackup(now = new Date()): BackupFile {
+  return exportBackup(now).backup
 }
 
 export function serializeBackup(backup: BackupFile): string {
   return JSON.stringify(backup, null, 2)
 }
 
+// Local calendar date of the export, matching how records are keyed.
+export function backupDateKey(backup: BackupFile): string {
+  return toLocalDateKey(new Date(backup.exported_at))
+}
+
 export function backupFileName(backup: BackupFile): string {
-  return `daily-plank-squat-backup-${backup.exported_at.slice(0, 10)}.json`
+  return `daily-plank-squat-backup-${backupDateKey(backup)}.json`
 }
 
 export function parseBackup(text: string): ParseBackupResult {
