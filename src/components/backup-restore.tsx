@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import {
   applyRestore,
   backupDateKey,
@@ -37,13 +37,37 @@ function downloadViaBlob(fileName: string, contents: string): void {
   setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
 
-function describeRecord(record: DailyRecord): string {
-  return `Plank ${record.plank.actual_sec}s · Squat ${record.squat.actual_reps} · Pushup ${record.pushup.actual_reps}`
+function yesNo(value: boolean): string {
+  return value ? 'yes' : 'no'
+}
+
+function recordParts(record: DailyRecord): string[] {
+  return [
+    `Plank ${record.plank.actual_sec}s`,
+    `Squat ${record.squat.actual_reps}`,
+    `Pushup ${record.pushup.actual_reps}`,
+    `Deadhang ${record.deadhang.actual_sec}s`,
+    `Dumbbell ${record.dumbbell ? record.dumbbell.actual_reps : 'none'}`,
+    `Squat done: ${yesNo(record.squat_completed)}`,
+    `Pushup done: ${yesNo(record.pushup_completed)}`,
+    `Dumbbell done: ${yesNo(record.dumbbell_completed)}`,
+    `Day: ${record.day_type ?? 'training'}`,
+  ]
+}
+
+// Show only the parts that differ; when only derived fields (fatigue) differ, fall back to the main summary.
+function describeConflict(record: DailyRecord, other: DailyRecord): string {
+  const parts = recordParts(record)
+  const otherParts = recordParts(other)
+  const differing = parts.filter((part, i) => part !== otherParts[i])
+  return (differing.length > 0 ? differing : parts.slice(0, 3)).join(' · ')
 }
 
 export default function BackupRestore({ onRestored, downloadFile = downloadViaBlob }: BackupRestoreProps) {
   const [pending, setPending] = useState<PendingRestore | null>(null)
   const [message, setMessage] = useState('')
+  const [reading, setReading] = useState(false)
+  const readIdRef = useRef(0)
 
   function handleExport() {
     const { backup, skippedDates } = exportBackup()
@@ -58,7 +82,24 @@ export default function BackupRestore({ onRestored, downloadFile = downloadViaBl
     input.value = ''
     if (!file) return
 
-    const result = parseBackup(await file.text())
+    // A later pick supersedes any read still in flight.
+    const readId = ++readIdRef.current
+    setReading(true)
+    let text: string
+    try {
+      text = await file.text()
+    } catch (err) {
+      if (readId !== readIdRef.current) return
+      console.warn('[BackupRestore] file read failed:', err)
+      setReading(false)
+      setPending(null)
+      setMessage('Could not read the file — nothing was changed.')
+      return
+    }
+    if (readId !== readIdRef.current) return
+    setReading(false)
+
+    const result = parseBackup(text)
     if (!result.ok) {
       setPending(null)
       setMessage(`Invalid backup file — nothing was changed. (${result.error})`)
@@ -75,7 +116,7 @@ export default function BackupRestore({ onRestored, downloadFile = downloadViaBl
   }
 
   function handleConfirm() {
-    if (!pending) return
+    if (!pending || reading) return
     try {
       applyRestore(pending.backup, { conflicts: pending.choices, includeSettings: pending.includeSettings })
     } catch (err) {
@@ -130,7 +171,7 @@ export default function BackupRestore({ onRestored, downloadFile = downloadViaBl
                     checked={choice === 'keep'}
                     onChange={() => setChoice(conflict.date, 'keep')}
                   />
-                  Keep current — {describeRecord(conflict.existing)}
+                  Keep current — {describeConflict(conflict.existing, conflict.incoming)}
                 </label>
                 <label>
                   <input
@@ -139,7 +180,7 @@ export default function BackupRestore({ onRestored, downloadFile = downloadViaBl
                     checked={choice === 'replace'}
                     onChange={() => setChoice(conflict.date, 'replace')}
                   />
-                  Use backup — {describeRecord(conflict.incoming)}
+                  Use backup — {describeConflict(conflict.incoming, conflict.existing)}
                 </label>
               </fieldset>
             )
@@ -158,7 +199,7 @@ export default function BackupRestore({ onRestored, downloadFile = downloadViaBl
             </label>
           ) : null}
           <div className="settings__backup-actions">
-            <button type="button" className="btn" onClick={handleConfirm}>
+            <button type="button" className="btn" onClick={handleConfirm} disabled={reading}>
               Apply restore
             </button>
             <button type="button" className="btn btn--danger" onClick={() => setPending(null)}>
