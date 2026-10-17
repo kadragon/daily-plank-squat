@@ -553,6 +553,7 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
               setAppSettings(next)
               saveSettings(next)
             }}
+            onRestored={() => window.location.reload()}
           />
         )
       default:

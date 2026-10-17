@@ -1,7 +1,8 @@
 import type { DailyRecord, DayType, DumbbellRecord, ExerciseRecord, PushupRecord, SquatRecord } from '../types'
 import { getTodayDateKey } from '../utils/date-key'
 
-const STORAGE_KEY = 'daily-records'
+export const DAILY_RECORDS_STORAGE_KEY = 'daily-records'
+const STORAGE_KEY = DAILY_RECORDS_STORAGE_KEY
 
 const NEUTRAL_PUSHUP: PushupRecord = { target_reps: 15, actual_reps: 15, success: true }
 const NEUTRAL_DEADHANG: ExerciseRecord = { target_sec: 30, actual_sec: 30, success: true }
