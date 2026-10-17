@@ -135,7 +135,7 @@ function chooseFakeFile(input: HTMLElement, text: () => Promise<string>) {
   fireEvent.change(input)
 }
 
-test('stale read is ignored and confirm is blocked while reading', async () => {
+test('stale read is ignored and the preview is withdrawn while reading', async () => {
   saveRecord(sampleRecord('2026-09-01', 90))
   const firstText = exportBackupText()
   saveRecord(sampleRecord('2026-09-02', 45))
@@ -153,7 +153,9 @@ test('stale read is ignored and confirm is blocked while reading', async () => {
 
   chooseFakeFile(input, () => new Promise((resolve) => { resolveFirst = resolve }))
   chooseFakeFile(input, () => new Promise((resolve) => { resolveSecond = resolve }))
-  expect((view.getByText('Apply restore') as HTMLButtonElement).disabled).toBe(true)
+  // The earlier preview is withdrawn while reading, so it cannot be applied meanwhile.
+  expect(view.queryByRole('region', { name: 'Restore preview' })).toBeNull()
+  expect(view.getByRole('status').textContent).toBe('Reading file…')
 
   resolveSecond(secondText)
   await waitFor(() => expect(view.getByRole('region', { name: 'Restore preview' }).textContent).toContain('2 new'))
@@ -161,7 +163,7 @@ test('stale read is ignored and confirm is blocked while reading', async () => {
   await new Promise((resolve) => setTimeout(resolve, 0))
 
   expect(view.getByRole('region', { name: 'Restore preview' }).textContent).toContain('2 new')
-  expect((view.getByText('Apply restore') as HTMLButtonElement).disabled).toBe(false)
+  expect(view.queryByRole('status')).toBeNull()
 })
 
 test('unreadable file shows an error', async () => {
@@ -195,4 +197,17 @@ test('conflict labels fall back to the main summary when only derived fields dif
   await waitFor(() => view.getByRole('region', { name: 'Restore preview' }))
 
   expect(view.getByLabelText(/Use backup/).parentElement?.textContent).toBe('Use backup — Plank 60s · Squat 20 · Pushup 15')
+})
+
+test('conflict labels show non-summary fields such as success flags', async () => {
+  saveRecord({ ...sampleRecord('2026-09-01', 60), plank: { target_sec: 60, actual_sec: 60, success: false } })
+  const text = exportBackupText()
+  saveRecord(sampleRecord('2026-09-01', 60))
+
+  const view = render(<BackupRestore onRestored={() => {}} />)
+  chooseFile(view.getByLabelText('Backup file'), text)
+  await waitFor(() => view.getByRole('region', { name: 'Restore preview' }))
+
+  expect(view.getByLabelText(/Keep current/).parentElement?.textContent).toBe('Keep current — Plank success: yes')
+  expect(view.getByLabelText(/Use backup/).parentElement?.textContent).toBe('Use backup — Plank success: no')
 })
