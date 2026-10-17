@@ -9,9 +9,10 @@ export interface AppSettings {
   countdownSec: number
 }
 
-const STORAGE_KEY = 'app-settings'
+export const SETTINGS_STORAGE_KEY = 'app-settings'
+const STORAGE_KEY = SETTINGS_STORAGE_KEY
 
-const ALL_EXERCISES = ['plank', 'squat', 'pushup', 'deadhang', 'dumbbell'] as const satisfies readonly ExerciseId[]
+export const ALL_EXERCISES = ['plank', 'squat', 'pushup', 'deadhang', 'dumbbell'] as const satisfies readonly ExerciseId[]
 
 function defaultSettings(): AppSettings {
   return {

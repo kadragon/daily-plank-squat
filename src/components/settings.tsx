@@ -1,4 +1,5 @@
 import type { AppSettings, ExerciseId } from '../storage/settings'
+import BackupRestore from './backup-restore'
 
 interface ExerciseTarget {
   id: ExerciseId
@@ -13,6 +14,7 @@ interface SettingsProps {
   onToggleExercise: (id: ExerciseId, enabled: boolean) => void
   onChangeTarget: (id: ExerciseId, value: number) => void
   onChangeCountdownSec?: (value: number) => void
+  onRestored?: () => void
 }
 
 export default function Settings({
@@ -21,6 +23,7 @@ export default function Settings({
   onToggleExercise,
   onChangeTarget,
   onChangeCountdownSec,
+  onRestored = () => {},
 }: SettingsProps) {
   return (
     <div className="settings">
@@ -87,6 +90,7 @@ export default function Settings({
           <span className="settings__target-unit">s</span>
         </div>
       </section>
+      <BackupRestore onRestored={onRestored} />
     </div>
   )
 }

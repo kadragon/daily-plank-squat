@@ -862,6 +862,70 @@ body {
   border-top: 1px solid var(--hairline-soft);
 }
 
+.settings__backup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--hairline-soft);
+}
+
+.settings__backup-note,
+.settings__backup-message {
+  margin: 0;
+  color: var(--stone);
+  font-size: 0.9rem;
+}
+
+.settings__backup-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.settings__backup-file {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.settings__backup-file input[type="file"] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.settings__backup-file:focus-within {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.settings__backup-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.85rem;
+  border: 1px solid var(--hairline-soft);
+  border-radius: var(--radius-lg);
+}
+
+.settings__backup-preview p {
+  margin: 0;
+}
+
+.settings__backup-conflict {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--hairline-soft);
+  border-radius: var(--radius-lg);
+  font-size: 0.9rem;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
