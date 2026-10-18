@@ -42,13 +42,14 @@ export default function RepsCounter({
   const editClosedRef = useRef(false)
 
   // A button tap may not blur the input (e.g. iOS Safari), so buttons resolve an open draft themselves.
+  const adjustBase = draft !== null && isValidDraft(draft) ? Number(draft) : count
+
   function adjust(delta: number) {
-    const base = draft !== null && isValidDraft(draft) ? Number(draft) : count
     if (draft !== null) {
       editClosedRef.current = true
       setDraft(null)
     }
-    onDoneRepsChange?.(String(Math.max(0, base + delta)))
+    onDoneRepsChange?.(String(Math.max(0, adjustBase + delta)))
   }
 
   function complete() {
@@ -119,7 +120,7 @@ export default function RepsCounter({
           type="button"
           className="btn btn--secondary reps-adjust__minor"
           aria-label={REPS_COPY.decrementAriaLabel}
-          disabled={count <= 0}
+          disabled={adjustBase <= 0}
           onClick={() => adjust(-1)}
         >
           {REPS_COPY.decrement}

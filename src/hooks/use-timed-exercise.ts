@@ -36,8 +36,10 @@ export interface UseTimedExerciseReturn {
   handleCancel: () => void
 }
 
-function isBetterResult(next: TimedWorkoutResult, previous: TimedWorkoutResult): boolean {
-  if (next.success !== previous.success) return next.success
+// The previous success is re-judged against the current target, which may have changed since it was logged.
+function isBetterResult(next: TimedWorkoutResult, previous: TimedWorkoutResult, targetSec: number): boolean {
+  const previousSuccess = previous.success && previous.actualSec >= targetSec
+  if (next.success !== previousSuccess) return next.success
   return next.actualSec > previous.actualSec
 }
 
@@ -83,7 +85,8 @@ export function useTimedExercise({
     if (otherTimerRunning) return
     previousResultRef.current = logged ? result : null
     visibilityTrackerRef.current = createVisibilityTracker()
-    setSuspiciousSession(false)
+    // A kept earlier result keeps its flag; the next persist recomputes it either way.
+    if (!logged) setSuspiciousSession(false)
     if (countdownSec > 0) {
       const now = nowMs()
       timerRef.current?.startCountdown(now)
@@ -99,12 +102,12 @@ export function useTimedExercise({
   const logRun = useCallback((next: TimedWorkoutResult, elapsedMs: number) => {
     const previous = previousResultRef.current
     previousResultRef.current = null
-    if (previous && !isBetterResult(next, previous)) return
+    if (previous && !isBetterResult(next, previous, targetSec)) return
     completedElapsedMsRef.current = elapsedMs
     loggedVisibilityTrackerRef.current = visibilityTrackerRef.current
     setResult(next)
     setLogged(true)
-  }, [])
+  }, [targetSec])
 
   const handlePause = useCallback(() => {
     timerRef.current?.pause(nowMs())

@@ -189,3 +189,17 @@ test('완료 with direct entry open commits the typed value before completing', 
   expect(events).toEqual(['change:15', 'complete'])
   expect(view.container.querySelector('#squat-done-reps')).toBeNull()
 })
+
+test('−1 is enabled when the typed value is above zero even if the count is zero', () => {
+  const { view, changes } = renderCounter(0)
+
+  fireEvent.click(view.getByRole('button', { name: /완료 횟수 0/ }))
+  const input = view.container.querySelector('#squat-done-reps') as HTMLInputElement
+  fireEvent.input(input, { target: { value: '5' } })
+  const minus = view.getByRole('button', { name: '1회 빼기' }) as HTMLButtonElement
+
+  expect(minus.disabled).toBe(false)
+  fireEvent.click(minus)
+  expect(changes).toEqual(['4'])
+  expect(view.container.querySelector('#squat-done-reps')).toBeNull()
+})

@@ -40,21 +40,22 @@ afterEach(() => {
   Object.assign(globalThis, originalFrameApi)
 })
 
-function renderTimed(initial: { actualSec: number, success: boolean, logged: boolean }) {
+function renderTimed(initial: { actualSec: number, success: boolean, logged: boolean }, targetSec = 600) {
   const persisted: number[] = []
+  const suspiciousResets: boolean[] = []
   const view = renderHook(() => useTimedExercise({
     initialState: 'IDLE',
     initialActualSec: initial.actualSec,
     initialSuccess: initial.success,
     initialLogged: initial.logged,
-    targetSec: 600,
+    targetSec,
     countdownSec: 0,
     otherTimerRunning: false,
     onProgressSeconds: () => {},
     requestPersist: () => { persisted.push(now) },
-    setSuspiciousSession: () => {},
+    setSuspiciousSession: (value) => { suspiciousResets.push(value) },
   }))
-  return { view, persisted }
+  return { view, persisted, suspiciousResets }
 }
 
 test('restarting keeps the earlier logged result while the new run is in progress', () => {
@@ -106,4 +107,25 @@ test('a first run that is cancelled is logged as before', () => {
 
   expect(view.result.current.result).toEqual({ actualSec: 5, success: false })
   expect(view.result.current.logged).toBe(true)
+})
+
+test('a kept earlier result keeps its suspicious flag when a rerun starts', () => {
+  const kept = renderTimed({ actualSec: 60, success: true, logged: true })
+  act(() => kept.view.result.current.handleStart())
+  expect(kept.suspiciousResets).toEqual([])
+
+  cleanup()
+  const fresh = renderTimed({ actualSec: 0, success: false, logged: false })
+  act(() => fresh.view.result.current.handleStart())
+  expect(fresh.suspiciousResets).toEqual([false])
+})
+
+test('an earlier success under a lower target does not beat a longer rerun under the raised target', () => {
+  const { view } = renderTimed({ actualSec: 60, success: true, logged: true }, 90)
+
+  act(() => view.result.current.handleStart())
+  now += 70_000
+  act(() => view.result.current.handleCancel())
+
+  expect(view.result.current.result).toEqual({ actualSec: 70, success: false })
 })
