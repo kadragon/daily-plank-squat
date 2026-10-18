@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test'
 import type { AppSettings } from '../storage/settings'
-import { TAB_ITEMS, getActiveTab, getEnabledExerciseViews, isWorkoutView, resolveView } from './navigation'
+import { TAB_ITEMS, getActiveTab, getEnabledExerciseViews, getNextExerciseView, isWorkoutView, resolveView } from './navigation'
 
 function settingsWith(disabled: (keyof AppSettings['exercises'])[] = []): AppSettings {
   const exercises = {
@@ -44,4 +44,20 @@ test('resolveView sends a disabled exercise detail back to today and keeps every
   expect(resolveView('squat', settings)).toBe('squat')
   expect(resolveView('history', settings)).toBe('history')
   expect(resolveView('settings', settings)).toBe('settings')
+})
+
+test('getNextExerciseView picks the next enabled, not-completed exercise and wraps around', () => {
+  const enabled = ['plank', 'squat', 'pushup', 'deadhang'] as const
+  const done = (ids: string[]) => (id: string) => ids.includes(id)
+
+  expect(getNextExerciseView('plank', enabled, done([]))).toBe('squat')
+  expect(getNextExerciseView('plank', enabled, done(['squat']))).toBe('pushup')
+  expect(getNextExerciseView('deadhang', enabled, done(['squat']))).toBe('plank')
+  expect(getNextExerciseView('deadhang', enabled, done([]))).toBe('plank')
+})
+
+test('getNextExerciseView returns today when every other exercise is completed', () => {
+  expect(getNextExerciseView('plank', ['plank', 'squat'], (id) => id === 'squat')).toBe('today')
+  expect(getNextExerciseView('plank', ['plank'], () => false)).toBe('today')
+  expect(getNextExerciseView('deadhang', ['plank', 'squat'], () => false)).toBe('plank')
 })

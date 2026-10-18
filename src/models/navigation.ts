@@ -33,6 +33,20 @@ export function resolveView(view: AppView, settings: AppSettings): AppView {
   return settings.exercises[view].enabled ? view : 'today'
 }
 
+// Next enabled exercise after `current` (wrapping) that is not completed yet; 오늘 운동 when none remain.
+export function getNextExerciseView(
+  current: ExerciseId,
+  enabled: readonly ExerciseId[],
+  isCompleted: (id: ExerciseId) => boolean,
+): AppView {
+  const start = enabled.indexOf(current)
+  for (let step = 1; step < enabled.length + 1; step += 1) {
+    const candidate = enabled[(start + step) % enabled.length]
+    if (candidate !== undefined && candidate !== current && !isCompleted(candidate)) return candidate
+  }
+  return 'today'
+}
+
 export function isScrollableView(view: AppView): boolean {
   return !isWorkoutView(view)
 }
