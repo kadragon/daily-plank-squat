@@ -25,35 +25,35 @@ test('PlankTimer shows countdown at halfway', () => {
 test('Plank view shows start button in IDLE', () => {
   const html = renderToStaticMarkup(<PlankTimer state="IDLE" />)
 
-  expect(html).toContain('Start')
+  expect(html).toContain('시작')
 })
 
 test('Plank view shows pause/cancel in RUNNING and no manual complete button', () => {
   const html = renderToStaticMarkup(<PlankTimer state="RUNNING" />)
 
-  expect(html).toContain('Pause')
-  expect(html).toContain('Cancel')
-  expect(html).not.toContain('Complete')
+  expect(html).toContain('일시정지')
+  expect(html).toContain('취소')
+  expect(html).not.toContain('완료')
 })
 
 test('Plank view shows resume/cancel in PAUSED', () => {
   const html = renderToStaticMarkup(<PlankTimer state="PAUSED" />)
 
-  expect(html).toContain('Resume')
-  expect(html).toContain('Cancel')
+  expect(html).toContain('재개')
+  expect(html).toContain('취소')
 })
 
 test('Plank view shows result in COMPLETED', () => {
   const html = renderToStaticMarkup(<PlankTimer state="COMPLETED" elapsedMs={45_000} />)
 
-  expect(html).toContain('Result')
-  expect(html).toContain('45s')
+  expect(html).toContain('결과')
+  expect(html).toContain('45초')
 })
 
 test('Plank result clamps negative elapsed time to 0 seconds', () => {
   const html = renderToStaticMarkup(<PlankTimer state="COMPLETED" elapsedMs={-1000} />)
 
-  expect(html).toContain('Result: 0s')
+  expect(html).toContain('결과: 0초')
 })
 
 test('PlankTimer has h2 heading', () => {
@@ -92,21 +92,21 @@ test('PlankTimer progress bar shows correct width in RUNNING state', () => {
 })
 
 test('PlankTimer renders custom title via title prop', () => {
-  const html = renderToStaticMarkup(<PlankTimer title="Deadhang Timer" />)
+  const html = renderToStaticMarkup(<PlankTimer title="데드행 타이머" />)
 
-  expect(html).toContain('<h2>Deadhang Timer</h2>')
+  expect(html).toContain('<h2>데드행 타이머</h2>')
 })
 
-test('PlankTimer defaults to "Plank Timer" when title prop is omitted', () => {
+test('PlankTimer defaults to "플랭크 타이머" when title prop is omitted', () => {
   const html = renderToStaticMarkup(<PlankTimer />)
 
-  expect(html).toContain('<h2>Plank Timer</h2>')
+  expect(html).toContain('<h2>플랭크 타이머</h2>')
 })
 
 test('PlankTimer disables Start button when startDisabled=true', () => {
   const html = renderToStaticMarkup(<PlankTimer state="IDLE" startDisabled />)
 
-  expect(html).toContain('Start')
+  expect(html).toContain('시작')
   expect(html).toContain('disabled')
 })
 
@@ -123,7 +123,7 @@ test('PlankTimer shows recommendation when state is COMPLETED', () => {
     <PlankTimer state="COMPLETED" tomorrowTargetSec={63} tomorrowDeltaSec={3} recommendationReasonText="목표 달성으로 기본 증량" />,
   )
 
-  expect(html).toContain('내일 추천: 63s (+3s)')
+  expect(html).toContain('내일 추천: 63초 (+3초)')
   expect(html).toContain('목표 달성으로 기본 증량')
 })
 
@@ -152,7 +152,7 @@ test('PlankTimer COUNTDOWN state shows countdown number', () => {
 test('PlankTimer COUNTDOWN state shows Cancel button', () => {
   const html = renderToStaticMarkup(<PlankTimer state="COUNTDOWN" countdownMs={5000} />)
 
-  expect(html).toContain('Cancel')
-  expect(html).not.toContain('Pause')
-  expect(html).not.toContain('Start')
+  expect(html).toContain('취소')
+  expect(html).not.toContain('일시정지')
+  expect(html).not.toContain('시작')
 })

@@ -1,3 +1,5 @@
+import { EXERCISE_LABEL, REPS_COPY, formatReps, formatTomorrowRecommendation } from '../locales/ko'
+
 interface RepsCounterProps {
   title?: string
   idPrefix?: string
@@ -16,9 +18,9 @@ interface RepsCounterProps {
 }
 
 export default function RepsCounter({
-  title = 'Squat Counter',
+  title = REPS_COPY.squatTitle,
   idPrefix = 'squat',
-  exerciseName = 'squats',
+  exerciseName = EXERCISE_LABEL.squat,
   count = 0,
   targetReps = 0,
   showRecommendation = false,
@@ -37,27 +39,27 @@ export default function RepsCounter({
     <div className={`reps-counter${goalReached ? ' reps-counter--goal-reached' : ''}`}>
       <h2>{title}</h2>
       <div className="reps-input-row">
-        <label className="reps-input-label" htmlFor={`${idPrefix}-target-reps`}>Target reps</label>
+        <label className="reps-input-label" htmlFor={`${idPrefix}-target-reps`}>{REPS_COPY.targetReps}</label>
         <input
           id={`${idPrefix}-target-reps`}
           className="reps-input"
           type="text"
           inputMode="numeric"
           pattern="[0-9]*"
-          aria-label="Target reps"
+          aria-label={REPS_COPY.targetReps}
           value={targetReps}
           onInput={(event) => onTargetRepsChange?.((event.currentTarget as HTMLInputElement).value)}
         />
       </div>
       <div className="reps-input-row">
-        <label className="reps-input-label" htmlFor={`${idPrefix}-done-reps`}>Done reps</label>
+        <label className="reps-input-label" htmlFor={`${idPrefix}-done-reps`}>{REPS_COPY.doneReps}</label>
         <input
           id={`${idPrefix}-done-reps`}
           className="reps-input"
           type="text"
           inputMode="numeric"
           pattern="[0-9]*"
-          aria-label="Done reps"
+          aria-label={REPS_COPY.doneReps}
           value={count}
           onInput={(event) => onDoneRepsChange?.((event.currentTarget as HTMLInputElement).value)}
         />
@@ -66,14 +68,14 @@ export default function RepsCounter({
         ? (
           <div className="recommendation-note">
             <div className="recommendation-note__target">
-              내일 추천: {tomorrowTargetReps} ({tomorrowDeltaReps > 0 ? '+' : ''}{tomorrowDeltaReps})
+              {formatTomorrowRecommendation(tomorrowTargetReps, tomorrowDeltaReps, formatReps)}
             </div>
             <div className="recommendation-note__reason">{recommendationReasonText}</div>
           </div>
         )
         : null}
       <div className="reps-controls">
-        <button type="button" className="btn" aria-label={`Complete ${exerciseName}`} onClick={onComplete}>Complete</button>
+        <button type="button" className="btn" aria-label={REPS_COPY.completeAriaLabel(exerciseName)} onClick={onComplete}>{REPS_COPY.complete}</button>
       </div>
       {saveFeedbackText
         ? (

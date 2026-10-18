@@ -1,3 +1,4 @@
+import { SECONDS_UNIT, SETTINGS_COPY } from '../locales/ko'
 import type { AppSettings, ExerciseId } from '../storage/settings'
 import BackupRestore from './backup-restore'
 
@@ -27,9 +28,9 @@ export default function Settings({
 }: SettingsProps) {
   return (
     <div className="settings">
-      <h2>Settings</h2>
+      <h2>{SETTINGS_COPY.title}</h2>
       <section className="settings__exercises">
-        <h3>Exercises</h3>
+        <h3>{SETTINGS_COPY.exercises}</h3>
         {exerciseTargets.map((exercise) => {
           const enabled = settings.exercises[exercise.id].enabled
           return (
@@ -37,7 +38,7 @@ export default function Settings({
               <label className="settings__toggle-label">
                 <input
                   type="checkbox"
-                  aria-label={`${exercise.label} 활성화`}
+                  aria-label={SETTINGS_COPY.toggleAriaLabel(exercise.label)}
                   checked={enabled}
                   onChange={(e) => onToggleExercise(exercise.id, e.currentTarget.checked)}
                 />
@@ -46,7 +47,7 @@ export default function Settings({
               </label>
               <div className="settings__target-row">
                 <label className="settings__target-label" htmlFor={`settings-target-${exercise.id}`}>
-                  Target
+                  {SETTINGS_COPY.target}
                 </label>
                 <input
                   id={`settings-target-${exercise.id}`}
@@ -68,10 +69,10 @@ export default function Settings({
         })}
       </section>
       <section className="settings__timer">
-        <h3>Timer</h3>
+        <h3>{SETTINGS_COPY.timer}</h3>
         <div className="settings__target-row">
           <label className="settings__target-label" htmlFor="settings-countdown-sec">
-            Countdown
+            {SETTINGS_COPY.countdown}
           </label>
           <input
             id="settings-countdown-sec"
@@ -87,7 +88,7 @@ export default function Settings({
               if (Number.isFinite(val) && val >= 0 && val <= 10) onChangeCountdownSec?.(val)
             }}
           />
-          <span className="settings__target-unit">s</span>
+          <span className="settings__target-unit">{SECONDS_UNIT}</span>
         </div>
       </section>
       <BackupRestore onRestored={onRestored} />

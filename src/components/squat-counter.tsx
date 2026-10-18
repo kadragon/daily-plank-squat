@@ -1,3 +1,4 @@
+import { EXERCISE_LABEL, REPS_COPY } from '../locales/ko'
 import RepsCounter from './reps-counter'
 
 interface SquatCounterProps {
@@ -17,9 +18,9 @@ interface SquatCounterProps {
 export default function SquatCounter(props: SquatCounterProps) {
   return (
     <RepsCounter
-      title="Squat Counter"
+      title={REPS_COPY.squatTitle}
       idPrefix="squat"
-      exerciseName="squats"
+      exerciseName={EXERCISE_LABEL.squat}
       {...props}
     />
   )

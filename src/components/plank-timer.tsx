@@ -1,3 +1,4 @@
+import { TIMER_COPY, formatSeconds, formatTomorrowRecommendation } from '../locales/ko'
 import type { PlankState } from '../types'
 
 interface PlankTimerProps {
@@ -29,7 +30,7 @@ function formatTime(ms: number): string {
 }
 
 export default function PlankTimer({
-  title = 'Plank Timer',
+  title = TIMER_COPY.plankTitle,
   elapsedMs = 0,
   targetSec = 0,
   state = 'IDLE',
@@ -54,39 +55,39 @@ export default function PlankTimer({
       case 'IDLE':
         return (
           <div className="timer-controls">
-            <button type="button" className="btn btn--primary" onClick={onStart} disabled={startDisabled}>Start</button>
+            <button type="button" className="btn btn--primary" onClick={onStart} disabled={startDisabled}>{TIMER_COPY.start}</button>
           </div>
         )
       case 'COUNTDOWN':
         return (
           <div className="timer-controls">
-            <button type="button" className="btn btn--danger" onClick={onCancel}>Cancel</button>
+            <button type="button" className="btn btn--danger" onClick={onCancel}>{TIMER_COPY.cancel}</button>
           </div>
         )
       case 'RUNNING':
         return (
           <div className="timer-controls">
-            <button type="button" className="btn btn--primary" onClick={onPause}>Pause</button>
-            <button type="button" className="btn btn--danger" onClick={onCancel}>Cancel</button>
+            <button type="button" className="btn btn--primary" onClick={onPause}>{TIMER_COPY.pause}</button>
+            <button type="button" className="btn btn--danger" onClick={onCancel}>{TIMER_COPY.cancel}</button>
           </div>
         )
       case 'PAUSED':
         return (
           <div className="timer-controls">
-            <button type="button" className="btn btn--primary" onClick={onResume}>Resume</button>
-            <button type="button" className="btn btn--danger" onClick={onCancel}>Cancel</button>
+            <button type="button" className="btn btn--primary" onClick={onResume}>{TIMER_COPY.resume}</button>
+            <button type="button" className="btn btn--danger" onClick={onCancel}>{TIMER_COPY.cancel}</button>
           </div>
         )
       case 'COMPLETED':
         return (
           <div className="timer-controls">
-            <div>Result: {toElapsedSeconds(elapsedMs)}s</div>
+            <div>{TIMER_COPY.result(toElapsedSeconds(elapsedMs))}</div>
           </div>
         )
       case 'CANCELLED':
         return (
           <div className="timer-controls">
-            <div>Cancelled: {toElapsedSeconds(elapsedMs)}s</div>
+            <div>{TIMER_COPY.cancelled(toElapsedSeconds(elapsedMs))}</div>
           </div>
         )
       default:
@@ -107,7 +108,7 @@ export default function PlankTimer({
         ? (
           <div className="recommendation-note">
             <div className="recommendation-note__target">
-              내일 추천: {tomorrowTargetSec}s ({tomorrowDeltaSec > 0 ? '+' : ''}{tomorrowDeltaSec}s)
+              {formatTomorrowRecommendation(tomorrowTargetSec, tomorrowDeltaSec, formatSeconds)}
             </div>
             <div className="recommendation-note__reason">{recommendationReasonText}</div>
           </div>

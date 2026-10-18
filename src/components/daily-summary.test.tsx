@@ -7,10 +7,10 @@ test('Daily summary shows targets from fatigue model', () => {
     <DailySummary plankTargetSec={60} squatTargetReps={20} tomorrowPlankTargetSec={63} tomorrowSquatTargetReps={21} />,
   )
 
-  expect(html).toContain('Plank target: 60s')
-  expect(html).toContain('Squat target: 20')
-  expect(html).toContain('Tomorrow plank target: 63s')
-  expect(html).toContain('Tomorrow squat target: 21')
+  expect(html).toContain('플랭크 목표: 60초')
+  expect(html).toContain('스쿼트 목표: 20회')
+  expect(html).toContain('내일 플랭크 목표: 63초')
+  expect(html).toContain('내일 스쿼트 목표: 21회')
 })
 
 test('Daily summary shows completion status', () => {
@@ -18,8 +18,8 @@ test('Daily summary shows completion status', () => {
     <DailySummary plankSuccess squatSuccess={false} />,
   )
 
-  expect(html).toContain('Plank: Complete')
-  expect(html).toContain('Squat: Incomplete')
+  expect(html).toContain('플랭크: 완료')
+  expect(html).toContain('스쿼트: 미완료')
 })
 
 test('DailySummary has h2 heading', () => {
@@ -48,8 +48,8 @@ test('DailySummary shows pushup target and completion status', () => {
     <DailySummary pushupTargetReps={15} pushupSuccess />,
   )
 
-  expect(html).toContain('Pushup target: 15')
-  expect(html).toContain('Pushup: Complete')
+  expect(html).toContain('푸시업 목표: 15회')
+  expect(html).toContain('푸시업: 완료')
 })
 
 test('DailySummary shows deadhang target and completion status', () => {
@@ -57,8 +57,8 @@ test('DailySummary shows deadhang target and completion status', () => {
     <DailySummary deadhangTargetSec={30} deadhangSuccess />,
   )
 
-  expect(html).toContain('Deadhang target: 30s')
-  expect(html).toContain('Deadhang: Complete')
+  expect(html).toContain('데드행 목표: 30초')
+  expect(html).toContain('데드행: 완료')
 })
 
 test('DailySummary shows pushup incomplete when not done', () => {
@@ -66,7 +66,7 @@ test('DailySummary shows pushup incomplete when not done', () => {
     <DailySummary pushupTargetReps={15} pushupSuccess={false} />,
   )
 
-  expect(html).toContain('Pushup: Incomplete')
+  expect(html).toContain('푸시업: 미완료')
 })
 
 test('DailySummary shows tomorrow pushup target', () => {
@@ -74,7 +74,7 @@ test('DailySummary shows tomorrow pushup target', () => {
     <DailySummary tomorrowPushupTargetReps={16} />,
   )
 
-  expect(html).toContain('Tomorrow pushup target: 16')
+  expect(html).toContain('내일 푸시업 목표: 16회')
 })
 
 test('DailySummary shows tomorrow deadhang target', () => {
@@ -82,7 +82,7 @@ test('DailySummary shows tomorrow deadhang target', () => {
     <DailySummary tomorrowDeadhangTargetSec={33} />,
   )
 
-  expect(html).toContain('Tomorrow deadhang target: 33s')
+  expect(html).toContain('내일 데드행 목표: 33초')
 })
 
 test('DailySummary renders Apple Health export button', () => {

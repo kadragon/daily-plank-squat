@@ -8,11 +8,11 @@ test('App navigates between plank/squat/deadhang/overview views', () => {
   const deadhangHtml = renderToStaticMarkup(<App initialView="deadhang" />)
   const overviewHtml = renderToStaticMarkup(<App initialView="overview" />)
 
-  expect(plankHtml).toContain('Start')
-  expect(squatHtml).toContain('Done reps')
-  expect(deadhangHtml).toContain('Deadhang Timer')
-  expect(overviewHtml).toContain('Plank target:')
-  expect(overviewHtml).toContain('Workout Stats')
+  expect(plankHtml).toContain('시작')
+  expect(squatHtml).toContain('완료 횟수')
+  expect(deadhangHtml).toContain('데드행 타이머')
+  expect(overviewHtml).toContain('플랭크 목표:')
+  expect(overviewHtml).toContain('운동 통계')
 })
 
 test('App drives plank view from live plank state', () => {
@@ -20,15 +20,15 @@ test('App drives plank view from live plank state', () => {
     <App initialView="plank" initialPlankState="RUNNING" />,
   )
 
-  expect(runningHtml).toContain('Pause')
-  expect(runningHtml).toContain('Cancel')
+  expect(runningHtml).toContain('일시정지')
+  expect(runningHtml).toContain('취소')
 })
 
 test('App passes computed summary targets into overview view', () => {
   const overviewHtml = renderToStaticMarkup(<App initialView="overview" />)
 
-  expect(overviewHtml).toContain('Plank target: 60s')
-  expect(overviewHtml).toContain('Squat target: 20')
+  expect(overviewHtml).toContain('플랭크 목표: 60초')
+  expect(overviewHtml).toContain('스쿼트 목표: 20회')
 })
 
 test('App wraps active view in <main> landmark', () => {
@@ -54,14 +54,14 @@ test('Bottom nav has app-tabbar class and active button has app-tabbar__button--
 test('Bottom nav exposes exercise navigation semantics', () => {
   const html = renderToStaticMarkup(<App initialView="plank" />)
 
-  expect(html).toContain('aria-label="Exercise navigation"')
+  expect(html).toContain('aria-label="운동 탐색"')
   expect(html).toContain('app-tabbar__icon')
   expect(html).toContain('app-tabbar__label')
 })
 
 test('Wake lock notice div has wake-lock-notice class', () => {
   const html = renderToStaticMarkup(
-    <App initialView="plank" initialWakeLockNotice="Keep screen on manually" />,
+    <App initialView="plank" initialWakeLockNotice="화면을 직접 켜 두세요" />,
   )
 
   expect(html).toContain('wake-lock-notice')
@@ -75,16 +75,16 @@ test('computeSquatSuccess recalculates status when target changes', () => {
 test('App nav includes pushup, deadhang, and dumbbell tabs between squat and overview', () => {
   const html = renderToStaticMarkup(<App initialView="plank" />)
 
-  expect(html).toContain('Pushup')
-  expect(html).toContain('Deadhang')
-  expect(html).toContain('Dumbbell')
-  // Nav order: Plank, Squat, Pushup, Deadhang, Dumbbell, Overview
-  const plankIdx = html.indexOf('Plank')
-  const squatIdx = html.indexOf('Squat')
-  const pushupIdx = html.indexOf('Pushup')
-  const deadhangIdx = html.indexOf('Deadhang')
-  const dumbbellIdx = html.indexOf('Dumbbell')
-  const overviewIdx = html.indexOf('Overview')
+  expect(html).toContain('푸시업')
+  expect(html).toContain('데드행')
+  expect(html).toContain('덤벨 컬')
+  // Nav order: 플랭크, 스쿼트, 푸시업, 데드행, 덤벨 컬, 요약
+  const plankIdx = html.indexOf('플랭크')
+  const squatIdx = html.indexOf('스쿼트')
+  const pushupIdx = html.indexOf('푸시업')
+  const deadhangIdx = html.indexOf('데드행')
+  const dumbbellIdx = html.indexOf('덤벨 컬')
+  const overviewIdx = html.indexOf('요약')
 
   expect(plankIdx).toBeLessThan(squatIdx)
   expect(squatIdx).toBeLessThan(pushupIdx)
@@ -96,20 +96,20 @@ test('App nav includes pushup, deadhang, and dumbbell tabs between squat and ove
 test('App nav includes overview tab', () => {
   const html = renderToStaticMarkup(<App initialView="plank" />)
 
-  expect(html).toContain('Overview')
+  expect(html).toContain('요약')
 })
 
 test('App renders RepsCounter for pushup view with correct props', () => {
   const html = renderToStaticMarkup(<App initialView="pushup" />)
 
-  expect(html).toContain('Pushup Counter')
+  expect(html).toContain('푸시업 카운터')
   expect(html).toContain('id="pushup-target-reps"')
   expect(html).toContain('id="pushup-done-reps"')
 })
 
 test('App renders pushup view with editable reps inputs before completion', () => {
   const html = renderToStaticMarkup(<App initialView="pushup" />)
-  expect(html).toContain('Pushup Counter')
+  expect(html).toContain('푸시업 카운터')
   expect(html).toContain('id="pushup-done-reps"')
 })
 

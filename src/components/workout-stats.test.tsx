@@ -36,14 +36,14 @@ test('WorkoutStats renders cumulative cards for plank, squat, pushup, and deadha
     />,
   )
 
-  expect(html).toContain('Total plank')
-  expect(html).toContain('105s')
-  expect(html).toContain('Total squat')
+  expect(html).toContain('플랭크 합계')
+  expect(html).toContain('105초')
+  expect(html).toContain('스쿼트 합계')
   expect(html).toContain('32')
-  expect(html).toContain('Total pushup')
+  expect(html).toContain('푸시업 합계')
   expect(html).toContain('25')
-  expect(html).toContain('Total deadhang')
-  expect(html).toContain('60s')
+  expect(html).toContain('데드행 합계')
+  expect(html).toContain('60초')
 })
 
 test('WorkoutStats renders separate charts per exercise', () => {
@@ -51,16 +51,16 @@ test('WorkoutStats renders separate charts per exercise', () => {
     <WorkoutStats records={[record('2026-02-20', 60, 20, 15)]} />,
   )
 
-  expect(html).toContain('aria-label="Plank chart"')
-  expect(html).toContain('aria-label="Squat chart"')
-  expect(html).toContain('aria-label="Pushup chart"')
-  expect(html).toContain('aria-label="Deadhang chart"')
+  expect(html).toContain('aria-label="플랭크 차트"')
+  expect(html).toContain('aria-label="스쿼트 차트"')
+  expect(html).toContain('aria-label="푸시업 차트"')
+  expect(html).toContain('aria-label="데드행 차트"')
 })
 
 test('WorkoutStats shows empty message when no records exist', () => {
   const html = renderToStaticMarkup(<WorkoutStats records={[]} />)
 
-  expect(html).toContain('No records yet. Complete a workout to see stats.')
+  expect(html).toContain('아직 기록이 없습니다. 운동을 완료하면 통계가 표시됩니다.')
 })
 
 test('WorkoutStats shows all/7d/30d range filters', () => {
@@ -68,9 +68,9 @@ test('WorkoutStats shows all/7d/30d range filters', () => {
     <WorkoutStats records={[record('2026-02-20', 60, 20, 15)]} />,
   )
 
-  expect(html).toContain('>All<')
-  expect(html).toContain('>7D<')
-  expect(html).toContain('>30D<')
+  expect(html).toContain('>전체<')
+  expect(html).toContain('>7일<')
+  expect(html).toContain('>30일<')
 })
 
 test('WorkoutStats shows cumulative totals for plank seconds, squat reps, and pushup reps', () => {
@@ -83,11 +83,11 @@ test('WorkoutStats shows cumulative totals for plank seconds, squat reps, and pu
     />,
   )
 
-  expect(html).toContain('Total plank')
-  expect(html).toContain('75s')
-  expect(html).toContain('Total squat')
+  expect(html).toContain('플랭크 합계')
+  expect(html).toContain('75초')
+  expect(html).toContain('스쿼트 합계')
   expect(html).toContain('19')
-  expect(html).toContain('Total pushup')
+  expect(html).toContain('푸시업 합계')
   expect(html).toContain('15')
 })
 
@@ -101,7 +101,7 @@ test('WorkoutStats shows separate visual daily charts for plank, squat, and push
     />,
   )
 
-  expect(html).toContain('aria-label="Plank chart"')
-  expect(html).toContain('aria-label="Squat chart"')
-  expect(html).toContain('aria-label="Pushup chart"')
+  expect(html).toContain('aria-label="플랭크 차트"')
+  expect(html).toContain('aria-label="스쿼트 차트"')
+  expect(html).toContain('aria-label="푸시업 차트"')
 })

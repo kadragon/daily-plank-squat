@@ -2,15 +2,15 @@ import { expect, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
 import RepsCounter from './reps-counter'
 
-test('RepsCounter renders "Pushup Counter" heading when title="Pushup Counter"', () => {
-  const html = renderToStaticMarkup(<RepsCounter title="Pushup Counter" idPrefix="pushup" exerciseName="pushups" count={0} />)
+test('RepsCounter renders "푸시업 카운터" heading when title="푸시업 카운터"', () => {
+  const html = renderToStaticMarkup(<RepsCounter title="푸시업 카운터" idPrefix="pushup" exerciseName="푸시업" count={0} />)
 
-  expect(html).toContain('Pushup Counter')
+  expect(html).toContain('푸시업 카운터')
   expect(html).toContain('<h2')
 })
 
 test('RepsCounter uses pushup-prefixed ids when idPrefix="pushup"', () => {
-  const html = renderToStaticMarkup(<RepsCounter title="Pushup Counter" idPrefix="pushup" exerciseName="pushups" count={0} />)
+  const html = renderToStaticMarkup(<RepsCounter title="푸시업 카운터" idPrefix="pushup" exerciseName="푸시업" count={0} />)
 
   expect(html).toContain('id="pushup-target-reps"')
   expect(html).toContain('id="pushup-done-reps"')
@@ -18,7 +18,7 @@ test('RepsCounter uses pushup-prefixed ids when idPrefix="pushup"', () => {
 
 test('RepsCounter hides recommendation when showRecommendation=false', () => {
   const html = renderToStaticMarkup(
-    <RepsCounter title="Pushup Counter" idPrefix="pushup" exerciseName="pushups" count={0} showRecommendation={false} />,
+    <RepsCounter title="푸시업 카운터" idPrefix="pushup" exerciseName="푸시업" count={0} showRecommendation={false} />,
   )
 
   expect(html).not.toContain('recommendation-note')
@@ -27,9 +27,9 @@ test('RepsCounter hides recommendation when showRecommendation=false', () => {
 test('RepsCounter shows recommendation when showRecommendation=true', () => {
   const html = renderToStaticMarkup(
     <RepsCounter
-      title="Pushup Counter"
+      title="푸시업 카운터"
       idPrefix="pushup"
-      exerciseName="pushups"
+      exerciseName="푸시업"
       count={0}
       showRecommendation={true}
       tomorrowTargetReps={21}
@@ -38,14 +38,14 @@ test('RepsCounter shows recommendation when showRecommendation=true', () => {
     />,
   )
 
-  expect(html).toContain('내일 추천: 21 (+1)')
+  expect(html).toContain('내일 추천: 21회 (+1회)')
   expect(html).toContain('목표 달성으로 기본 증량')
 })
 
 test('RepsCounter complete button aria-label reflects exerciseName', () => {
-  const html = renderToStaticMarkup(<RepsCounter title="Pushup Counter" idPrefix="pushup" exerciseName="pushups" count={0} />)
+  const html = renderToStaticMarkup(<RepsCounter title="푸시업 카운터" idPrefix="pushup" exerciseName="푸시업" count={0} />)
 
-  expect(html).toContain('aria-label="Complete pushups"')
+  expect(html).toContain('aria-label="푸시업 완료"')
 })
 
 test('RepsCounter renders reps-counter class', () => {
@@ -65,12 +65,12 @@ test('RepsCounter renders inline save feedback with polite live region when prov
     <RepsCounter
       count={12}
       targetReps={15}
-      saveFeedbackText="Saved just now"
+      saveFeedbackText="방금 저장됨"
       saveFeedbackTone="success"
     />,
   )
 
-  expect(html).toContain('Saved just now')
+  expect(html).toContain('방금 저장됨')
   expect(html).toContain('reps-save-feedback')
   expect(html).toContain('reps-save-feedback--success')
   expect(html).toContain('aria-live="polite"')
