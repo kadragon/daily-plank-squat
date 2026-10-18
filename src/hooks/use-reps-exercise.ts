@@ -3,7 +3,6 @@ import {
   complete as completeSquatCounter,
   createSquatCounter,
   sanitizeDoneReps,
-  sanitizeTargetReps,
   type SquatCounter as DomainSquatCounter,
 } from '../models/squat-counter'
 import { computeSquatSuccess } from '../state/initial-state'
@@ -32,7 +31,6 @@ export interface UseRepsExerciseReturn {
   counterRef: React.RefObject<DomainSquatCounter | null>
   setTarget: (value: number) => void
   handleDoneRepsChange: (rawValue: string) => void
-  handleTargetRepsChange: (rawValue: string) => void
   handleComplete: () => void
 }
 
@@ -70,14 +68,6 @@ export function useRepsExercise({
     requestPersist()
   }, [target, goalAlerts, requestPersist])
 
-  const handleTargetRepsChange = useCallback((rawValue: string) => {
-    const nextTarget = sanitizeTargetReps(Number(rawValue))
-    setTarget(nextTarget)
-    setSuccess(computeSquatSuccess(count, nextTarget))
-    goalAlerts.onProgress(count, nextTarget)
-    requestPersist()
-  }, [count, goalAlerts, requestPersist])
-
   const handleComplete = useCallback(() => {
     if (!counterRef.current) {
       console.error('[useRepsExercise] counterRef is null in handleComplete — this should never happen')
@@ -103,7 +93,6 @@ export function useRepsExercise({
     counterRef,
     setTarget,
     handleDoneRepsChange,
-    handleTargetRepsChange,
     handleComplete,
   }
 }

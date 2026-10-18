@@ -479,7 +479,6 @@ export default function App({ initialView = 'today', initialPlankState, initialW
               saveFeedbackText={squatSaveFeedback?.text}
               saveFeedbackTone={squatSaveFeedback?.tone}
               onDoneRepsChange={squat.handleDoneRepsChange}
-              onTargetRepsChange={squat.handleTargetRepsChange}
               onComplete={squat.handleComplete}
             />
           )
@@ -501,7 +500,6 @@ export default function App({ initialView = 'today', initialPlankState, initialW
               saveFeedbackText={pushupSaveFeedback?.text}
               saveFeedbackTone={pushupSaveFeedback?.tone}
               onDoneRepsChange={pushup.handleDoneRepsChange}
-              onTargetRepsChange={pushup.handleTargetRepsChange}
               onComplete={pushup.handleComplete}
             />
           )
@@ -545,7 +543,6 @@ export default function App({ initialView = 'today', initialPlankState, initialW
               saveFeedbackText={dumbbellSaveFeedback?.text}
               saveFeedbackTone={dumbbellSaveFeedback?.tone}
               onDoneRepsChange={dumbbellExercise.handleDoneRepsChange}
-              onTargetRepsChange={dumbbellExercise.handleTargetRepsChange}
               onComplete={dumbbellExercise.handleComplete}
             />
           )

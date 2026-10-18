@@ -442,19 +442,50 @@ body {
   padding: 1.5rem;
 }
 
-.reps-input-row {
-  width: 100%;
+.reps-display {
   display: flex;
-  flex-direction: column;
-  gap: 0.45rem;
+  justify-content: center;
 }
 
-.reps-input-label {
+/* Tap target for direct entry: the hero numeral itself */
+.reps-display__count,
+.reps-display__form {
+  display: inline-flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 48px;
+  padding: 0.25rem 1rem;
+  border: none;
+  border-radius: var(--radius-field);
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--font-display);
+  cursor: pointer;
+}
+
+.reps-display__count:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.reps-display__value,
+.reps-display__input {
+  font-family: var(--font-display);
+  font-size: clamp(4rem, 20vw, 5.5rem);
+  font-weight: 400;
+  line-height: 0.9;
+  font-variant-numeric: tabular-nums;
+}
+
+.reps-display__target {
+  font-size: clamp(1.75rem, 8vw, 2.25rem);
   color: var(--mute);
-  font-size: 0.78rem;
-  font-weight: 500;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+}
+
+.reps-counter--goal-reached .reps-display__value {
+  color: var(--success);
 }
 
 .reps-input,
@@ -481,13 +512,62 @@ body {
   min-height: 48px;
 }
 
+.reps-input.reps-display__input {
+  width: 4ch;
+  padding: 0.1rem 0.4rem;
+  text-align: center;
+}
+
 .reps-counter--goal-reached .reps-input {
   border-color: var(--success);
 }
 
+.reps-adjust {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.btn.reps-adjust__minor {
+  width: 64px;
+  height: 64px;
+  min-width: 0;
+  padding: 0;
+  border-radius: 50%;
+  font-size: 1.15rem;
+}
+
+.btn.reps-adjust__major {
+  width: 104px;
+  height: 104px;
+  min-width: 0;
+  padding: 0;
+  border-radius: 50%;
+  font-family: var(--font-display);
+  font-size: 2.5rem;
+  font-weight: 400;
+}
+
 .reps-controls {
   display: flex;
-  justify-content: flex-end;
+}
+
+.btn.reps-complete {
+  width: 100%;
+  background-color: var(--soft-cloud);
+  border-color: var(--hairline);
+  color: var(--ink);
+}
+
+.btn.reps-complete--ready {
+  background-color: var(--success);
+  border-color: var(--success);
+  color: var(--on-primary);
+}
+
+.btn.reps-complete--ready:hover {
+  filter: brightness(0.92);
 }
 
 .recommendation-note {

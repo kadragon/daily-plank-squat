@@ -2,13 +2,12 @@ import { expect, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
 import SquatCounter from './squat-counter'
 
-test('Squat view shows target and done reps numeric inputs', () => {
-  const html = renderToStaticMarkup(<SquatCounter count={3} />)
+test('Squat view shows count / target display and no target input', () => {
+  const html = renderToStaticMarkup(<SquatCounter count={3} targetReps={20} />)
 
-  expect(html).toContain('목표 횟수')
-  expect(html).toContain('완료 횟수')
-  expect(html).toContain('type="text"')
-  expect(html).toContain('inputMode="numeric"')
+  expect(html).toContain('완료 횟수 3회, 목표 20회')
+  expect(html).not.toContain('목표 횟수')
+  expect(html).not.toContain('squat-target-reps')
 })
 
 test('Squat view shows complete button', () => {
@@ -17,25 +16,27 @@ test('Squat view shows complete button', () => {
   expect(html).toContain('>완료</button>')
 })
 
-test('Squat view no longer renders +1/-1 buttons', () => {
+test('Squat view renders +1/−1/+5 tap buttons', () => {
   const html = renderToStaticMarkup(<SquatCounter count={0} />)
 
-  expect(html).not.toContain('Increment squats')
-  expect(html).not.toContain('Decrement squats')
+  expect(html).toContain('>+1</button>')
+  expect(html).toContain('>−1</button>')
+  expect(html).toContain('>+5</button>')
 })
 
 test('SquatCounter controls have aria-labels', () => {
   const html = renderToStaticMarkup(<SquatCounter count={0} />)
 
-  expect(html).toContain('aria-label="목표 횟수"')
-  expect(html).toContain('aria-label="완료 횟수"')
+  expect(html).toContain('aria-label="1회 추가"')
+  expect(html).toContain('aria-label="1회 빼기"')
+  expect(html).toContain('aria-label="5회 추가"')
   expect(html).toContain('aria-label="스쿼트 완료"')
 })
 
 test('SquatCounter done reps value is rendered', () => {
   const html = renderToStaticMarkup(<SquatCounter count={5} />)
 
-  expect(html).toContain('value="5"')
+  expect(html).toMatch(/class="reps-display__value">5</)
 })
 
 test('SquatCounter has h2 heading', () => {
@@ -44,11 +45,11 @@ test('SquatCounter has h2 heading', () => {
   expect(html).toContain('<h2')
 })
 
-test('SquatCounter markup has reps-counter, reps-input, and btn class names', () => {
+test('SquatCounter markup has reps-counter, reps-display, and btn class names', () => {
   const html = renderToStaticMarkup(<SquatCounter count={0} />)
 
   expect(html).toContain('reps-counter')
-  expect(html).toContain('reps-input')
+  expect(html).toContain('reps-display')
   expect(html).toContain('btn')
 })
 

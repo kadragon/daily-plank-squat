@@ -9,11 +9,31 @@ test('RepsCounter renders "푸시업 카운터" heading when title="푸시업 �
   expect(html).toContain('<h2')
 })
 
-test('RepsCounter uses pushup-prefixed ids when idPrefix="pushup"', () => {
-  const html = renderToStaticMarkup(<RepsCounter title="푸시업 카운터" idPrefix="pushup" exerciseName="푸시업" count={0} />)
+test('RepsCounter shows a large count / target display without a target input', () => {
+  const html = renderToStaticMarkup(<RepsCounter title="푸시업 카운터" idPrefix="pushup" exerciseName="푸시업" count={7} targetReps={15} />)
 
-  expect(html).toContain('id="pushup-target-reps"')
-  expect(html).toContain('id="pushup-done-reps"')
+  expect(html).toMatch(/class="reps-display__value">7</)
+  expect(html).toMatch(/class="reps-display__target">\/ 15</)
+  expect(html).toContain('aria-label="완료 횟수 7회, 목표 15회. 눌러서 직접 입력"')
+  expect(html).not.toContain('pushup-target-reps')
+  expect(html).not.toContain('목표 횟수')
+})
+
+test('RepsCounter renders a large +1 and smaller −1 / +5 buttons', () => {
+  const html = renderToStaticMarkup(<RepsCounter count={3} />)
+
+  expect(html).toMatch(/class="btn reps-adjust__major"[^>]*aria-label="1회 추가"[^>]*>\+1</)
+  expect(html).toMatch(/class="btn btn--secondary reps-adjust__minor"[^>]*aria-label="1회 빼기"[^>]*>−1</)
+  expect(html).toMatch(/class="btn btn--secondary reps-adjust__minor"[^>]*aria-label="5회 추가"[^>]*>\+5</)
+})
+
+test('RepsCounter emphasizes the complete button only once count reaches target', () => {
+  const below = renderToStaticMarkup(<RepsCounter count={14} targetReps={15} />)
+  const reached = renderToStaticMarkup(<RepsCounter count={15} targetReps={15} />)
+
+  expect(below).toContain('btn btn--primary reps-complete"')
+  expect(below).not.toContain('reps-complete--ready')
+  expect(reached).toContain('reps-complete reps-complete--ready')
 })
 
 test('RepsCounter hides recommendation when showRecommendation=false', () => {
@@ -83,11 +103,8 @@ test('RepsCounter does not render RPE input', () => {
   expect(html).not.toContain('rpe')
 })
 
-test('RepsCounter renders type="text" with inputMode="numeric" and pattern', () => {
+test('RepsCounter does not render the direct entry input until the count is tapped', () => {
   const html = renderToStaticMarkup(<RepsCounter count={0} />)
 
-  expect(html).toContain('type="text"')
-  expect(html).toContain('inputMode="numeric"')
-  expect(html).toContain('pattern="[0-9]*"')
-  expect(html).not.toContain('type="number"')
+  expect(html).not.toContain('<input')
 })
