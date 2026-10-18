@@ -69,3 +69,11 @@ test('main scroll policy disables page vertical scroll and enables horizontal sw
   expect(scrollableStageBlock).toContain('overflow-y: auto;')
   expect(htmlBodyBlock).toContain('overscroll-behavior-y: none;')
 })
+
+test('app shell is pinned to the viewport height so the tab bar stays visible', async () => {
+  const css = await readIndexCss()
+  const appShellBlock = css.match(/\.app-shell\s*\{([\s\S]*?)\}/)?.[1] ?? ''
+
+  expect(appShellBlock).toMatch(/\n\s*height:\s*100dvh;/)
+  expect(css).toMatch(/@media\s*\(min-width:\s*768px\)\s*\{[\s\S]*?\.app-shell\s*\{[\s\S]*?\n\s*height:\s*min\(860px,\s*calc\(100dvh - 4rem\)\);/)
+})
