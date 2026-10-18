@@ -64,6 +64,19 @@ function setNumberInputValue(input: Element, value: string) {
   fireEvent.change(field)
 }
 
+function openDoneRepsEntry(view: ReturnType<typeof render>, idPrefix: string): HTMLInputElement {
+  fireEvent.click(view.getByRole('button', { name: /^완료 횟수 \d+회/ }))
+  const input = view.container.querySelector<HTMLInputElement>(`#${idPrefix}-done-reps`)
+  if (!input) throw new Error(`${idPrefix} done reps input not found`)
+  return input
+}
+
+function enterDoneReps(view: ReturnType<typeof render>, idPrefix: string, value: string) {
+  const input = openDoneRepsEntry(view, idPrefix)
+  setNumberInputValue(input, value)
+  fireEvent.submit(input.form as HTMLFormElement)
+}
+
 function seedTodayRecord(overrides: Partial<DailyRecord> = {}) {
   const record: DailyRecord = {
     date: getTodayDateKey(),
@@ -112,8 +125,7 @@ test('Swipe right on first tab is a no-op', () => {
 
 test('Swipe started from input does not navigate', () => {
   const view = render(<App initialView="squat" />)
-  const doneInput = view.container.querySelector('#squat-done-reps')
-  if (!doneInput) throw new Error('squat done reps input not found')
+  const doneInput = openDoneRepsEntry(view, 'squat')
 
   fireEvent.pointerDown(doneInput, {
     clientX: 260,
@@ -296,10 +308,7 @@ test('App does not persist any record on initial render without interaction', ()
 
 test('Changing squat done reps immediately saves today record', async () => {
   const view = render(<App initialView="squat" />)
-  const doneInput = view.container.querySelector('#squat-done-reps')
-  if (!doneInput) throw new Error('squat done reps input not found')
-
-  setNumberInputValue(doneInput, '12')
+  enterDoneReps(view, 'squat', '12')
   await waitFor(() => {
     const stored = readStoredRecords()
     expect(stored).toHaveLength(1)
@@ -308,10 +317,10 @@ test('Changing squat done reps immediately saves today record', async () => {
   })
 })
 
-test('Changing squat target reps immediately saves today record', async () => {
-  const view = render(<App initialView="squat" />)
-  const targetInput = view.container.querySelector('#squat-target-reps')
-  if (!targetInput) throw new Error('squat target reps input not found')
+test('Changing squat target reps in settings immediately saves today record', async () => {
+  const view = render(<App initialView="settings" />)
+  const targetInput = view.container.querySelector('#settings-target-squat')
+  if (!targetInput) throw new Error('squat settings target input not found')
 
   setNumberInputValue(targetInput, '24')
   await waitFor(() => {
@@ -324,16 +333,13 @@ test('Changing squat target reps immediately saves today record', async () => {
 
 test('Changing pushup done reps updates existing today record instead of appending', async () => {
   const view = render(<App initialView="pushup" />)
-  const doneInput = view.container.querySelector('#pushup-done-reps')
-  if (!doneInput) throw new Error('pushup done reps input not found')
-
-  setNumberInputValue(doneInput, '10')
+  enterDoneReps(view, 'pushup', '10')
   await waitFor(() => {
     const stored = readStoredRecords()
     expect(stored).toHaveLength(1)
     expect(stored[0]?.pushup.actual_reps).toBe(10)
   })
-  setNumberInputValue(doneInput, '13')
+  enterDoneReps(view, 'pushup', '13')
   await waitFor(() => {
     const stored = readStoredRecords()
     expect(stored).toHaveLength(1)
@@ -342,10 +348,10 @@ test('Changing pushup done reps updates existing today record instead of appendi
   })
 })
 
-test('Changing pushup target reps immediately saves today record', async () => {
-  const view = render(<App initialView="pushup" />)
-  const targetInput = view.container.querySelector('#pushup-target-reps')
-  if (!targetInput) throw new Error('pushup target reps input not found')
+test('Changing pushup target reps in settings immediately saves today record', async () => {
+  const view = render(<App initialView="settings" />)
+  const targetInput = view.container.querySelector('#settings-target-pushup')
+  if (!targetInput) throw new Error('pushup settings target input not found')
 
   setNumberInputValue(targetInput, '19')
   await waitFor(() => {
@@ -353,6 +359,48 @@ test('Changing pushup target reps immediately saves today record', async () => {
     expect(stored).toHaveLength(1)
     expect(stored[0]?.date).toBe(getTodayDateKey())
     expect(stored[0]?.pushup.target_reps).toBe(19)
+  })
+})
+
+test('Lowering a reps target in settings below the done count marks the exercise successful', async () => {
+  seedTodayRecord({ squat: { target_reps: 20, actual_reps: 15, success: false } })
+  const view = render(<App initialView="settings" />)
+  const targetInput = view.container.querySelector('#settings-target-squat')
+  if (!targetInput) throw new Error('squat settings target input not found')
+
+  setNumberInputValue(targetInput, '10')
+  await waitFor(() => {
+    const stored = readStoredRecords()
+    expect(stored[0]?.squat.target_reps).toBe(10)
+    expect(stored[0]?.squat.success).toBe(true)
+  })
+})
+
+test('Switching exercises discards an open direct entry instead of carrying it over', () => {
+  const view = render(<App initialView="pushup" />)
+  const input = openDoneRepsEntry(view, 'pushup')
+  setNumberInputValue(input, '37')
+
+  fireEvent.click(view.getByRole('button', { name: '덤벨 컬' }))
+
+  expect(view.getByText('덤벨 컬 카운터')).toBeTruthy()
+  expect(view.container.querySelector('#dumbbell-done-reps')).toBeNull()
+  expect(view.container.querySelector('input')).toBeNull()
+})
+
+test('Tapping +1, +5 and −1 on the dumbbell screen updates the count and saves it', async () => {
+  const view = render(<App initialView="dumbbell" />)
+
+  fireEvent.click(view.getByRole('button', { name: '1회 추가' }))
+  fireEvent.click(view.getByRole('button', { name: '5회 추가' }))
+  fireEvent.click(view.getByRole('button', { name: '1회 추가' }))
+  fireEvent.click(view.getByRole('button', { name: '1회 빼기' }))
+
+  expect(view.getByRole('button', { name: /^완료 횟수 6회/ })).toBeTruthy()
+  await waitFor(() => {
+    const stored = readStoredRecords()
+    expect(stored).toHaveLength(1)
+    expect(stored[0]?.dumbbell.actual_reps).toBe(6)
   })
 })
 
@@ -448,10 +496,7 @@ test('Complete click shows save feedback lifecycle for squat', async () => {
 
 test('Input change save path does not show complete save feedback', async () => {
   const view = render(<App initialView="squat" />)
-  const doneInput = view.container.querySelector('#squat-done-reps')
-  if (!doneInput) throw new Error('squat done reps input not found')
-
-  setNumberInputValue(doneInput, '8')
+  enterDoneReps(view, 'squat', '8')
 
   await waitFor(() => {
     const stored = readStoredRecords()

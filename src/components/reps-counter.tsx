@@ -1,3 +1,4 @@
+import { useRef, useState } from 'react'
 import { EXERCISE_LABEL, REPS_COPY, formatReps, formatTomorrowRecommendation } from '../locales/ko'
 
 interface RepsCounterProps {
@@ -12,7 +13,6 @@ interface RepsCounterProps {
   recommendationReasonText?: string
   saveFeedbackText?: string
   saveFeedbackTone?: 'info' | 'success' | 'error'
-  onTargetRepsChange?: (rawValue: string) => void
   onDoneRepsChange?: (rawValue: string) => void
   onComplete?: () => void
 }
@@ -29,40 +29,102 @@ export default function RepsCounter({
   recommendationReasonText = '',
   saveFeedbackText = '',
   saveFeedbackTone = 'info',
-  onTargetRepsChange,
   onDoneRepsChange,
   onComplete,
 }: RepsCounterProps) {
   const goalReached = targetReps > 0 && count >= targetReps
+  const [draft, setDraft] = useState<string | null>(null)
+  // Set when the edit was already closed (submit/Escape) so a blur fired by unmounting the input is ignored.
+  const editClosedRef = useRef(false)
+
+  function adjust(delta: number) {
+    onDoneRepsChange?.(String(Math.max(0, count + delta)))
+  }
+
+  function openDraft() {
+    editClosedRef.current = false
+    setDraft(String(count))
+  }
+
+  function closeDraft(commit: boolean) {
+    if (editClosedRef.current) return
+    editClosedRef.current = true
+    if (commit && draft !== null && /^\d{1,4}$/.test(draft) && Number(draft) !== count) onDoneRepsChange?.(draft)
+    setDraft(null)
+  }
 
   return (
     <div className={`reps-counter${goalReached ? ' reps-counter--goal-reached' : ''}`}>
       <h2>{title}</h2>
-      <div className="reps-input-row">
-        <label className="reps-input-label" htmlFor={`${idPrefix}-target-reps`}>{REPS_COPY.targetReps}</label>
-        <input
-          id={`${idPrefix}-target-reps`}
-          className="reps-input"
-          type="text"
-          inputMode="numeric"
-          pattern="[0-9]*"
-          aria-label={REPS_COPY.targetReps}
-          value={targetReps}
-          onInput={(event) => onTargetRepsChange?.((event.currentTarget as HTMLInputElement).value)}
-        />
+      <div className="reps-display">
+        {draft === null
+          ? (
+            <button
+              type="button"
+              className="reps-display__count"
+              aria-label={REPS_COPY.countAriaLabel(count, targetReps)}
+              onClick={openDraft}
+            >
+              <span className="reps-display__value">{count}</span>
+              <span className="reps-display__target">/ {targetReps}</span>
+            </button>
+          )
+          : (
+            <form
+              className="reps-display__form"
+              onSubmit={(event) => {
+                event.preventDefault()
+                closeDraft(true)
+              }}
+            >
+              <label className="visually-hidden" htmlFor={`${idPrefix}-done-reps`}>{REPS_COPY.doneReps}</label>
+              <input
+                id={`${idPrefix}-done-reps`}
+                className="reps-input reps-display__input"
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={4}
+                enterKeyHint="done"
+                // biome-ignore lint/a11y/noAutofocus: the input only exists after the user taps the count to edit it
+                autoFocus
+                value={draft}
+                onInput={(event) => setDraft((event.currentTarget as HTMLInputElement).value)}
+                onBlur={() => closeDraft(true)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Escape') closeDraft(false)
+                }}
+              />
+              <span className="reps-display__target">/ {targetReps}</span>
+            </form>
+          )}
       </div>
-      <div className="reps-input-row">
-        <label className="reps-input-label" htmlFor={`${idPrefix}-done-reps`}>{REPS_COPY.doneReps}</label>
-        <input
-          id={`${idPrefix}-done-reps`}
-          className="reps-input"
-          type="text"
-          inputMode="numeric"
-          pattern="[0-9]*"
-          aria-label={REPS_COPY.doneReps}
-          value={count}
-          onInput={(event) => onDoneRepsChange?.((event.currentTarget as HTMLInputElement).value)}
-        />
+      <div className="reps-adjust">
+        <button
+          type="button"
+          className="btn btn--secondary reps-adjust__minor"
+          aria-label={REPS_COPY.decrementAriaLabel}
+          disabled={count <= 0}
+          onClick={() => adjust(-1)}
+        >
+          {REPS_COPY.decrement}
+        </button>
+        <button
+          type="button"
+          className="btn reps-adjust__major"
+          aria-label={REPS_COPY.incrementAriaLabel}
+          onClick={() => adjust(1)}
+        >
+          {REPS_COPY.increment}
+        </button>
+        <button
+          type="button"
+          className="btn btn--secondary reps-adjust__minor"
+          aria-label={REPS_COPY.incrementFiveAriaLabel}
+          onClick={() => adjust(5)}
+        >
+          {REPS_COPY.incrementFive}
+        </button>
       </div>
       {showRecommendation
         ? (
@@ -75,7 +137,14 @@ export default function RepsCounter({
         )
         : null}
       <div className="reps-controls">
-        <button type="button" className="btn" aria-label={REPS_COPY.completeAriaLabel(exerciseName)} onClick={onComplete}>{REPS_COPY.complete}</button>
+        <button
+          type="button"
+          className={`btn btn--primary reps-complete${goalReached ? ' reps-complete--ready' : ''}`}
+          aria-label={REPS_COPY.completeAriaLabel(exerciseName)}
+          onClick={onComplete}
+        >
+          {REPS_COPY.complete}
+        </button>
       </div>
       {saveFeedbackText
         ? (

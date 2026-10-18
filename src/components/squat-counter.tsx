@@ -10,7 +10,6 @@ interface SquatCounterProps {
   recommendationReasonText?: string
   saveFeedbackText?: string
   saveFeedbackTone?: 'info' | 'success' | 'error'
-  onTargetRepsChange?: (rawValue: string) => void
   onDoneRepsChange?: (rawValue: string) => void
   onComplete?: () => void
 }

@@ -479,7 +479,6 @@ export default function App({ initialView = 'today', initialPlankState, initialW
               saveFeedbackText={squatSaveFeedback?.text}
               saveFeedbackTone={squatSaveFeedback?.tone}
               onDoneRepsChange={squat.handleDoneRepsChange}
-              onTargetRepsChange={squat.handleTargetRepsChange}
               onComplete={squat.handleComplete}
             />
           )
@@ -489,6 +488,7 @@ export default function App({ initialView = 'today', initialPlankState, initialW
           const pushupSaveFeedback = completeSaveFeedback?.target === 'pushup' ? completeSaveFeedback : null
           return (
             <RepsCounter
+              key="pushup"
               title={REPS_COPY.pushupTitle}
               idPrefix="pushup"
               exerciseName={EXERCISE_LABEL.pushup}
@@ -501,7 +501,6 @@ export default function App({ initialView = 'today', initialPlankState, initialW
               saveFeedbackText={pushupSaveFeedback?.text}
               saveFeedbackTone={pushupSaveFeedback?.tone}
               onDoneRepsChange={pushup.handleDoneRepsChange}
-              onTargetRepsChange={pushup.handleTargetRepsChange}
               onComplete={pushup.handleComplete}
             />
           )
@@ -533,6 +532,7 @@ export default function App({ initialView = 'today', initialPlankState, initialW
           const dumbbellSaveFeedback = completeSaveFeedback?.target === 'dumbbell' ? completeSaveFeedback : null
           return (
             <RepsCounter
+              key="dumbbell"
               title={REPS_COPY.dumbbellTitle}
               idPrefix="dumbbell"
               exerciseName={EXERCISE_LABEL.dumbbell}
@@ -545,7 +545,6 @@ export default function App({ initialView = 'today', initialPlankState, initialW
               saveFeedbackText={dumbbellSaveFeedback?.text}
               saveFeedbackTone={dumbbellSaveFeedback?.tone}
               onDoneRepsChange={dumbbellExercise.handleDoneRepsChange}
-              onTargetRepsChange={dumbbellExercise.handleTargetRepsChange}
               onComplete={dumbbellExercise.handleComplete}
             />
           )

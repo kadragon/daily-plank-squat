@@ -11,6 +11,7 @@ test('App renders plank/squat/deadhang detail, today, and history views', () => 
 
   expect(plankHtml).toContain('시작')
   expect(squatHtml).toContain('완료 횟수')
+  expect(squatHtml).toContain('1회 추가')
   expect(deadhangHtml).toContain('데드행 타이머')
   expect(todayHtml).toContain('exercise-card')
   expect(historyHtml).toContain('운동 통계')
@@ -108,14 +109,15 @@ test('App renders RepsCounter for pushup view with correct props', () => {
   const html = renderToStaticMarkup(<App initialView="pushup" />)
 
   expect(html).toContain('푸시업 카운터')
-  expect(html).toContain('id="pushup-target-reps"')
-  expect(html).toContain('id="pushup-done-reps"')
+  expect(html).toContain('aria-label="푸시업 완료"')
+  expect(html).not.toContain('id="pushup-target-reps"')
 })
 
-test('App renders pushup view with editable reps inputs before completion', () => {
+test('App renders pushup view with editable reps controls before completion', () => {
   const html = renderToStaticMarkup(<App initialView="pushup" />)
   expect(html).toContain('푸시업 카운터')
-  expect(html).toContain('id="pushup-done-reps"')
+  expect(html).toContain('눌러서 직접 입력')
+  expect(html).toContain('aria-label="1회 추가"')
 })
 
 test('App applies swipe-priority main classes for workout views and scrollable stage for tab views', () => {

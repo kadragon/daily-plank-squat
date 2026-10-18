@@ -3,7 +3,6 @@ import {
   complete as completeSquatCounter,
   createSquatCounter,
   sanitizeDoneReps,
-  sanitizeTargetReps,
   type SquatCounter as DomainSquatCounter,
 } from '../models/squat-counter'
 import { computeSquatSuccess } from '../state/initial-state'
@@ -32,7 +31,6 @@ export interface UseRepsExerciseReturn {
   counterRef: React.RefObject<DomainSquatCounter | null>
   setTarget: (value: number) => void
   handleDoneRepsChange: (rawValue: string) => void
-  handleTargetRepsChange: (rawValue: string) => void
   handleComplete: () => void
 }
 
@@ -70,13 +68,11 @@ export function useRepsExercise({
     requestPersist()
   }, [target, goalAlerts, requestPersist])
 
-  const handleTargetRepsChange = useCallback((rawValue: string) => {
-    const nextTarget = sanitizeTargetReps(Number(rawValue))
-    setTarget(nextTarget)
-    setSuccess(computeSquatSuccess(count, nextTarget))
-    goalAlerts.onProgress(count, nextTarget)
-    requestPersist()
-  }, [count, goalAlerts, requestPersist])
+  const updateTarget = useCallback((value: number) => {
+    setTarget(value)
+    setSuccess(computeSquatSuccess(count, value))
+    goalAlerts.onProgress(count, value)
+  }, [count, goalAlerts])
 
   const handleComplete = useCallback(() => {
     if (!counterRef.current) {
@@ -101,9 +97,8 @@ export function useRepsExercise({
     success,
     completed,
     counterRef,
-    setTarget,
+    setTarget: updateTarget,
     handleDoneRepsChange,
-    handleTargetRepsChange,
     handleComplete,
   }
 }
