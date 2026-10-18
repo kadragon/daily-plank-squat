@@ -25,6 +25,7 @@ export interface InitialAppState {
   fatigue: number
   overloadWarning: boolean
   suspiciousSession: boolean
+  inactiveTimeRatio: number
   tomorrowPlankTargetSec: number
   tomorrowSquatTargetReps: number
   tomorrowPushupTargetReps: number
@@ -125,6 +126,7 @@ export function createInitialAppState(initialPlankState?: PlankState): InitialAp
     fatigue: todayRecord?.fatigue ?? todayTargets.fatigue,
     overloadWarning: todayRecord ? tomorrowPlan.overload_warning : false,
     suspiciousSession: todayRecord?.flag_suspicious ?? false,
+    inactiveTimeRatio: todayRecord?.inactive_time_ratio ?? 0,
     tomorrowPlankTargetSec: tomorrowPlan.plank_target_sec,
     tomorrowSquatTargetReps: tomorrowPlan.squat_target_reps,
     tomorrowPushupTargetReps: tomorrowPlan.pushup_target_reps,

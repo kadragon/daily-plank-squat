@@ -106,6 +106,7 @@ export const TIMER_COPY = {
   progressLabel: '진행률',
   result: (sec: number) => `결과: ${formatSeconds(sec)}`,
   cancelled: (sec: number) => `취소됨: ${formatSeconds(sec)}`,
+  keptEarlierResult: (sec: number) => `더 좋은 이전 기록(${formatSeconds(sec)})을 유지했어요`,
 } as const
 
 export const REPS_COPY = {

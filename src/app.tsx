@@ -142,6 +142,7 @@ export default function App({ initialView = 'today', initialPlankState, initialW
     initialActualSec: initial.plankActualSec,
     initialSuccess: initial.plankSuccess,
     initialLogged: initial.alreadyLoggedPlankToday,
+    initialInactiveTimeRatio: initial.inactiveTimeRatio,
     targetSec: plankTargetSec,
     countdownSec: appSettings.countdownSec,
     otherTimerRunning: false,
@@ -155,6 +156,7 @@ export default function App({ initialView = 'today', initialPlankState, initialW
     initialActualSec: initial.deadhangActualSec,
     initialSuccess: initial.deadhangSuccess,
     initialLogged: initial.alreadyLoggedDeadhangToday,
+    initialInactiveTimeRatio: initial.inactiveTimeRatio,
     targetSec: deadhangTargetSec,
     countdownSec: appSettings.countdownSec,
     otherTimerRunning: false,
@@ -455,6 +457,7 @@ export default function App({ initialView = 'today', initialPlankState, initialW
               tomorrowTargetSec={tomorrowTargets.plank}
               tomorrowDeltaSec={tomorrowTargets.plank - plankTargetSec}
               recommendationReasonText={getRecommendationReasonText(tomorrowTargets.plankReason, 'plank')}
+              keptResultSec={plank.earlierResultKept ? plank.result.actualSec : null}
               startDisabled={deadhang.state === 'RUNNING' || deadhang.state === 'COUNTDOWN'}
               onStart={handlePlankStart}
               onPause={plank.handlePause}
@@ -517,6 +520,7 @@ export default function App({ initialView = 'today', initialPlankState, initialW
               tomorrowTargetSec={tomorrowTargets.deadhang}
               tomorrowDeltaSec={tomorrowTargets.deadhang - deadhangTargetSec}
               recommendationReasonText={getRecommendationReasonText(tomorrowTargets.deadhangReason, 'deadhang')}
+              keptResultSec={deadhang.earlierResultKept ? deadhang.result.actualSec : null}
               startDisabled={plank.state === 'RUNNING' || plank.state === 'COUNTDOWN'}
               onStart={handleDeadhangStart}
               onPause={deadhang.handlePause}

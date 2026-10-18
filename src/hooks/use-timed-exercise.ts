@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createVisibilityTracker, type VisibilityTracker } from './use-visibility'
 import { createPlankTimer, type PlankTimer as DomainPlankTimer } from '../models/plank-timer'
 import type { PlankState } from '../types'
@@ -10,6 +10,7 @@ interface UseTimedExerciseOptions {
   initialActualSec: number
   initialSuccess: boolean
   initialLogged: boolean
+  initialInactiveTimeRatio: number
   targetSec: number
   countdownSec: number
   otherTimerRunning: boolean
@@ -25,6 +26,7 @@ export interface UseTimedExerciseReturn {
   countdownMs: number
   result: TimedWorkoutResult
   logged: boolean
+  earlierResultKept: boolean
   timerRef: React.RefObject<DomainPlankTimer | null>
   visibilityTrackerRef: React.RefObject<VisibilityTracker>
   loggedVisibilityTrackerRef: React.RefObject<VisibilityTracker>
@@ -34,6 +36,11 @@ export interface UseTimedExerciseReturn {
   handlePause: () => void
   handleResume: () => void
   handleCancel: () => void
+}
+
+function judgeResult(result: TimedWorkoutResult, targetSec: number): TimedWorkoutResult {
+  const success = result.actualSec >= targetSec
+  return success === result.success ? result : { actualSec: result.actualSec, success }
 }
 
 function isBetterResult(next: TimedWorkoutResult, previous: TimedWorkoutResult): boolean {
@@ -46,6 +53,7 @@ export function useTimedExercise({
   initialActualSec,
   initialSuccess,
   initialLogged,
+  initialInactiveTimeRatio,
   targetSec,
   countdownSec,
   otherTimerRunning,
@@ -55,7 +63,12 @@ export function useTimedExercise({
   setSuspiciousSession,
 }: UseTimedExerciseOptions): UseTimedExerciseReturn {
   const timerRef = useRef<DomainPlankTimer | null>(null)
-  const visibilityTrackerRef = useRef(createVisibilityTracker())
+  // A restored logged result has no live tracker; seed one with the stored ratio so later persists keep its flag.
+  // The record keeps only the day's max ratio, so with both timed exercises logged each inherits it (over-flags).
+  const visibilityTrackerRef = useRef<VisibilityTracker>({
+    ...createVisibilityTracker(),
+    hiddenDurationMs: initialLogged ? initialInactiveTimeRatio * initialActualSec * 1000 : 0,
+  })
   // Tracker of the run behind `result`; `visibilityTrackerRef` moves on to a rerun as soon as it starts.
   const loggedVisibilityTrackerRef = useRef(visibilityTrackerRef.current)
   const completedElapsedMsRef = useRef(initialActualSec * 1000)
@@ -71,6 +84,7 @@ export function useTimedExercise({
   const countdownDurationRef = useRef(0)
   const [result, setResult] = useState<TimedWorkoutResult>({ actualSec: initialActualSec, success: initialSuccess })
   const [logged, setLogged] = useState(initialLogged)
+  const [earlierResultKept, setEarlierResultKept] = useState(false)
   // Result a rerun must not discard: kept unless the rerun ends with a better result.
   const previousResultRef = useRef<TimedWorkoutResult | null>(null)
 
@@ -82,6 +96,7 @@ export function useTimedExercise({
   const handleStart = useCallback(() => {
     if (otherTimerRunning) return
     previousResultRef.current = logged ? result : null
+    setEarlierResultKept(false)
     visibilityTrackerRef.current = createVisibilityTracker()
     // A kept earlier result keeps its flag; the next persist recomputes it either way.
     if (!logged) setSuspiciousSession(false)
@@ -100,13 +115,11 @@ export function useTimedExercise({
   const logRun = useCallback((next: TimedWorkoutResult, elapsedMs: number) => {
     const stored = previousResultRef.current
     previousResultRef.current = null
-    if (stored) {
-      // Re-judge the earlier result against the current target, which may have changed since it was logged.
-      const previous = { actualSec: stored.actualSec, success: stored.actualSec >= targetSec }
-      if (!isBetterResult(next, previous)) {
-        if (previous.success !== stored.success) setResult(previous)
-        return
-      }
+    const previous = stored && judgeResult(stored, targetSec)
+    if (previous && !isBetterResult(next, previous)) {
+      // A tie keeps the earlier result too, but only a strictly better one is worth telling the user about.
+      setEarlierResultKept(isBetterResult(previous, next))
+      return
     }
     completedElapsedMsRef.current = elapsedMs
     loggedVisibilityTrackerRef.current = visibilityTrackerRef.current
@@ -193,12 +206,19 @@ export function useTimedExercise({
     return () => cancelAnimationFrame(frameId)
   }, [state, targetSec, onProgressSeconds, onCompleted, logRun, requestPersist, syncState])
 
+  // A logged result is judged against the current target, which may have changed since it was logged.
+  const judgedResult = useMemo(
+    () => (logged ? judgeResult(result, targetSec) : result),
+    [logged, result, targetSec],
+  )
+
   return {
     state,
     elapsedMs,
     countdownMs,
-    result,
+    result: judgedResult,
     logged,
+    earlierResultKept,
     timerRef,
     visibilityTrackerRef,
     loggedVisibilityTrackerRef,

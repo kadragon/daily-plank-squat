@@ -182,3 +182,12 @@ test('PlankTimer COUNTDOWN state shows Cancel button', () => {
   expect(html).not.toContain('일시정지')
   expect(html).not.toContain('시작')
 })
+
+test('PlankTimer tells the user when a rerun kept the earlier result', () => {
+  const kept = renderToStaticMarkup(<PlankTimer state="CANCELLED" elapsedMs={10_000} keptResultSec={60} />)
+  expect(kept).toContain('취소됨: 10초')
+  expect(kept).toContain('더 좋은 이전 기록(60초)을 유지했어요')
+
+  const replaced = renderToStaticMarkup(<PlankTimer state="CANCELLED" elapsedMs={45_000} />)
+  expect(replaced).not.toContain('이전 기록')
+})

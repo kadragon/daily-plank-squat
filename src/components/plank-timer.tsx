@@ -17,6 +17,7 @@ interface PlankTimerProps {
   tomorrowTargetSec?: number
   tomorrowDeltaSec?: number
   recommendationReasonText?: string
+  keptResultSec?: number | null
   startDisabled?: boolean
   cancelHoldMs?: number
   onStart?: () => void
@@ -64,6 +65,7 @@ export default function PlankTimer({
   tomorrowTargetSec = 0,
   tomorrowDeltaSec = 0,
   recommendationReasonText = '',
+  keptResultSec = null,
   startDisabled = false,
   cancelHoldMs = CANCEL_HOLD_MS,
   onStart,
@@ -99,6 +101,11 @@ export default function PlankTimer({
         onLongPress={onCancel}
       />
     )
+  }
+
+  function renderKeptResult() {
+    if (keptResultSec === null) return null
+    return <div>{TIMER_COPY.keptEarlierResult(keptResultSec)}</div>
   }
 
   function renderNext() {
@@ -152,6 +159,7 @@ export default function PlankTimer({
         return (
           <div key={state} className="timer-controls">
             <div>{TIMER_COPY.result(toElapsedSeconds(elapsedMs))}</div>
+            {renderKeptResult()}
             {renderNext()}
           </div>
         )
@@ -159,6 +167,7 @@ export default function PlankTimer({
         return (
           <div key={state} className="timer-controls">
             <div>{TIMER_COPY.cancelled(toElapsedSeconds(elapsedMs))}</div>
+            {renderKeptResult()}
             {renderNext()}
           </div>
         )
