@@ -78,6 +78,9 @@ function readSecondsRecord(value: unknown, path: string): ExerciseRecord {
     target_sec: readCount(obj.target_sec, `${path}.target_sec`),
     actual_sec: readCount(obj.actual_sec, `${path}.actual_sec`),
     success: readBoolean(obj.success, `${path}.success`),
+    ...(obj.inactive_time_ratio !== undefined
+      ? { inactive_time_ratio: readCount(obj.inactive_time_ratio, `${path}.inactive_time_ratio`, 1) }
+      : {}),
   }
 }
 

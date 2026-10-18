@@ -43,7 +43,12 @@ function createMemoryStorage(): Storage {
 function sampleRecord(date: string, seed = 0): DailyRecord {
   return {
     date,
-    plank: { target_sec: 60 + seed, actual_sec: 55 + seed, success: seed % 2 === 0 },
+    plank: {
+      target_sec: 60 + seed,
+      actual_sec: 55 + seed,
+      success: seed % 2 === 0,
+      ...(seed % 4 === 0 ? { inactive_time_ratio: 0.25 } : {}),
+    },
     squat: { target_reps: 20 + seed, actual_reps: 20 + seed, success: true },
     pushup: { target_reps: 15, actual_reps: 12 + (seed % 4), success: false },
     deadhang: { target_sec: 30, actual_sec: 30, success: true },
@@ -250,6 +255,10 @@ const invalidCases: Array<[string, () => string]> = [
     records: [{ ...sampleRecord('2026-09-01'), squat: { target_reps: 20, actual_reps: -1, success: true } }],
   })],
   ['fatigue above 1', () => JSON.stringify({ ...validEnvelope(), records: [{ ...sampleRecord('2026-09-01'), fatigue: 1.5 }] })],
+  ['plank inactive ratio above 1', () => JSON.stringify({
+    ...validEnvelope(),
+    records: [{ ...sampleRecord('2026-09-01'), plank: { target_sec: 60, actual_sec: 60, success: true, inactive_time_ratio: 1.5 } }],
+  })],
   ['missing plank', () => JSON.stringify({ ...validEnvelope(), records: [{ ...sampleRecord('2026-09-01'), plank: undefined }] })],
   ['unknown day_type', () => JSON.stringify({ ...validEnvelope(), records: [{ ...sampleRecord('2026-09-01'), day_type: 'rest' }] })],
   ['countdown out of range', () => JSON.stringify({ ...validEnvelope(), settings: { ...sampleSettings(), countdownSec: 60 } })],

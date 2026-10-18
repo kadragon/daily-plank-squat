@@ -67,6 +67,7 @@ export function buildDailyRecord(input: BuildDailyRecordInput): BuildDailyRecord
       target_sec: input.plankTargetSec,
       actual_sec: input.plankResult.actualSec,
       success: input.plankResult.success,
+      inactive_time_ratio: plankInactiveTimeRatio,
     },
     squat: {
       target_reps: input.squatTargetReps,
@@ -82,6 +83,7 @@ export function buildDailyRecord(input: BuildDailyRecordInput): BuildDailyRecord
       target_sec: input.deadhangTargetSec,
       actual_sec: input.deadhangResult.actualSec,
       success: input.deadhangResult.success,
+      inactive_time_ratio: deadhangInactiveTimeRatio,
     },
     dumbbell: {
       target_reps: input.dumbbellTargetReps,

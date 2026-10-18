@@ -18,6 +18,7 @@ export interface ExerciseRecord {
   target_sec: number
   actual_sec: number
   success: boolean
+  inactive_time_ratio?: number // absent on records saved before it was tracked per exercise
 }
 
 export interface SquatRecord {

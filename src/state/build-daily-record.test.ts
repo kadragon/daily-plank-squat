@@ -37,3 +37,17 @@ test('buildDailyRecord persists day_type recovery', () => {
   const { draftRecord } = buildDailyRecord({ ...BASE_INPUT, dayType: 'recovery' })
   expect(draftRecord.day_type).toBe('recovery')
 })
+
+test('buildDailyRecord stores each timed exercise its own inactive ratio and the day max on top', () => {
+  const { draftRecord, flagSuspicious } = buildDailyRecord({
+    ...BASE_INPUT,
+    plankVisibilityTracker: { hiddenAt: null, hiddenDurationMs: 42_000 },
+    deadhangLogged: true,
+    deadhangSessionElapsedMs: 30_000,
+    dayType: 'training',
+  })
+  expect(draftRecord.plank.inactive_time_ratio).toBeCloseTo(0.7)
+  expect(draftRecord.deadhang.inactive_time_ratio).toBe(0)
+  expect(draftRecord.inactive_time_ratio).toBeCloseTo(0.7)
+  expect(flagSuspicious).toBe(true)
+})
