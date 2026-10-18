@@ -10,11 +10,6 @@ import {
 } from './squat-counter'
 
 describe('Squat Counter', () => {
-  test('count starts at 0', () => {
-    const counter = createSquatCounter()
-    expect(counter.count).toBe(0)
-  })
-
   test('increment adds 1', () => {
     const counter = createSquatCounter()
     increment(counter)

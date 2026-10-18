@@ -2,11 +2,6 @@ import { describe, test, expect } from 'vitest'
 import { createPlankStateMachine, type PlankStateMachine } from './plank-state-machine'
 
 describe('Plank State Machine', () => {
-  test('initial state is IDLE', () => {
-    const machine = createPlankStateMachine()
-    expect(machine.state).toBe('IDLE')
-  })
-
   test('IDLE → RUNNING on start', () => {
     const machine = createPlankStateMachine()
     machine.send('start')

@@ -30,14 +30,9 @@ const BASE_INPUT = {
   nowMs: 1000000,
 }
 
-test('buildDailyRecord persists day_type training', () => {
-  const { draftRecord } = buildDailyRecord({ ...BASE_INPUT, dayType: 'training' })
-  expect(draftRecord.day_type).toBe('training')
-})
-
-test('buildDailyRecord persists day_type recovery', () => {
-  const { draftRecord } = buildDailyRecord({ ...BASE_INPUT, dayType: 'recovery' })
-  expect(draftRecord.day_type).toBe('recovery')
+test('buildDailyRecord persists the given day_type', () => {
+  expect(buildDailyRecord({ ...BASE_INPUT, dayType: 'training' }).draftRecord.day_type).toBe('training')
+  expect(buildDailyRecord({ ...BASE_INPUT, dayType: 'recovery' }).draftRecord.day_type).toBe('recovery')
 })
 
 test('buildDailyRecord stores each timed exercise its own inactive ratio and the day max on top', () => {
