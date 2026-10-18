@@ -124,7 +124,9 @@ body {
 }
 
 .main-content--workout {
+  flex-direction: column;
   align-items: stretch;
+  gap: 0.75rem;
 }
 
 .main-content--swipe {
@@ -146,6 +148,7 @@ body {
 }
 
 .main-content--workout .view-stage {
+  flex: 1;
   align-items: center;
   justify-content: center;
 }
@@ -200,13 +203,15 @@ body {
 }
 
 /* Cancel / decline = soft secondary pill (Nike has no red CTA) */
-.btn--danger {
+.btn--danger,
+.btn--secondary {
   background-color: var(--soft-cloud);
   border-color: var(--soft-cloud);
   color: var(--ink);
 }
 
-.btn--danger:hover {
+.btn--danger:hover,
+.btn--secondary:hover {
   background-color: var(--hairline-soft);
   border-color: var(--hairline-soft);
 }
@@ -600,6 +605,230 @@ body {
   font-weight: 600;
 }
 
+/* ── 오늘 운동: progress + exercise cards ── */
+
+.today-workout__progress-count {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  color: var(--ink);
+}
+
+.today-workout__progress progress {
+  width: 100%;
+  height: 6px;
+  appearance: none;
+  border: none;
+  border-radius: var(--radius-pill);
+  background-color: var(--soft-cloud);
+  overflow: hidden;
+}
+
+.today-workout__progress progress::-webkit-progress-bar {
+  background-color: var(--soft-cloud);
+}
+
+.today-workout__progress progress::-webkit-progress-value {
+  background-color: var(--success);
+}
+
+.today-workout__progress progress::-moz-progress-bar {
+  background-color: var(--success);
+}
+
+.today-workout__cards {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.exercise-card {
+  width: 100%;
+  min-height: 64px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.3rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-lg);
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 140ms ease, background-color 140ms ease;
+}
+
+.exercise-card:hover {
+  border-color: var(--ink);
+}
+
+.exercise-card:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.exercise-card--completed {
+  background: var(--soft-cloud);
+  border-color: var(--hairline-soft);
+}
+
+.exercise-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.exercise-card__name {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.exercise-card__done {
+  color: var(--success);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.exercise-card__value {
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.exercise-card__recommendation {
+  color: var(--mute);
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+
+.today-workout__empty {
+  color: var(--mute);
+  font-size: 0.92rem;
+}
+
+.today-workout__export--emphasized {
+  width: 100%;
+}
+
+/* ── 기록: stats + per-day list ── */
+
+.workout-history {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.workout-history__days {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1.25rem;
+  border: 1px solid var(--hairline);
+  background: var(--canvas);
+}
+
+.workout-history__days h2 {
+  font-family: var(--font-ui);
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--ink);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.workout-history__list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+}
+
+.workout-history__day {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.6rem 0;
+  border-top: 1px solid var(--hairline-soft);
+}
+
+.workout-history__date {
+  font-weight: 600;
+  font-size: 0.92rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.workout-history__entries,
+.workout-history__empty {
+  color: var(--mute);
+  font-size: 0.85rem;
+}
+
+/* ── Exercise detail header: back + chips ── */
+
+.detail-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.detail-header__back {
+  flex: none;
+  min-height: 44px;
+  padding: 0 0.75rem;
+  border: none;
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.detail-header__chips {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  display: flex;
+  gap: 0.35rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.exercise-chip {
+  flex: none;
+  min-height: 44px;
+  padding: 0 0.9rem;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-pill);
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.exercise-chip--active {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--on-primary);
+}
+
+.detail-header__back:focus-visible,
+.exercise-chip:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
 .wake-lock-notice {
   margin-top: 0.75rem;
   padding: 0.6rem 1rem;
@@ -615,6 +844,9 @@ body {
 /* ── Bottom tab bar: white, ink-active with top indicator ── */
 
 .nav.app-tabbar {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
   margin-top: auto;
   display: grid;
   grid-auto-flow: column;
@@ -661,16 +893,9 @@ body {
 }
 
 .app-tabbar__icon {
+  width: 22px;
   height: 22px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.95rem;
-  font-weight: 700;
-  line-height: 1;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  font-variant-numeric: tabular-nums;
+  flex: none;
   opacity: 0.7;
   transition: opacity 140ms ease;
 }
@@ -680,18 +905,12 @@ body {
   opacity: 1;
 }
 
-/* Label kept in DOM for screen readers + test hooks; monogram is the visible element. */
 .app-tabbar__label {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  clip-path: inset(50%);
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.2;
   white-space: nowrap;
-  border: 0;
 }
 
 @media (max-width: 360px) {
@@ -720,6 +939,7 @@ body {
   }
 
   .app-shell {
+    height: min(860px, calc(100dvh - 4rem));
     min-height: min(860px, calc(100dvh - 4rem));
     border-radius: var(--radius-lg);
     border: 1px solid var(--hairline);

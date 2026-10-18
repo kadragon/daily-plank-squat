@@ -1,53 +1,40 @@
 import { NAV_LABEL } from '../locales/ko'
-import type { AppSettings, ExerciseId } from '../storage/settings'
+import { ALL_EXERCISES, type AppSettings, type ExerciseId } from '../storage/settings'
 
-export type AppView = 'plank' | 'squat' | 'pushup' | 'deadhang' | 'dumbbell' | 'overview' | 'settings'
+export type AppTab = 'today' | 'history' | 'settings'
+export type AppView = ExerciseId | AppTab
 
 export interface NavItemMeta {
-  view: AppView
+  tab: AppTab
   label: string
 }
 
-export const ALL_NAV_VIEWS: readonly AppView[] = ['plank', 'squat', 'pushup', 'deadhang', 'dumbbell', 'overview', 'settings']
-
-export const ALL_NAV_ITEMS: readonly NavItemMeta[] = [
-  { view: 'plank', label: NAV_LABEL.plank },
-  { view: 'squat', label: NAV_LABEL.squat },
-  { view: 'pushup', label: NAV_LABEL.pushup },
-  { view: 'deadhang', label: NAV_LABEL.deadhang },
-  { view: 'dumbbell', label: NAV_LABEL.dumbbell },
-  { view: 'overview', label: NAV_LABEL.overview },
-  { view: 'settings', label: NAV_LABEL.settings },
+export const TAB_ITEMS: readonly NavItemMeta[] = [
+  { tab: 'today', label: NAV_LABEL.today },
+  { tab: 'history', label: NAV_LABEL.history },
+  { tab: 'settings', label: NAV_LABEL.settings },
 ]
 
-export const EXERCISE_VIEW_MAP: Record<ExerciseId, AppView> = {
-  plank: 'plank',
-  squat: 'squat',
-  pushup: 'pushup',
-  deadhang: 'deadhang',
-  dumbbell: 'dumbbell',
+export function getEnabledExerciseViews(settings: AppSettings): ExerciseId[] {
+  return ALL_EXERCISES.filter((id) => settings.exercises[id].enabled)
 }
 
-export function getActiveNavViews(settings: AppSettings): AppView[] {
-  return ALL_NAV_VIEWS.filter((v) => {
-    if (v === 'overview' || v === 'settings') return true
-    const exerciseId = Object.entries(EXERCISE_VIEW_MAP).find(([, view]) => view === v)?.[0] as ExerciseId | undefined
-    if (!exerciseId) return true
-    return settings.exercises[exerciseId].enabled
-  })
+export function isWorkoutView(view: AppView): view is ExerciseId {
+  return (ALL_EXERCISES as readonly AppView[]).includes(view)
 }
 
-export function getActiveNavItems(settings: AppSettings): NavItemMeta[] {
-  const activeViews = getActiveNavViews(settings)
-  return ALL_NAV_ITEMS.filter((item) => activeViews.includes(item.view))
+// Exercise detail screens belong to the 오늘 운동 tab.
+export function getActiveTab(view: AppView): AppTab {
+  return isWorkoutView(view) ? 'today' : view
 }
 
-export function isWorkoutView(view: AppView): boolean {
-  return view === 'plank' || view === 'squat' || view === 'pushup' || view === 'deadhang' || view === 'dumbbell'
+export function resolveView(view: AppView, settings: AppSettings): AppView {
+  if (!isWorkoutView(view)) return view
+  return settings.exercises[view].enabled ? view : 'today'
 }
 
 export function isScrollableView(view: AppView): boolean {
-  return view === 'overview' || view === 'settings'
+  return !isWorkoutView(view)
 }
 
 export function isSwipeIgnoredTarget(target: EventTarget | null): boolean {

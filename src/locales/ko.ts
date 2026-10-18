@@ -54,20 +54,9 @@ export const EXERCISE_LABEL: Record<RecommendationExercise, string> = {
 }
 
 export const NAV_LABEL = {
-  ...EXERCISE_LABEL,
-  overview: '요약',
+  today: '오늘 운동',
+  history: '기록',
   settings: '설정',
-} as const
-
-// One-syllable monograms, distinct per view.
-export const NAV_MONOGRAM = {
-  plank: '플',
-  squat: '스',
-  pushup: '푸',
-  deadhang: '데',
-  dumbbell: '덤',
-  overview: '요',
-  settings: '설',
 } as const
 
 export const SECONDS_UNIT = '초'
@@ -92,7 +81,7 @@ export function formatTomorrowRecommendation(target: number, delta: number, form
 export const APP_COPY = {
   title: '데일리 트레이닝',
   subtitle: '꾸준히 운동하고, 똑똑하게 회복하세요.',
-  navLabel: '운동 탐색',
+  navLabel: '주 메뉴',
   healthExportError: '단축어를 열 수 없습니다. 이 기기에서 Apple 단축어를 사용할 수 있는지 확인하세요.',
   suspiciousExportHint: '기록은 가능하지만 측정 환경 경고',
   wakeLockUnsupported: '이 기기는 화면 켜짐 유지를 지원하지 않습니다. 화면을 직접 켜 두세요.',
@@ -136,14 +125,31 @@ export const SETTINGS_COPY = {
 } as const
 
 export const SUMMARY_COPY = {
-  title: '오늘 요약',
-  target: (exerciseName: string, value: string) => `${exerciseName} 목표: ${value}`,
-  status: (exerciseName: string, success: boolean) => `${exerciseName}: ${success ? '완료' : '미완료'}`,
+  title: '오늘 운동',
+  progress: (completed: number, total: number) => `${completed} / ${total} 완료`,
+  progressAriaLabel: '오늘 진행률',
+  exercisesAriaLabel: '오늘 운동 목록',
+  actualOfTarget: (actual: string, target: string) => `${actual} / ${target}`,
+  completed: '완료',
+  openAriaLabel: (exerciseName: string, status: string) => `${exerciseName} 열기, ${status}`,
   fatigue: (value: string) => `피로도: ${value}`,
-  tomorrowTarget: (exerciseName: string, value: string) => `내일 ${exerciseName} 목표: ${value}`,
+  noExercises: '활성화된 운동이 없습니다. 설정에서 운동을 켜세요.',
   healthExport: 'Apple 건강에 기록',
   overloadWarning: '경고: 운동 부하가 상위 5%를 넘었습니다',
   suspiciousWarning: '경고: 측정 환경이 불안정합니다',
+} as const
+
+export const DETAIL_COPY = {
+  back: '목록',
+  backAriaLabel: '오늘 운동 목록으로 돌아가기',
+  chipsAriaLabel: '운동 선택',
+} as const
+
+export const HISTORY_COPY = {
+  title: '날짜별 기록',
+  empty: '아직 기록이 없습니다.',
+  noActivity: '운동 기록 없음',
+  entry: (exerciseName: string, value: string) => `${exerciseName} ${value}`,
 } as const
 
 export const STATS_COPY = {

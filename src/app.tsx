@@ -3,7 +3,8 @@ import PlankTimer from './components/plank-timer'
 import RepsCounter from './components/reps-counter'
 import Settings from './components/settings'
 import SquatCounter from './components/squat-counter'
-import WorkoutOverview from './components/workout-overview'
+import TodayWorkout, { type TodayExerciseCard } from './components/today-workout'
+import WorkoutHistory from './components/workout-history'
 import { useRepsExercise } from './hooks/use-reps-exercise'
 import { useSwipeNavigation } from './hooks/use-swipe-navigation'
 import { useTimedExercise } from './hooks/use-timed-exercise'
@@ -18,22 +19,28 @@ import {
 import { createGoalAlerts, playGoalFeedback } from './models/goal-alerts'
 import {
   type AppView,
-  getActiveNavViews,
-  getActiveNavItems,
+  TAB_ITEMS,
+  getActiveTab,
+  getEnabledExerciseViews,
   isWorkoutView,
   isScrollableView,
+  resolveView,
 } from './models/navigation'
 import { TabIcon } from './components/tab-icon'
 import { saveRecord } from './storage/daily-record'
 import { buildHealthPayload, buildShortcutRunUrl } from './integrations/apple-health-shortcut'
 import {
   APP_COPY,
+  DETAIL_COPY,
   EXERCISE_LABEL,
   REPS_COPY,
   REPS_UNIT,
   SAVE_FEEDBACK,
   SECONDS_UNIT,
   TIMER_COPY,
+  formatReps,
+  formatSeconds,
+  formatTomorrowRecommendation,
   getRecommendationReasonText,
 } from './locales/ko'
 import { loadSettings, saveSettings, type AppSettings, type ExerciseId } from './storage/settings'
@@ -65,7 +72,7 @@ interface AppProps {
 
 const APPLE_HEALTH_SHORTCUT_NAME = 'DailyPlankSquatToHealth'
 
-export default function App({ initialView = 'plank', initialPlankState, initialWakeLockNotice }: AppProps) {
+export default function App({ initialView = 'today', initialPlankState, initialWakeLockNotice }: AppProps) {
   const initial = useRef(createInitialAppState(initialPlankState)).current
   const today = useMemo(() => todayKey(), [])
 
@@ -74,12 +81,9 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
 
   const [records, setRecords] = useState<DailyRecord[]>(initial.records)
   const [appSettings, setAppSettings] = useState<AppSettings>(() => loadSettings())
-  const activeNavViews = useMemo(() => getActiveNavViews(appSettings), [appSettings])
-  const [view, setView] = useState<AppView>(() => {
-    const active = getActiveNavViews(loadSettings())
-    return active.includes(initialView) ? initialView : (active[0] ?? 'settings')
-  })
-  const activeNavItems = useMemo(() => getActiveNavItems(appSettings), [appSettings])
+  const enabledExerciseViews = useMemo(() => getEnabledExerciseViews(appSettings), [appSettings])
+  const [view, setView] = useState<AppView>(() => resolveView(initialView, appSettings))
+  const activeTab = getActiveTab(view)
 
   const [plankTargetSec, setPlankTargetSec] = useState(initial.plankTargetSec)
   const [deadhangTargetSec, setDeadhangTargetSec] = useState(initial.deadhangTargetSec)
@@ -252,10 +256,7 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
     }
     setAppSettings(next)
     saveSettings(next)
-    const nextActiveViews = getActiveNavViews(next)
-    if (!nextActiveViews.includes(view)) {
-      setView(nextActiveViews[0] ?? 'settings')
-    }
+    setView((current) => resolveView(current, next))
   }
 
   function handleSettingsTargetChange(id: ExerciseId, value: number) {
@@ -269,7 +270,7 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
   }
 
   // Swipe navigation
-  const swipe = useSwipeNavigation({ activeNavViews, view, setView })
+  const swipe = useSwipeNavigation({ activeNavViews: enabledExerciseViews, view, setView })
 
   // Visibility tracking
   useWorkoutVisibility(plank, deadhang)
@@ -408,6 +409,34 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
     clearCompleteSaveFeedbackTimer()
   }, [clearCompleteSaveFeedbackTimer])
 
+  const exerciseProgress: Record<ExerciseId, {
+    actual: number
+    target: number
+    tomorrowTarget: number
+    success: boolean
+    finished: boolean
+    format: (value: number) => string
+  }> = {
+    plank: { actual: plank.result.actualSec, target: plankTargetSec, tomorrowTarget: tomorrowTargets.plank, success: plank.result.success, finished: plank.logged, format: formatSeconds },
+    squat: { actual: squat.count, target: squat.target, tomorrowTarget: tomorrowTargets.squat, success: squat.success, finished: squat.completed, format: formatReps },
+    pushup: { actual: pushup.count, target: pushup.target, tomorrowTarget: tomorrowTargets.pushup, success: pushup.success, finished: pushup.completed, format: formatReps },
+    deadhang: { actual: deadhang.result.actualSec, target: deadhangTargetSec, tomorrowTarget: tomorrowTargets.deadhang, success: deadhang.result.success, finished: deadhang.logged, format: formatSeconds },
+    dumbbell: { actual: dumbbellExercise.count, target: dumbbellExercise.target, tomorrowTarget: tomorrowTargets.dumbbell, success: dumbbellExercise.success, finished: dumbbellExercise.completed, format: formatReps },
+  }
+
+  const todayCards: TodayExerciseCard[] = enabledExerciseViews.map((id) => {
+    const { actual, target, tomorrowTarget, success, finished, format } = exerciseProgress[id]
+    // Completed = target met; the recommendation follows the exercise screen's own reveal rule.
+    return {
+      id,
+      label: EXERCISE_LABEL[id],
+      actual: format(actual),
+      target: format(target),
+      completed: success,
+      recommendationText: finished ? formatTomorrowRecommendation(tomorrowTarget, tomorrowTarget - target, format) : undefined,
+    }
+  })
+
   function renderView() {
     switch (view) {
       case 'plank':
@@ -514,34 +543,22 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
             />
           )
         }
-      case 'overview':
+      case 'today':
         return (
-          <WorkoutOverview
-            plankTargetSec={plankTargetSec}
-            squatTargetReps={squat.target}
-            pushupTargetReps={pushup.target}
-            deadhangTargetSec={deadhangTargetSec}
-            dumbbellTargetReps={dumbbellExercise.target}
-            tomorrowPlankTargetSec={tomorrowTargets.plank}
-            tomorrowSquatTargetReps={tomorrowTargets.squat}
-            tomorrowPushupTargetReps={tomorrowTargets.pushup}
-            tomorrowDeadhangTargetSec={tomorrowTargets.deadhang}
-            tomorrowDumbbellTargetReps={tomorrowTargets.dumbbell}
+          <TodayWorkout
+            exercises={todayCards}
             tomorrowDayType={tomorrowTargets.dayType}
-            plankSuccess={plank.result.success}
-            squatSuccess={squat.success}
-            pushupSuccess={pushup.success}
-            deadhangSuccess={deadhang.result.success}
-            dumbbellSuccess={dumbbellExercise.success}
             fatigue={fatigue}
             overloadWarning={overloadWarning}
             suspiciousSession={suspiciousSession}
+            onOpenExercise={setView}
             onExportToHealth={handleExportToHealth}
             healthExportEnabled={todayRecord !== null}
             healthExportHint={summaryHealthHint}
-            records={records}
           />
         )
+      case 'history':
+        return <WorkoutHistory records={records} />
       case 'settings':
         return (
           <Settings
@@ -583,20 +600,45 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
           onPointerLeave={swipe.handlePointerLeave}
           onLostPointerCapture={swipe.handleLostPointerCapture}
         >
+          {isWorkoutView(view) ? (
+            <div className="detail-header" data-swipe-ignore="true">
+              <button
+                type="button"
+                className="detail-header__back"
+                aria-label={DETAIL_COPY.backAriaLabel}
+                onClick={() => setView('today')}
+              >
+                <span aria-hidden="true">←</span> {DETAIL_COPY.back}
+              </button>
+              <fieldset className="detail-header__chips" aria-label={DETAIL_COPY.chipsAriaLabel}>
+                {enabledExerciseViews.map((id) => (
+                  <button
+                    key={id}
+                    type="button"
+                    className={`exercise-chip${view === id ? ' exercise-chip--active' : ''}`}
+                    aria-pressed={view === id}
+                    onClick={() => setView(id)}
+                  >
+                    {EXERCISE_LABEL[id]}
+                  </button>
+                ))}
+              </fieldset>
+            </div>
+          ) : null}
           <div className={`view-stage${isScrollableView(view) ? ' view-stage--scrollable' : ''}`}>
             {renderView()}
           </div>
         </main>
         <nav className="nav app-tabbar" aria-label={APP_COPY.navLabel} data-swipe-ignore="true">
-          {activeNavItems.map((item) => (
+          {TAB_ITEMS.map((item) => (
             <button
-              key={item.view}
+              key={item.tab}
               type="button"
-              className={`nav-btn app-tabbar__button${view === item.view ? ' app-tabbar__button--active' : ''}`}
-              aria-current={view === item.view ? 'page' : undefined}
-              onClick={() => setView(item.view)}
+              className={`nav-btn app-tabbar__button${activeTab === item.tab ? ' app-tabbar__button--active' : ''}`}
+              aria-current={activeTab === item.tab ? 'page' : undefined}
+              onClick={() => setView(item.tab)}
             >
-              <TabIcon view={item.view} />
+              <TabIcon tab={item.tab} />
               <span className="app-tabbar__label">{item.label}</span>
             </button>
           ))}

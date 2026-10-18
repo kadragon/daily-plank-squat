@@ -124,40 +124,100 @@ test('Swipe started from input does not navigate', () => {
   expect(view.getByText('스쿼트 카운터')).toBeTruthy()
 })
 
-test('Tap navigation fallback switches tabs and updates active state', () => {
-  const view = render(<App initialView="plank" />)
-  const pushupTab = Array.from(view.container.querySelectorAll('button'))
-    .find((button) => button.querySelector('.app-tabbar__label')?.textContent?.trim() === '푸시업')
-  if (!pushupTab) throw new Error('pushup tab button not found')
+function getTab(view: ReturnType<typeof render>, label: string): HTMLElement {
+  const tab = Array.from(view.container.querySelectorAll<HTMLElement>('nav button'))
+    .find((button) => button.querySelector('.app-tabbar__label')?.textContent?.trim() === label)
+  if (!tab) throw new Error(`${label} tab button not found`)
+  return tab
+}
 
-  fireEvent.click(pushupTab)
+function getChip(view: ReturnType<typeof render>, label: string): HTMLElement {
+  const chips = view.getByRole('group', { name: '운동 선택' })
+  const chip = Array.from(chips.querySelectorAll<HTMLElement>('button'))
+    .find((button) => button.textContent?.trim() === label)
+  if (!chip) throw new Error(`${label} chip not found`)
+  return chip
+}
 
-  expect(view.getByText('푸시업 카운터')).toBeTruthy()
-  expect(pushupTab.getAttribute('aria-current')).toBe('page')
-})
+test('Tap navigation switches between the three tabs and updates active state', () => {
+  const view = render(<App initialView="today" />)
 
-test('Tap navigation can open overview tab', () => {
-  const view = render(<App initialView="plank" />)
-  const overviewTab = Array.from(view.container.querySelectorAll('button'))
-    .find((button) => button.querySelector('.app-tabbar__label')?.textContent?.trim() === '요약')
-  if (!overviewTab) throw new Error('overview tab button not found')
-
-  fireEvent.click(overviewTab)
-
+  fireEvent.click(getTab(view, '기록'))
   expect(view.getByText('운동 통계')).toBeTruthy()
-  expect(overviewTab.getAttribute('aria-current')).toBe('page')
+  expect(view.getByText('날짜별 기록')).toBeTruthy()
+  expect(getTab(view, '기록').getAttribute('aria-current')).toBe('page')
+  expect(getTab(view, '오늘 운동').getAttribute('aria-current')).toBeNull()
+
+  fireEvent.click(getTab(view, '설정'))
+  expect(view.getByRole('checkbox', { name: '플랭크 활성화' })).toBeTruthy()
+  expect(getTab(view, '설정').getAttribute('aria-current')).toBe('page')
+
+  fireEvent.click(getTab(view, '오늘 운동'))
+  expect(view.getByRole('list', { name: '오늘 운동 목록' })).toBeTruthy()
+  expect(getTab(view, '오늘 운동').getAttribute('aria-current')).toBe('page')
 })
 
-test('Tap navigation can open deadhang tab', () => {
-  const view = render(<App initialView="plank" />)
-  const deadhangTab = Array.from(view.container.querySelectorAll('button'))
-    .find((button) => button.querySelector('.app-tabbar__label')?.textContent?.trim() === '데드행')
-  if (!deadhangTab) throw new Error('deadhang tab button not found')
+test('Card opens exercise detail, keeps today tab active, and back returns to the list', () => {
+  const view = render(<App initialView="today" />)
 
-  fireEvent.click(deadhangTab)
+  fireEvent.click(view.getByRole('button', { name: /^푸시업 열기/ }))
+  expect(view.getByText('푸시업 카운터')).toBeTruthy()
+  expect(getTab(view, '오늘 운동').getAttribute('aria-current')).toBe('page')
+
+  fireEvent.click(view.getByRole('button', { name: '오늘 운동 목록으로 돌아가기' }))
+  expect(view.queryByText('푸시업 카운터')).toBeNull()
+  expect(view.getByRole('list', { name: '오늘 운동 목록' })).toBeTruthy()
+})
+
+test('Today tab tap from a detail view returns to the card list', () => {
+  const view = render(<App initialView="plank" />)
+
+  fireEvent.click(getTab(view, '오늘 운동'))
+
+  expect(view.queryByText('플랭크 타이머')).toBeNull()
+  expect(view.getByRole('list', { name: '오늘 운동 목록' })).toBeTruthy()
+})
+
+test('Exercise chip switches detail view and marks the chip pressed', () => {
+  const view = render(<App initialView="plank" />)
+
+  fireEvent.click(getChip(view, '데드행'))
 
   expect(view.getByText('데드행 타이머')).toBeTruthy()
-  expect(deadhangTab.getAttribute('aria-current')).toBe('page')
+  expect(getChip(view, '데드행').getAttribute('aria-pressed')).toBe('true')
+  expect(getChip(view, '플랭크').getAttribute('aria-pressed')).toBe('false')
+  expect(getTab(view, '오늘 운동').getAttribute('aria-current')).toBe('page')
+})
+
+test('Disabled exercises are excluded from cards and chips', () => {
+  happyWindow.localStorage.setItem('app-settings', JSON.stringify({ exercises: { pushup: { enabled: false } } }))
+  const view = render(<App initialView="today" />)
+
+  expect(view.queryByRole('button', { name: /^푸시업 열기/ })).toBeNull()
+  expect(view.getByRole('button', { name: /^스쿼트 열기/ })).toBeTruthy()
+
+  fireEvent.click(view.getByRole('button', { name: /^스쿼트 열기/ }))
+  const chipLabels = Array.from(view.getByRole('group', { name: '운동 선택' }).querySelectorAll('button'))
+    .map((button) => button.textContent?.trim())
+  expect(chipLabels).toEqual(['플랭크', '스쿼트', '데드행', '덤벨 컬'])
+})
+
+test('initialView for a disabled exercise falls back to the today list', () => {
+  happyWindow.localStorage.setItem('app-settings', JSON.stringify({ exercises: { squat: { enabled: false } } }))
+  const view = render(<App initialView="squat" />)
+
+  expect(view.queryByText('스쿼트 카운터')).toBeNull()
+  expect(view.getByRole('list', { name: '오늘 운동 목록' })).toBeTruthy()
+})
+
+test('Disabling an exercise in settings removes it from the today list', () => {
+  const view = render(<App initialView="settings" />)
+
+  fireEvent.click(view.getByRole('checkbox', { name: '덤벨 컬 활성화' }))
+  fireEvent.click(getTab(view, '오늘 운동'))
+
+  expect(view.queryByRole('button', { name: /^덤벨 컬 열기/ })).toBeNull()
+  expect(view.getByText('0 / 4 완료')).toBeTruthy()
 })
 
 test('Pointer up from a different pointer id does not trigger swipe navigation', () => {
@@ -181,17 +241,41 @@ test('Pointer up from a different pointer id does not trigger swipe navigation',
   expect(view.getByText('플랭크 타이머')).toBeTruthy()
 })
 
-test('Swipe right from overview goes to dumbbell', () => {
-  const view = render(<App initialView="overview" />)
+test('Swipe on the today tab is a no-op', () => {
+  const view = render(<App initialView="today" />)
   const main = view.container.querySelector('main')
   if (!main) throw new Error('main element not found')
 
+  swipe(main, 260, 120)
   swipe(main, 120, 260)
+
+  expect(view.getByRole('list', { name: '오늘 운동 목록' })).toBeTruthy()
+})
+
+test('Swipe left from the last enabled exercise does not move into history or settings', () => {
+  const view = render(<App initialView="dumbbell" />)
+  const main = view.container.querySelector('main')
+  if (!main) throw new Error('main element not found')
+
+  swipe(main, 260, 120)
+
   expect(view.getByText('덤벨 컬 카운터')).toBeTruthy()
+  expect(view.queryByText('운동 통계')).toBeNull()
+})
+
+test('Swipe skips disabled exercises', () => {
+  happyWindow.localStorage.setItem('app-settings', JSON.stringify({ exercises: { squat: { enabled: false } } }))
+  const view = render(<App initialView="plank" />)
+  const main = view.container.querySelector('main')
+  if (!main) throw new Error('main element not found')
+
+  swipe(main, 260, 120)
+
+  expect(view.getByText('푸시업 카운터')).toBeTruthy()
 })
 
 test('Summary export button is disabled when there is no today record', () => {
-  const view = render(<App initialView="overview" />)
+  const view = render(<App initialView="today" />)
   const button = view.getByRole('button', { name: 'Apple 건강에 기록' })
 
   expect(button.hasAttribute('disabled')).toBe(true)
@@ -334,10 +418,7 @@ test('Plank start is disabled while deadhang is running', () => {
   const deadhangStartButton = view.getByRole('button', { name: '시작' })
   fireEvent.click(deadhangStartButton)
 
-  const plankTab = Array.from(view.container.querySelectorAll('button'))
-    .find((button) => button.querySelector('.app-tabbar__label')?.textContent?.trim() === '플랭크')
-  if (!plankTab) throw new Error('plank tab button not found')
-  fireEvent.click(plankTab)
+  fireEvent.click(getChip(view, '플랭크'))
 
   const plankStartButton = view.getByRole('button', { name: '시작' })
   expect(plankStartButton.hasAttribute('disabled')).toBe(true)
@@ -461,7 +542,7 @@ test('Partial today record without plank log keeps plank view in IDLE', () => {
 
 test('Summary export navigates to shortcuts URL when today record exists', () => {
   seedTodayRecord()
-  const view = render(<App initialView="overview" />)
+  const view = render(<App initialView="today" />)
   const button = view.getByRole('button', { name: 'Apple 건강에 기록' })
 
   fireEvent.click(button)
@@ -490,7 +571,7 @@ test('Summary export shows hint when opening Shortcuts throws', () => {
   })
 
   try {
-    const view = render(<App initialView="overview" />)
+    const view = render(<App initialView="today" />)
     const button = view.getByRole('button', { name: 'Apple 건강에 기록' })
 
     fireEvent.click(button)
@@ -502,4 +583,32 @@ test('Summary export shows hint when opening Shortcuts throws', () => {
       value: originalLocation,
     })
   }
+})
+
+test('Cancelled plank is not marked completed on the today card but shows its recommendation', async () => {
+  happyWindow.localStorage.setItem('app-settings', JSON.stringify({ countdownSec: 0 }))
+  const view = render(<App initialView="plank" />)
+  fireEvent.click(view.getByRole('button', { name: '시작' }))
+  fireEvent.click(view.getByRole('button', { name: '취소' }))
+  await waitFor(() => {
+    expect(readStoredRecords()).toHaveLength(1)
+  })
+
+  fireEvent.click(view.getByRole('button', { name: '오늘 운동 목록으로 돌아가기' }))
+  const plankCard = view.getByRole('button', { name: /^플랭크 열기/ })
+
+  expect(plankCard.className).not.toContain('exercise-card--completed')
+  expect(plankCard.getAttribute('aria-label')).toContain('내일 추천')
+  expect(view.getByText('0 / 5 완료')).toBeTruthy()
+})
+
+test('Squat reaching target shows completed mark on the today card', () => {
+  seedTodayRecord({
+    squat: { target_reps: 20, actual_reps: 21, success: true },
+    squat_completed: true,
+  })
+  const view = render(<App initialView="today" />)
+  const squatCard = view.getByRole('button', { name: /^스쿼트 열기/ })
+
+  expect(squatCard.className).toContain('exercise-card--completed')
 })
