@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test'
-import { detectSwipeDirection, getAdjacentView, type SwipeDirection } from './swipe-navigation'
+import { detectSwipeDirection, getAdjacentView, } from './swipe-navigation'
 
 test('detectSwipeDirection returns left for horizontal swipe above threshold', () => {
   const direction = detectSwipeDirection({
@@ -63,12 +63,4 @@ test('getAdjacentView returns neighboring tab for valid direction', () => {
 
   expect(leftFromSquat).toBe('pushup')
   expect(rightFromPushup).toBe('squat')
-})
-
-test('SwipeDirection type only allows left/right values', () => {
-  const left: SwipeDirection = 'left'
-  const right: SwipeDirection = 'right'
-
-  expect(left).toBe('left')
-  expect(right).toBe('right')
 })

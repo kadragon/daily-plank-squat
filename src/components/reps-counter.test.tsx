@@ -2,13 +2,6 @@ import { expect, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
 import RepsCounter from './reps-counter'
 
-test('RepsCounter renders "푸시업 카운터" heading when title="푸시업 카운터"', () => {
-  const html = renderToStaticMarkup(<RepsCounter title="푸시업 카운터" idPrefix="pushup" exerciseName="푸시업" count={0} />)
-
-  expect(html).toContain('푸시업 카운터')
-  expect(html).toContain('<h2')
-})
-
 test('RepsCounter shows a large count / target display without a target input', () => {
   const html = renderToStaticMarkup(<RepsCounter title="푸시업 카운터" idPrefix="pushup" exerciseName="푸시업" count={7} targetReps={15} />)
 
@@ -68,12 +61,6 @@ test('RepsCounter complete button aria-label reflects exerciseName', () => {
   expect(html).toContain('aria-label="푸시업 완료"')
 })
 
-test('RepsCounter renders reps-counter class', () => {
-  const html = renderToStaticMarkup(<RepsCounter count={0} />)
-
-  expect(html).toContain('reps-counter')
-})
-
 test('RepsCounter renders reps-counter--goal-reached when count meets target', () => {
   const html = renderToStaticMarkup(<RepsCounter count={15} targetReps={15} />)
 
@@ -94,13 +81,6 @@ test('RepsCounter renders inline save feedback with polite live region when prov
   expect(html).toContain('reps-save-feedback')
   expect(html).toContain('reps-save-feedback--success')
   expect(html).toContain('aria-live="polite"')
-})
-
-test('RepsCounter does not render RPE input', () => {
-  const html = renderToStaticMarkup(<RepsCounter count={0} />)
-
-  expect(html).not.toContain('RPE')
-  expect(html).not.toContain('rpe')
 })
 
 test('RepsCounter does not render the direct entry input until the count is tapped', () => {

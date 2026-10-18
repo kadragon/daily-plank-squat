@@ -181,7 +181,7 @@ test('legacy squat schema is upgraded to target_reps/actual_reps', () => {
   })
 })
 
-test('Records without pushup field load with neutral pushup defaults (target=15, actual=15, success=true)', () => {
+test('Records without pushup/deadhang/F_U/F_D fields load with neutral defaults', () => {
   const today = getTodayDateKey()
   localStorage.setItem(
     STORAGE_KEY,
@@ -200,27 +200,9 @@ test('Records without pushup field load with neutral pushup defaults (target=15,
 
   const record = loadTodayRecord()
   expect(record?.pushup).toEqual({ target_reps: 15, actual_reps: 15, success: true })
-})
-
-test('Records without F_U field load with F_U=0', () => {
-  const today = getTodayDateKey()
-  localStorage.setItem(
-    STORAGE_KEY,
-    JSON.stringify([
-      {
-        date: today,
-        plank: { target_sec: 60, actual_sec: 60, success: true },
-        squat: { target_reps: 20, actual_reps: 20, success: true },
-        fatigue: 0.4,
-        F_P: 0.3,
-        F_S: 0.2,
-        F_total_raw: 0.5,
-      },
-    ]),
-  )
-
-  const record = loadTodayRecord()
   expect(record?.F_U).toBe(0)
+  expect(record?.deadhang).toEqual({ target_sec: 30, actual_sec: 30, success: true })
+  expect(record?.F_D).toBe(0)
 })
 
 test('Records with valid pushup field parse correctly', () => {
@@ -247,27 +229,6 @@ test('Records with valid pushup field parse correctly', () => {
   expect(record?.F_U).toBe(0.15)
 })
 
-test('Records without deadhang field load with neutral deadhang defaults (target=30, actual=30, success=true)', () => {
-  const today = getTodayDateKey()
-  localStorage.setItem(
-    STORAGE_KEY,
-    JSON.stringify([
-      {
-        date: today,
-        plank: { target_sec: 60, actual_sec: 60, success: true },
-        squat: { target_reps: 20, actual_reps: 20, success: true },
-        fatigue: 0.4,
-        F_P: 0.3,
-        F_S: 0.2,
-        F_total_raw: 0.5,
-      },
-    ]),
-  )
-
-  const record = loadTodayRecord()
-  expect(record?.deadhang).toEqual({ target_sec: 30, actual_sec: 30, success: true })
-})
-
 test('asDailyRecord parses valid deadhang ExerciseRecord', () => {
   const today = getTodayDateKey()
   localStorage.setItem(
@@ -288,27 +249,6 @@ test('asDailyRecord parses valid deadhang ExerciseRecord', () => {
 
   const record = loadTodayRecord()
   expect(record?.deadhang).toEqual({ target_sec: 30, actual_sec: 25, success: false })
-})
-
-test('Records without F_D field load with F_D=0', () => {
-  const today = getTodayDateKey()
-  localStorage.setItem(
-    STORAGE_KEY,
-    JSON.stringify([
-      {
-        date: today,
-        plank: { target_sec: 60, actual_sec: 60, success: true },
-        squat: { target_reps: 20, actual_reps: 20, success: true },
-        fatigue: 0.4,
-        F_P: 0.3,
-        F_S: 0.2,
-        F_total_raw: 0.5,
-      },
-    ]),
-  )
-
-  const record = loadTodayRecord()
-  expect(record?.F_D).toBe(0)
 })
 
 test('Records without squat_completed/pushup_completed fields default to false', () => {

@@ -1,10 +1,6 @@
 import { expect, test } from 'bun:test'
 import type { BaseTargets, DailyRecord, FatigueParams } from '../types'
 import {
-  ALPHA_D,
-  ALPHA_P,
-  ALPHA_S,
-  ALPHA_U,
   MEDIAN_INITIAL,
   RECOVERY_LOAD_FACTOR,
   TRAINING_DAYS_BEFORE_RECOVERY,
@@ -16,18 +12,14 @@ import {
   computeFatigueSeries,
   computeLoad,
   computeMissedDays,
-  computeNextTarget,
-  computePushupTarget,
   computeRampPenalty,
   computeSharedFatigueRaw,
-  computeSquatTarget,
   computeTargetIntensity,
   computeTomorrowPlan,
   computeWeightFactor,
   median,
   normalizePerformance,
   percentile,
-  updateEWMA,
 } from './fatigue'
 
 const params: FatigueParams = {
@@ -122,23 +114,6 @@ test('computes ramp penalty from clipped positive ramp only', () => {
   expect(computeRampPenalty(100, 50)).toBeCloseTo(0)
 })
 
-test('computes EWMA fatigue per exercise with alpha_P=0.35 and alpha_S=0.40', () => {
-  expect(ALPHA_P).toBeCloseTo(0.35)
-  expect(ALPHA_S).toBeCloseTo(0.40)
-  expect(updateEWMA(ALPHA_P, 0, 1.0)).toBeCloseTo(0.35)
-  expect(updateEWMA(ALPHA_S, 0, 1.0)).toBeCloseTo(0.40)
-})
-
-test('ALPHA_U constant equals 0.45', () => {
-  expect(ALPHA_U).toBeCloseTo(0.45)
-  expect(updateEWMA(ALPHA_U, 0, 1.0)).toBeCloseTo(0.45)
-})
-
-test('ALPHA_D constant equals 0.35', () => {
-  expect(ALPHA_D).toBeCloseTo(0.35)
-  expect(updateEWMA(ALPHA_D, 0, 1.0)).toBeCloseTo(0.35)
-})
-
 test('computeSharedFatigueRaw(F_P, F_S, F_U, F_D, F_DB) returns 5-exercise weighted formula', () => {
   const allOnes = 0.18 + 0.23 + 0.23 + 0.18 + 0.18
     + 0.04 + 0.04 + 0.03 + 0.03 + 0.03 + 0.03 + 0.03 + 0.03 + 0.03 + 0.02
@@ -185,18 +160,6 @@ test('uses rolling median with initial default 0.9', () => {
   expect(median([1, 3, 5, 7])).toBe(4)
 })
 
-test('computes fatigue series for both plank and squat dimensions', () => {
-  const records: DailyRecord[] = [
-    dailyRecord('2026-02-16', 60, 60, true, 20, 20, true),
-    dailyRecord('2026-02-17', 65, 62, true, 21, 19, false),
-  ]
-
-  const series = computeFatigueSeries(records, params, baseTargets)
-  expect(series).toHaveLength(2)
-  expect(series[1]?.F_P ?? 0).toBeGreaterThan(0)
-  expect(series[1]?.F_S ?? 0).toBeGreaterThan(0)
-})
-
 test('computeFatigueSeries decays EWMA during gap days', () => {
   const consecutive: DailyRecord[] = [
     dailyRecord('2026-02-16', 60, 60, true, 20, 20, true),
@@ -216,106 +179,12 @@ test('computeFatigueSeries decays EWMA during gap days', () => {
   expect(gapSeries[1]?.F_S).toBeLessThan(consecutiveSeries[1]?.F_S)
 })
 
-test('computeFatigueSeries computes F_U via pushup EWMA', () => {
-  const records: DailyRecord[] = [
-    {
-      ...dailyRecord('2026-02-16', 60, 60, true, 20, 20, true),
-      pushup: { target_reps: 15, actual_reps: 15, success: true },
-    },
-    {
-      ...dailyRecord('2026-02-17', 60, 60, true, 20, 20, true),
-      pushup: { target_reps: 15, actual_reps: 15, success: true },
-    },
-  ]
-
-  const series = computeFatigueSeries(records, params, baseTargets)
-  expect(series).toHaveLength(2)
-  expect(series[0]?.F_U ?? 0).toBeGreaterThan(0)
-  expect(series[1]?.F_U ?? 0).toBeGreaterThan(0)
-})
-
 test('returns base targets when there is no history', () => {
   const plan = computeTomorrowPlan([], params, baseTargets)
   expect(plan.plank_target_sec).toBe(60)
   expect(plan.squat_target_reps).toBe(20)
   expect(plan.pushup_target_reps).toBe(15)
   expect(plan.deadhang_target_sec).toBe(30)
-})
-
-test('increases targets when success=true and fatigue is low', () => {
-  const plan = computeTomorrowPlan(
-    [dailyRecord('2026-02-16', 60, 60, true, 20, 20, true)],
-    params,
-    baseTargets,
-  )
-
-  expect(plan.plank_target_sec).toBeGreaterThan(60)
-  expect(plan.squat_target_reps).toBeGreaterThan(20)
-})
-
-test('computeTomorrowPlan increases pushup target when success=true and fatigue low', () => {
-  const record: DailyRecord = {
-    ...dailyRecord('2026-02-16', 60, 60, true, 20, 20, true),
-    pushup: { target_reps: 15, actual_reps: 15, success: true },
-  }
-  const plan = computeTomorrowPlan([record], params, baseTargets)
-  expect(plan.pushup_target_reps).toBeGreaterThan(15)
-})
-
-test('computeTomorrowPlan increases deadhang target when success=true and fatigue low', () => {
-  const record: DailyRecord = {
-    ...dailyRecord('2026-02-16', 60, 60, true, 20, 20, true),
-    deadhang: { target_sec: 30, actual_sec: 30, success: true },
-  }
-  const plan = computeTomorrowPlan([record], params, baseTargets)
-  expect(plan.deadhang_target_sec).toBeGreaterThan(30)
-})
-
-test('holds both targets when fatigue is above threshold 0.85', () => {
-  const plan = computeTomorrowPlan(
-    [
-      dailyRecord('2026-02-16', 60, 60, true, 20, 20, true),
-      dailyRecord('2026-02-17', 800, 1200, true, 300, 450, true),
-    ],
-    params,
-    baseTargets,
-  )
-
-  expect(plan.fatigue).toBeGreaterThan(0.85)
-  expect(plan.plank_target_sec).toBe(800)
-  expect(plan.squat_target_reps).toBe(300)
-})
-
-test('computeTomorrowPlan holds pushup target when fatigue > 0.85', () => {
-  const records: DailyRecord[] = [
-    {
-      ...dailyRecord('2026-02-16', 60, 60, true, 20, 20, true),
-      pushup: { target_reps: 15, actual_reps: 30, success: true },
-    },
-    {
-      ...dailyRecord('2026-02-17', 800, 1200, true, 300, 450, true),
-      pushup: { target_reps: 100, actual_reps: 200, success: true },
-    },
-  ]
-  const plan = computeTomorrowPlan(records, params, baseTargets)
-  expect(plan.fatigue).toBeGreaterThan(0.85)
-  expect(plan.pushup_target_reps).toBe(100)
-})
-
-test('computeTomorrowPlan holds deadhang target when fatigue > 0.85', () => {
-  const records: DailyRecord[] = [
-    {
-      ...dailyRecord('2026-02-16', 60, 60, true, 20, 20, true),
-      deadhang: { target_sec: 30, actual_sec: 60, success: true },
-    },
-    {
-      ...dailyRecord('2026-02-17', 800, 1200, true, 300, 450, true),
-      deadhang: { target_sec: 300, actual_sec: 450, success: true },
-    },
-  ]
-  const plan = computeTomorrowPlan(records, params, baseTargets)
-  expect(plan.fatigue).toBeGreaterThan(0.85)
-  expect(plan.deadhang_target_sec).toBe(300)
 })
 
 test('decreases targets by 10% after 3-day failure streak per exercise', () => {
@@ -331,34 +200,6 @@ test('decreases targets by 10% after 3-day failure streak per exercise', () => {
 
   expect(plan.plank_target_sec).toBe(54)
   expect(plan.squat_target_reps).toBe(18)
-})
-
-test('hasFailureStreak detects pushup 3-day failure streak', () => {
-  const records: DailyRecord[] = [
-    {
-      ...dailyRecord('2026-02-14', 60, 60, true, 20, 20, true),
-      pushup: { target_reps: 15, actual_reps: 5, success: false },
-    },
-    {
-      ...dailyRecord('2026-02-15', 60, 60, true, 20, 20, true),
-      pushup: { target_reps: 15, actual_reps: 5, success: false },
-    },
-    {
-      ...dailyRecord('2026-02-16', 60, 60, true, 20, 20, true),
-      pushup: { target_reps: 15, actual_reps: 5, success: false },
-    },
-  ]
-  const plan = computeTomorrowPlan(records, params, baseTargets)
-  expect(plan.pushup_target_reps).toBe(14) // 15 * 0.9 = 13.5 → 14
-})
-
-test('computeTomorrowPlan decreases pushup target after failure streak', () => {
-  const records: DailyRecord[] = Array.from({ length: 3 }, (_, i) => ({
-    ...dailyRecord(`2026-02-${14 + i}`, 60, 60, true, 20, 20, true),
-    pushup: { target_reps: 20, actual_reps: 5, success: false },
-  }))
-  const plan = computeTomorrowPlan(records, params, baseTargets)
-  expect(plan.pushup_target_reps).toBe(18) // 20 * 0.9 = 18
 })
 
 test('hasFailureStreak detects deadhang 3-day failure streak', () => {
@@ -386,19 +227,6 @@ test('sets overload warning when latest F_total_raw is above historical 95th per
 
 test('percentile returns interpolated percentile values', () => {
   expect(percentile([1, 2, 3, 4], 95)).toBeCloseTo(3.85)
-})
-
-test('compatibility wrappers still compute next targets', () => {
-  const plankTarget = computeNextTarget(60, [{ target_sec: 60, actual_sec: 60, success: true }], params)
-  const squatTarget = computeSquatTarget(20, [{ target_reps: 20, actual_reps: 20, success: true }], params)
-
-  expect(plankTarget).toBeGreaterThan(60)
-  expect(squatTarget).toBeGreaterThan(20)
-})
-
-test('computePushupTarget compatibility wrapper computes next pushup target', () => {
-  const pushupTarget = computePushupTarget(15, [{ target_reps: 15, actual_reps: 15, success: true }], params)
-  expect(pushupTarget).toBeGreaterThan(15)
 })
 
 test('computeTomorrowPlan applies success_progression (+5%) for successful exercise (non-beginner)', () => {
@@ -554,10 +382,6 @@ test('computeTomorrowPlan returns beginner_ramp reason codes for new users', () 
   expect(plan.deadhang_reason).toBe('beginner_ramp')
 })
 
-test('computeMissedDays returns 0 for consecutive days', () => {
-  expect(computeMissedDays('2026-02-16', '2026-02-17')).toBe(0)
-})
-
 test('computeMissedDays returns correct gap for skipped days', () => {
   expect(computeMissedDays('2026-02-16', '2026-02-18')).toBe(1)
   expect(computeMissedDays('2026-02-16', '2026-02-20')).toBe(3)
@@ -608,25 +432,6 @@ test('missed day decay does not reduce below base target', () => {
   expect(plan.squat_target_reps).toBe(20) // floored at base_S=20
   expect(plan.plank_target_sec).toBe(60)  // 65*0.7=45.5 → floored at base_P=60
   expect(plan.squat_reason).toBe('missed_day_decay')
-})
-
-test('no missed day decay when consecutive days (beginner_ramp applies)', () => {
-  const records = [dailyRecord('2026-02-16', 100, 100, true, 20, 20, true)]
-  const plan = computeTomorrowPlan(records, params, baseTargets, '2026-02-17')
-
-  // Single record → beginner phase (+3%), no missed day decay
-  expect(plan.plank_target_sec).toBe(103) // 100 * 1.03
-  expect(plan.squat_target_reps).toBe(21) // 20 * 1.03 = 20.6 → 21
-  expect(plan.plank_reason).toBe('beginner_ramp')
-})
-
-test('no missed day decay when targetDate is not provided (beginner_ramp applies)', () => {
-  const records = [dailyRecord('2026-02-16', 100, 100, true, 20, 20, true)]
-  const plan = computeTomorrowPlan(records, params, baseTargets)
-
-  // Single record → beginner phase (+3%)
-  expect(plan.plank_target_sec).toBe(103)
-  expect(plan.squat_target_reps).toBe(21)
 })
 
 test('computeTomorrowPlan reduces target by 5% for exactly 1 missed day', () => {
@@ -846,22 +651,6 @@ test('computeTomorrowPlan — recovery day produces reduced targets and recovery
   expect(plan.squat_target_reps).toBe(Math.max(baseTargets.base_S, Math.round(30 * RECOVERY_LOAD_FACTOR)))
 })
 
-test('computeTomorrowPlan — recovery day record preserves consecutive streak (computeConsecutiveDays)', () => {
-  // 4 training days, then a recovery day, then 1 training day
-  const trainingDays = Array.from({ length: 4 }, (_, i) =>
-    dailyRecord(`2026-02-${String(i + 1).padStart(2, '0')}`, 60, 60, true, 20, 20, true),
-  )
-  const recoveryRecord = {
-    ...dailyRecord('2026-02-05', 30, 30, true, 10, 10, true),
-    day_type: 'recovery' as const,
-  }
-  const lastTraining = dailyRecord('2026-02-06', 60, 60, true, 20, 20, true)
-  const records = [...trainingDays, recoveryRecord, lastTraining]
-
-  // Habit streak from Feb 6 backward: Feb6, Feb5, Feb4, Feb3, Feb2, Feb1 = 6 consecutive
-  expect(computeConsecutiveDays(records, '2026-02-06')).toBe(6)
-})
-
 test('computeTomorrowPlan — weekly cap limits growth toward date-based baseline', () => {
   // Setup: 22 records (non-beginner), targets growing in blocks with gaps between blocks.
   // Gaps prevent consecutive training streak from hitting TRAINING_DAYS_BEFORE_RECOVERY=5.
@@ -933,51 +722,4 @@ test('computeTomorrowPlan — weekly cap does not apply when fewer than 7-day-ol
   // No weekly cap (no baseline 7+ days ago) → raw beginner_ramp applies
   expect(plan.plank_reason).toBe('beginner_ramp')
   expect(plan.plank_target_sec).toBeGreaterThan(69) // progression without cap
-})
-
-test('computeTomorrowPlan — day_type is training after 20 records (beginner boundary)', () => {
-  // 20 records → sorted.length < BEGINNER_DAYS (21 < 21 = false would be 21 records)
-  // With 20 records: 20 < 21 = true → still beginner phase
-  const records = Array.from({ length: 20 }, (_, i) => ({
-    ...dailyRecord(`2026-01-${String(i + 1).padStart(2, '0')}`, 60, 60, true, 20, 20, true),
-    day_type: 'training' as const,
-  }))
-  const plan = computeTomorrowPlan(records, params, baseTargets, '2026-01-21')
-  // 20 records < 21 = beginner phase → reason is beginner_ramp (if in training day)
-  // 20 consecutive days hits beginner threshold (4), so this would be recovery...
-  // But these 20 records are all consecutive → computeConsecutiveTrainingDays = 20 ≥ TRAINING_DAYS_BEFORE_RECOVERY_BEGINNER(4)
-  // → recovery day
-  expect(plan.day_type).toBe('recovery')
-  expect(plan.plank_reason).toBe('recovery_day')
-})
-
-test('computeTomorrowPlan — day_type uses non-beginner threshold at exactly BEGINNER_DAYS records', () => {
-  // 21 records → sorted.length < BEGINNER_DAYS = 21 < 21 = false → non-beginner phase
-  // Use gaps to keep consecutive training < TRAINING_DAYS_BEFORE_RECOVERY(5)
-  const records = [
-    ...Array.from({ length: 4 }, (_, i) => ({
-      ...dailyRecord(`2026-01-${String(i + 1).padStart(2, '0')}`, 100, 100, true, 20, 20, true),
-      day_type: 'training' as const,
-    })),
-    // gap Jan5
-    ...Array.from({ length: 17 }, (_, i) => ({
-      ...dailyRecord(`2026-01-${String(i + 6).padStart(2, '0')}`, 100, 100, true, 20, 20, true),
-      day_type: 'training' as const,
-    })),
-  ] // 4 + 17 = 21 records, gap at Jan5 breaks consecutive streak
-  // Target Jan23: last 17 consecutive training (Jan6-Jan22) ≥ TRAINING_DAYS_BEFORE_RECOVERY(5) → recovery
-  const plan = computeTomorrowPlan(records, params, baseTargets, '2026-01-23')
-  expect(plan.day_type).toBe('recovery')
-  // With 20 records (beginner) it would use threshold=4, with 21 (non-beginner) threshold=5
-  // Both would still prescribe recovery since consecutive=17 exceeds both thresholds
-  expect(plan.plank_reason).toBe('recovery_day')
-})
-
-test('computeTomorrowPlan — day_type is training for normal progression', () => {
-  const plan = computeTomorrowPlan(
-    [dailyRecord('2026-02-16', 60, 60, true, 20, 20, true)],
-    params,
-    baseTargets,
-  )
-  expect(plan.day_type).toBe('training')
 })

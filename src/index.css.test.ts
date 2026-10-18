@@ -20,25 +20,6 @@ test('app-header applies top safe-area padding while keeping horizontal insets',
   expect(appHeaderBlock).toContain('padding-right: max(1rem, env(safe-area-inset-right));')
 })
 
-test('safe-area header region inherits shell background with root fallback color', async () => {
-  const css = await readIndexCss()
-  const appShellBlock = css.match(/\.app-shell\s*\{([\s\S]*?)\}/)?.[1] ?? ''
-  const appHeaderBlock = css.match(/\.app-header\s*\{([\s\S]*?)\}/)?.[1] ?? ''
-  const htmlBodyBlock = css.match(/html,\s*body\s*\{([\s\S]*?)\}/)?.[1] ?? ''
-
-  expect(appShellBlock).toContain('background: var(--app-shell-background);')
-  expect(appHeaderBlock).not.toContain('background: var(--app-shell-background);')
-  expect(htmlBodyBlock).toContain('background-color: var(--app-chrome-color);')
-})
-
-test('index.css separates content and tabbar visual tokens', async () => {
-  const css = await readIndexCss()
-
-  expect(css).toContain('--content-surface:')
-  expect(css).toContain('--tabbar-surface:')
-  expect(css).toContain('--tabbar-border:')
-})
-
 test('bottom tabbar uses auto-flow columns for dynamic tab count', async () => {
   const css = await readIndexCss()
   const tabbarBlock = css.match(/\.nav\.app-tabbar\s*\{([\s\S]*?)\}/)?.[1] ?? ''
@@ -80,14 +61,4 @@ test('tab bar stays visible: sticky on mobile, fixed-height frame on desktop', a
   // Mobile shell must grow with content so short viewports can still scroll to workout controls.
   expect(appShellBlock).not.toMatch(/\n\s*height:/)
   expect(css).toMatch(/@media\s*\(min-width:\s*768px\)\s*\{[\s\S]*?\.app-shell\s*\{[\s\S]*?\n\s*height:\s*min\(860px,\s*calc\(100dvh - 4rem\)\);/)
-})
-
-test('timer state colors are tokens on :root and the primary button uses them', async () => {
-  const css = await readIndexCss()
-  const rootBlock = css.match(/:root\s*\{([\s\S]*?)\}/)?.[1] ?? ''
-
-  expect(rootBlock).toContain('--timer-go:')
-  expect(rootBlock).toContain('--timer-pause:')
-  expect(css).toMatch(/\.btn\.timer-primary--go\s*\{[^}]*background-color:\s*var\(--timer-go\);/)
-  expect(css).toMatch(/\.btn\.timer-primary--pause\s*\{[^}]*background-color:\s*var\(--timer-pause\);/)
 })

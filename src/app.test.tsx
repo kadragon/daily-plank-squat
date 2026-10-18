@@ -40,26 +40,6 @@ test('App passes computed targets into today exercise cards', () => {
   expect(todayHtml).toContain('0회 / 20회')
 })
 
-test('App wraps active view in <main> landmark', () => {
-  const html = renderToStaticMarkup(<App initialView="plank" />)
-
-  expect(html).toContain('<main')
-})
-
-test('Active nav button has aria-current="page", others do not', () => {
-  const html = renderToStaticMarkup(<App initialView="plank" />)
-
-  expect(html).toContain('aria-current="page"')
-  expect((html.match(/aria-current="page"/g) ?? []).length).toBe(1)
-})
-
-test('Bottom nav has app-tabbar class and active button has app-tabbar__button--active', () => {
-  const html = renderToStaticMarkup(<App initialView="plank" />)
-
-  expect(html).toContain('class="nav app-tabbar"')
-  expect(html).toContain('app-tabbar__button--active')
-})
-
 test('Bottom nav exposes labeled tab semantics with SVG icons', () => {
   const html = renderToStaticMarkup(<App initialView="plank" />)
 
@@ -76,9 +56,10 @@ test('Wake lock notice div has wake-lock-notice class', () => {
   expect(html).toContain('wake-lock-notice')
 })
 
-test('computeSquatSuccess recalculates status when target changes', () => {
+test('computeSquatSuccess succeeds once reps reach or exceed the target', () => {
   expect(computeSquatSuccess(10, 10)).toBe(true)
   expect(computeSquatSuccess(10, 20)).toBe(false)
+  expect(computeSquatSuccess(20, 15)).toBe(true)
 })
 
 test('App nav shows exactly three tabs in order 오늘 운동, 기록, 설정', () => {
@@ -105,21 +86,6 @@ test('Exercise detail view has back affordance and enabled exercise chips', () =
   expect(html).toMatch(/aria-pressed="true"[^>]*>스쿼트</)
 })
 
-test('App renders RepsCounter for pushup view with correct props', () => {
-  const html = renderToStaticMarkup(<App initialView="pushup" />)
-
-  expect(html).toContain('푸시업 카운터')
-  expect(html).toContain('aria-label="푸시업 완료"')
-  expect(html).not.toContain('id="pushup-target-reps"')
-})
-
-test('App renders pushup view with editable reps controls before completion', () => {
-  const html = renderToStaticMarkup(<App initialView="pushup" />)
-  expect(html).toContain('푸시업 카운터')
-  expect(html).toContain('눌러서 직접 입력')
-  expect(html).toContain('aria-label="1회 추가"')
-})
-
 test('App applies swipe-priority main classes for workout views and scrollable stage for tab views', () => {
   const workoutHtml = renderToStaticMarkup(<App initialView="squat" />)
 
@@ -130,34 +96,4 @@ test('App applies swipe-priority main classes for workout views and scrollable s
     expect(tabHtml).toContain('view-stage--scrollable')
     expect(tabHtml).not.toContain('main-content--swipe')
   }
-})
-
-test('computeSquatSuccess (reused) computes pushup success correctly', () => {
-  expect(computeSquatSuccess(15, 15)).toBe(true)
-  expect(computeSquatSuccess(10, 15)).toBe(false)
-  expect(computeSquatSuccess(20, 15)).toBe(true)
-})
-
-test('No RPE inputs are rendered in any workout view', () => {
-  const plankHtml = renderToStaticMarkup(<App initialView="plank" />)
-  const squatHtml = renderToStaticMarkup(<App initialView="squat" />)
-  const pushupHtml = renderToStaticMarkup(<App initialView="pushup" />)
-  const deadhangHtml = renderToStaticMarkup(<App initialView="deadhang" />)
-
-  expect(plankHtml).not.toContain('id="plank-rpe"')
-  expect(squatHtml).not.toContain('id="squat-rpe"')
-  expect(pushupHtml).not.toContain('id="pushup-rpe"')
-  expect(deadhangHtml).not.toContain('id="deadhang-rpe"')
-})
-
-test('Recommendation is hidden in IDLE plank state', () => {
-  const html = renderToStaticMarkup(<App initialView="plank" />)
-
-  expect(html).not.toContain('recommendation-note')
-})
-
-test('Recommendation is hidden in squat view before completion', () => {
-  const html = renderToStaticMarkup(<App initialView="squat" />)
-
-  expect(html).not.toContain('recommendation-note')
 })

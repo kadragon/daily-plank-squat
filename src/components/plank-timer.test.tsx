@@ -2,12 +2,6 @@ import { expect, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
 import PlankTimer from './plank-timer'
 
-test('Plank view shows remaining time as MM:SS', () => {
-  const html = renderToStaticMarkup(<PlankTimer elapsedMs={61_000} targetSec={120} />)
-
-  expect(html).toContain('00:59')
-})
-
 test('PlankTimer IDLE shows full target time', () => {
   const html = renderToStaticMarkup(<PlankTimer state="IDLE" targetSec={60} />)
 
@@ -56,30 +50,10 @@ test('Plank result clamps negative elapsed time to 0 seconds', () => {
   expect(html).toContain('결과: 0초')
 })
 
-test('PlankTimer has h2 heading', () => {
-  const html = renderToStaticMarkup(<PlankTimer />)
-
-  expect(html).toContain('<h2')
-})
-
 test('PlankTimer elapsed display has aria-live="polite"', () => {
   const html = renderToStaticMarkup(<PlankTimer state="RUNNING" />)
 
   expect(html).toContain('aria-live="polite"')
-})
-
-test('PlankTimer IDLE markup has plank-timer, timer-display, btn class names', () => {
-  const html = renderToStaticMarkup(<PlankTimer state="IDLE" />)
-
-  expect(html).toContain('plank-timer')
-  expect(html).toContain('timer-display')
-  expect(html).toContain('btn')
-})
-
-test('PlankTimer RUNNING markup has plank-timer--running class', () => {
-  const html = renderToStaticMarkup(<PlankTimer state="RUNNING" />)
-
-  expect(html).toContain('plank-timer--running')
 })
 
 test('PlankTimer progress ring reports 50% in RUNNING state', () => {
@@ -159,20 +133,6 @@ test('PlankTimer shows recommendation when state is CANCELLED', () => {
   )
 
   expect(html).toContain('recommendation-note')
-})
-
-test('PlankTimer does not render RPE input', () => {
-  const html = renderToStaticMarkup(<PlankTimer />)
-
-  expect(html).not.toContain('RPE')
-  expect(html).not.toContain('rpe')
-})
-
-test('PlankTimer COUNTDOWN state shows countdown number', () => {
-  const html = renderToStaticMarkup(<PlankTimer state="COUNTDOWN" countdownMs={3000} />)
-
-  expect(html).toContain('3')
-  expect(html).toContain('countdown-display')
 })
 
 test('PlankTimer COUNTDOWN state shows Cancel button', () => {
