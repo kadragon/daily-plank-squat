@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import { TIMER_COPY, formatSeconds, formatTomorrowRecommendation } from '../locales/ko'
 import type { PlankState } from '../types'
 import LongPressButton from './long-press-button'
@@ -76,6 +77,17 @@ export default function PlankTimer({
     : 0
   const remainingMs = Math.max(0, targetSec * 1000 - elapsedMs)
   const showRecommendation = state === 'COMPLETED' || state === 'CANCELLED'
+  const nextButtonRef = useRef<HTMLButtonElement>(null)
+  const previousStateRef = useRef(state)
+
+  // Ending a session unmounts the focused control; hand focus to 다음 운동 instead of <body>.
+  useEffect(() => {
+    const previous = previousStateRef.current
+    previousStateRef.current = state
+    if (!showRecommendation || previous === state) return
+    if (document.activeElement && document.activeElement !== document.body) return
+    nextButtonRef.current?.focus()
+  }, [state, showRecommendation])
 
   function renderHoldCancel() {
     return (
@@ -92,7 +104,7 @@ export default function PlankTimer({
   function renderNext() {
     if (!onNext) return null
     return (
-      <button type="button" className="btn btn--primary timer-next" onClick={onNext}>
+      <button ref={nextButtonRef} type="button" className="btn btn--primary timer-next" onClick={onNext}>
         {TIMER_COPY.next}
         <span aria-hidden="true"> →</span>
       </button>
@@ -103,7 +115,7 @@ export default function PlankTimer({
     switch (state) {
       case 'IDLE':
         return (
-          <div className="timer-controls">
+          <div key={state} className="timer-controls">
             <button type="button" className="btn timer-primary timer-primary--go" onClick={onStart} disabled={startDisabled}>
               <PlayIcon />
               <span className="timer-primary__label">{TIMER_COPY.start}</span>
@@ -112,13 +124,13 @@ export default function PlankTimer({
         )
       case 'COUNTDOWN':
         return (
-          <div className="timer-controls">
+          <div key={state} className="timer-controls">
             <button type="button" className="btn btn--danger timer-cancel" onClick={onCancel}>{TIMER_COPY.cancel}</button>
           </div>
         )
       case 'RUNNING':
         return (
-          <div className="timer-controls">
+          <div key={state} className="timer-controls">
             <button type="button" className="btn timer-primary timer-primary--pause" onClick={onPause}>
               <PauseIcon />
               <span className="timer-primary__label">{TIMER_COPY.pause}</span>
@@ -128,7 +140,7 @@ export default function PlankTimer({
         )
       case 'PAUSED':
         return (
-          <div className="timer-controls">
+          <div key={state} className="timer-controls">
             <button type="button" className="btn timer-primary timer-primary--go" onClick={onResume}>
               <PlayIcon />
               <span className="timer-primary__label">{TIMER_COPY.resume}</span>
@@ -138,14 +150,14 @@ export default function PlankTimer({
         )
       case 'COMPLETED':
         return (
-          <div className="timer-controls">
+          <div key={state} className="timer-controls">
             <div>{TIMER_COPY.result(toElapsedSeconds(elapsedMs))}</div>
             {renderNext()}
           </div>
         )
       case 'CANCELLED':
         return (
-          <div className="timer-controls">
+          <div key={state} className="timer-controls">
             <div>{TIMER_COPY.cancelled(toElapsedSeconds(elapsedMs))}</div>
             {renderNext()}
           </div>
@@ -158,15 +170,17 @@ export default function PlankTimer({
   return (
     <div className={`plank-timer plank-timer--${state.toLowerCase()}`}>
       <h2>{title}</h2>
-      <div
-        className="timer-ring"
-        role="progressbar"
-        aria-label={TIMER_COPY.progressLabel}
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-valuenow={Math.round(progressPercent)}
-      >
-        <svg className="timer-ring__svg" viewBox="0 0 120 120" aria-hidden="true" focusable="false">
+      <div className="timer-ring">
+        <svg
+          className="timer-ring__svg"
+          viewBox="0 0 120 120"
+          role="progressbar"
+          aria-label={TIMER_COPY.progressLabel}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={Math.round(progressPercent)}
+          focusable="false"
+        >
           <circle className="timer-ring__track" cx="60" cy="60" r={RING_RADIUS} />
           <circle
             className="timer-ring__fill"

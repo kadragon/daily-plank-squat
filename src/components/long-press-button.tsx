@@ -52,6 +52,10 @@ export default function LongPressButton({
 
   function handlePointerDown(event: PointerEvent<HTMLButtonElement>) {
     if (event.button !== 0) return
+    // Touch pointers are implicitly captured; release so sliding off fires pointerleave and aborts.
+    if (event.currentTarget.hasPointerCapture?.(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId)
+    }
     startHold()
   }
 

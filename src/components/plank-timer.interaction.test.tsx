@@ -121,3 +121,31 @@ test('다음 운동 button after completion calls onNext', () => {
 
   expect(calls.next).toBe(1)
 })
+
+test('a state change remounts the controls so a repeated tap never hits the next state action', () => {
+  const view = render(<PlankTimer state="IDLE" />)
+  const startButton = view.getByRole('button', { name: '시작' })
+
+  view.rerender(<PlankTimer state="COUNTDOWN" />)
+
+  expect(startButton.isConnected).toBe(false)
+  expect(view.getByRole('button', { name: '취소' })).not.toBe(startButton)
+})
+
+test('ending a session by long press hands focus to 다음 운동', () => {
+  const view = render(<PlankTimer state="RUNNING" onNext={() => {}} />)
+  view.getByRole('button', { name: '취소' }).focus()
+
+  view.rerender(<PlankTimer state="CANCELLED" onNext={() => {}} />)
+
+  expect(document.activeElement).toBe(view.getByRole('button', { name: '다음 운동' }))
+})
+
+test('remaining time stays outside the progressbar so it is announced', () => {
+  const view = render(<PlankTimer state="RUNNING" elapsedMs={30_000} targetSec={60} />)
+
+  const progressbar = view.getByRole('progressbar', { name: '진행률' })
+  expect(progressbar.getAttribute('aria-valuenow')).toBe('50')
+  expect(progressbar.querySelector('.timer-display')).toBeNull()
+  expect(view.container.querySelector('.timer-display')?.textContent).toBe('00:30')
+})

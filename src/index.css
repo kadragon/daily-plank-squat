@@ -262,7 +262,8 @@ body {
 /* Circular progress ring with the hero numeral centered inside */
 .timer-ring {
   position: relative;
-  width: min(100%, 300px);
+  /* Shrink on short viewports so the controls below stay reachable without scrolling. */
+  width: min(100%, 300px, 42dvh);
   aspect-ratio: 1;
   display: grid;
   place-items: center;
@@ -1267,5 +1268,10 @@ body {
     animation-iteration-count: 1;
     transition-duration: 1ms;
     scroll-behavior: auto;
+  }
+
+  .timer-ring__fill,
+  .long-press-btn--pressing .long-press-btn__fill {
+    transition-duration: 1ms;
   }
 }
