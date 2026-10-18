@@ -80,12 +80,16 @@ export default function TodayWorkout({
         <ul className="today-workout__cards" aria-label={SUMMARY_COPY.exercisesAriaLabel}>
           {exercises.map((exercise) => {
             const value = SUMMARY_COPY.actualOfTarget(exercise.actual, exercise.target)
+            const recommendationText = isRecoveryDay ? undefined : exercise.recommendationText
+            const status = [value, exercise.completed ? SUMMARY_COPY.completed : null, recommendationText ?? null]
+              .filter((part) => part !== null)
+              .join(', ')
             return (
               <li key={exercise.id}>
                 <button
                   type="button"
                   className={`exercise-card${exercise.completed ? ' exercise-card--completed' : ''}`}
-                  aria-label={SUMMARY_COPY.openAriaLabel(exercise.label, exercise.completed ? `${value}, ${SUMMARY_COPY.completed}` : value)}
+                  aria-label={SUMMARY_COPY.openAriaLabel(exercise.label, status)}
                   onClick={() => onOpenExercise?.(exercise.id)}
                 >
                   <span className="exercise-card__header">
@@ -93,8 +97,8 @@ export default function TodayWorkout({
                     {exercise.completed ? <span className="exercise-card__done">✓ {SUMMARY_COPY.completed}</span> : null}
                   </span>
                   <span className="exercise-card__value">{value}</span>
-                  {exercise.completed && exercise.recommendationText ? (
-                    <span className="exercise-card__recommendation">{exercise.recommendationText}</span>
+                  {recommendationText ? (
+                    <span className="exercise-card__recommendation">{recommendationText}</span>
                   ) : null}
                 </button>
               </li>

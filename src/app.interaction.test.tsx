@@ -584,3 +584,31 @@ test('Summary export shows hint when opening Shortcuts throws', () => {
     })
   }
 })
+
+test('Cancelled plank is not marked completed on the today card but shows its recommendation', async () => {
+  happyWindow.localStorage.setItem('app-settings', JSON.stringify({ countdownSec: 0 }))
+  const view = render(<App initialView="plank" />)
+  fireEvent.click(view.getByRole('button', { name: '시작' }))
+  fireEvent.click(view.getByRole('button', { name: '취소' }))
+  await waitFor(() => {
+    expect(readStoredRecords()).toHaveLength(1)
+  })
+
+  fireEvent.click(view.getByRole('button', { name: '오늘 운동 목록으로 돌아가기' }))
+  const plankCard = view.getByRole('button', { name: /^플랭크 열기/ })
+
+  expect(plankCard.className).not.toContain('exercise-card--completed')
+  expect(plankCard.getAttribute('aria-label')).toContain('내일 추천')
+  expect(view.getByText('0 / 5 완료')).toBeTruthy()
+})
+
+test('Squat reaching target shows completed mark on the today card', () => {
+  seedTodayRecord({
+    squat: { target_reps: 20, actual_reps: 21, success: true },
+    squat_completed: true,
+  })
+  const view = render(<App initialView="today" />)
+  const squatCard = view.getByRole('button', { name: /^스쿼트 열기/ })
+
+  expect(squatCard.className).toContain('exercise-card--completed')
+})

@@ -70,10 +70,14 @@ test('main scroll policy disables page vertical scroll and enables horizontal sw
   expect(htmlBodyBlock).toContain('overscroll-behavior-y: none;')
 })
 
-test('app shell is pinned to the viewport height so the tab bar stays visible', async () => {
+test('tab bar stays visible: sticky on mobile, fixed-height frame on desktop', async () => {
   const css = await readIndexCss()
+  const tabbarBlock = css.match(/\.nav\.app-tabbar\s*\{([\s\S]*?)\}/)?.[1] ?? ''
   const appShellBlock = css.match(/\.app-shell\s*\{([\s\S]*?)\}/)?.[1] ?? ''
 
-  expect(appShellBlock).toMatch(/\n\s*height:\s*100dvh;/)
+  expect(tabbarBlock).toContain('position: sticky;')
+  expect(tabbarBlock).toContain('bottom: 0;')
+  // Mobile shell must grow with content so short viewports can still scroll to workout controls.
+  expect(appShellBlock).not.toMatch(/\n\s*height:/)
   expect(css).toMatch(/@media\s*\(min-width:\s*768px\)\s*\{[\s\S]*?\.app-shell\s*\{[\s\S]*?\n\s*height:\s*min\(860px,\s*calc\(100dvh - 4rem\)\);/)
 })

@@ -6,17 +6,18 @@ interface WorkoutHistoryProps {
   records?: DailyRecord[]
 }
 
+// Exercises with no activity that day are omitted so skipped or disabled ones don't read as failures.
 function formatRecordEntries(record: DailyRecord): string[] {
-  const entries = [
-    HISTORY_COPY.entry(EXERCISE_LABEL.plank, formatSeconds(record.plank.actual_sec)),
-    HISTORY_COPY.entry(EXERCISE_LABEL.squat, formatReps(record.squat.actual_reps)),
-    HISTORY_COPY.entry(EXERCISE_LABEL.pushup, formatReps(record.pushup.actual_reps)),
-    HISTORY_COPY.entry(EXERCISE_LABEL.deadhang, formatSeconds(record.deadhang.actual_sec)),
+  const values: [string, number, (value: number) => string][] = [
+    [EXERCISE_LABEL.plank, record.plank.actual_sec, formatSeconds],
+    [EXERCISE_LABEL.squat, record.squat.actual_reps, formatReps],
+    [EXERCISE_LABEL.pushup, record.pushup.actual_reps, formatReps],
+    [EXERCISE_LABEL.deadhang, record.deadhang.actual_sec, formatSeconds],
+    [EXERCISE_LABEL.dumbbell, record.dumbbell?.actual_reps ?? 0, formatReps],
   ]
-  if (record.dumbbell) {
-    entries.push(HISTORY_COPY.entry(EXERCISE_LABEL.dumbbell, formatReps(record.dumbbell.actual_reps)))
-  }
-  return entries
+  return values
+    .filter(([, value]) => value > 0)
+    .map(([label, value, format]) => HISTORY_COPY.entry(label, format(value)))
 }
 
 export default function WorkoutHistory({ records = [] }: WorkoutHistoryProps) {
@@ -34,7 +35,7 @@ export default function WorkoutHistory({ records = [] }: WorkoutHistoryProps) {
             {newestFirst.map((record) => (
               <li key={record.date} className="workout-history__day">
                 <span className="workout-history__date">{record.date}</span>
-                <span className="workout-history__entries">{formatRecordEntries(record).join(' · ')}</span>
+                <span className="workout-history__entries">{formatRecordEntries(record).join(' · ') || HISTORY_COPY.noActivity}</span>
               </li>
             ))}
           </ul>

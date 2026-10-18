@@ -49,3 +49,34 @@ test('WorkoutHistory shows an empty notice without records', () => {
 
   expect(html).toContain('아직 기록이 없습니다.')
 })
+
+test('WorkoutHistory omits exercises with no activity that day', () => {
+  const html = renderToStaticMarkup(
+    <WorkoutHistory
+      records={[record('2026-10-17', {
+        pushup: { target_reps: 15, actual_reps: 0, success: false },
+        deadhang: { target_sec: 30, actual_sec: 0, success: false },
+        dumbbell: { target_reps: 10, actual_reps: 0, success: false },
+      })]}
+    />,
+  )
+
+  expect(html).toContain('플랭크 63초 · 스쿼트 21회</span>')
+  expect(html).not.toContain('푸시업 0회')
+})
+
+test('WorkoutHistory shows a no-activity note for an all-zero day', () => {
+  const html = renderToStaticMarkup(
+    <WorkoutHistory
+      records={[record('2026-10-17', {
+        plank: { target_sec: 60, actual_sec: 0, success: false },
+        squat: { target_reps: 20, actual_reps: 0, success: false },
+        pushup: { target_reps: 15, actual_reps: 0, success: false },
+        deadhang: { target_sec: 30, actual_sec: 0, success: false },
+        dumbbell: null,
+      })]}
+    />,
+  )
+
+  expect(html).toContain('운동 기록 없음')
+})

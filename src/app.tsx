@@ -413,25 +413,27 @@ export default function App({ initialView = 'today', initialPlankState, initialW
     actual: number
     target: number
     tomorrowTarget: number
-    completed: boolean
+    success: boolean
+    finished: boolean
     format: (value: number) => string
   }> = {
-    plank: { actual: plank.result.actualSec, target: plankTargetSec, tomorrowTarget: tomorrowTargets.plank, completed: plank.logged, format: formatSeconds },
-    squat: { actual: squat.count, target: squat.target, tomorrowTarget: tomorrowTargets.squat, completed: squat.completed, format: formatReps },
-    pushup: { actual: pushup.count, target: pushup.target, tomorrowTarget: tomorrowTargets.pushup, completed: pushup.completed, format: formatReps },
-    deadhang: { actual: deadhang.result.actualSec, target: deadhangTargetSec, tomorrowTarget: tomorrowTargets.deadhang, completed: deadhang.logged, format: formatSeconds },
-    dumbbell: { actual: dumbbellExercise.count, target: dumbbellExercise.target, tomorrowTarget: tomorrowTargets.dumbbell, completed: dumbbellExercise.completed, format: formatReps },
+    plank: { actual: plank.result.actualSec, target: plankTargetSec, tomorrowTarget: tomorrowTargets.plank, success: plank.result.success, finished: plank.logged, format: formatSeconds },
+    squat: { actual: squat.count, target: squat.target, tomorrowTarget: tomorrowTargets.squat, success: squat.success, finished: squat.completed, format: formatReps },
+    pushup: { actual: pushup.count, target: pushup.target, tomorrowTarget: tomorrowTargets.pushup, success: pushup.success, finished: pushup.completed, format: formatReps },
+    deadhang: { actual: deadhang.result.actualSec, target: deadhangTargetSec, tomorrowTarget: tomorrowTargets.deadhang, success: deadhang.result.success, finished: deadhang.logged, format: formatSeconds },
+    dumbbell: { actual: dumbbellExercise.count, target: dumbbellExercise.target, tomorrowTarget: tomorrowTargets.dumbbell, success: dumbbellExercise.success, finished: dumbbellExercise.completed, format: formatReps },
   }
 
   const todayCards: TodayExerciseCard[] = enabledExerciseViews.map((id) => {
-    const { actual, target, tomorrowTarget, completed, format } = exerciseProgress[id]
+    const { actual, target, tomorrowTarget, success, finished, format } = exerciseProgress[id]
+    // Completed = target met; the recommendation follows the exercise screen's own reveal rule.
     return {
       id,
       label: EXERCISE_LABEL[id],
       actual: format(actual),
       target: format(target),
-      completed,
-      recommendationText: formatTomorrowRecommendation(tomorrowTarget, tomorrowTarget - target, format),
+      completed: success,
+      recommendationText: finished ? formatTomorrowRecommendation(tomorrowTarget, tomorrowTarget - target, format) : undefined,
     }
   })
 

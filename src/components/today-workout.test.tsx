@@ -17,7 +17,6 @@ const squatCard: TodayExerciseCard = {
   actual: '12회',
   target: '20회',
   completed: false,
-  recommendationText: '내일 추천: 20회 (0회)',
 }
 
 test('TodayWorkout shows progress as completed / enabled count', () => {
@@ -35,13 +34,27 @@ test('TodayWorkout renders one card per exercise with actual / target', () => {
   expect(html).toContain('12회 / 20회')
 })
 
-test('TodayWorkout marks completed cards and shows tomorrow recommendation only after completion', () => {
+test('TodayWorkout marks completed cards and shows tomorrow recommendation only when provided', () => {
   const html = renderToStaticMarkup(<TodayWorkout exercises={[plankCard, squatCard]} />)
 
   expect(html).toContain('exercise-card exercise-card--completed')
   expect((html.match(/exercise-card__done/g) ?? []).length).toBe(1)
+  expect((html.match(/exercise-card__recommendation/g) ?? []).length).toBe(1)
   expect(html).toContain('내일 추천: 63초 (+3초)')
-  expect(html).not.toContain('내일 추천: 20회 (0회)')
+})
+
+test('TodayWorkout card accessible name includes value, completion, and recommendation', () => {
+  const html = renderToStaticMarkup(<TodayWorkout exercises={[plankCard, squatCard]} />)
+
+  expect(html).toContain('aria-label="플랭크 열기, 63초 / 60초, 완료, 내일 추천: 63초 (+3초)"')
+  expect(html).toContain('aria-label="스쿼트 열기, 12회 / 20회"')
+})
+
+test('TodayWorkout hides per-card tomorrow recommendation on recovery day', () => {
+  const html = renderToStaticMarkup(<TodayWorkout exercises={[plankCard]} tomorrowDayType="recovery" />)
+
+  expect(html).not.toContain('내일 추천: 63초 (+3초)')
+  expect(html).toContain('recovery-guide-item')
 })
 
 test('TodayWorkout shows fatigue and tomorrow day type banners', () => {

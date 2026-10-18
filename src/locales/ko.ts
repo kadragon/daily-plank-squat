@@ -148,6 +148,7 @@ export const DETAIL_COPY = {
 export const HISTORY_COPY = {
   title: '날짜별 기록',
   empty: '아직 기록이 없습니다.',
+  noActivity: '운동 기록 없음',
   entry: (exerciseName: string, value: string) => `${exerciseName} ${value}`,
 } as const
 
