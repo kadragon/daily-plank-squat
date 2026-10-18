@@ -11,8 +11,8 @@ test('WorkoutOverview renders both summary and stats sections', () => {
     />,
   )
 
-  expect(html).toContain('Daily Summary')
-  expect(html).toContain('Workout Stats')
+  expect(html).toContain('오늘 요약')
+  expect(html).toContain('운동 통계')
 })
 
 test('WorkoutOverview passes through summary props', () => {
@@ -28,8 +28,8 @@ test('WorkoutOverview passes through summary props', () => {
     />,
   )
 
-  expect(html).toContain('Plank target: 60s')
-  expect(html).toContain('Plank: Complete')
-  expect(html).toContain('Squat: Incomplete')
-  expect(html).toContain('Dumbbell target: 10')
+  expect(html).toContain('플랭크 목표: 60초')
+  expect(html).toContain('플랭크: 완료')
+  expect(html).toContain('스쿼트: 미완료')
+  expect(html).toContain('덤벨 컬 목표: 10회')
 })

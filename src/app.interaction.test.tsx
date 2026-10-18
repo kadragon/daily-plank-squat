@@ -90,7 +90,7 @@ test('Swipe left from plank moves to squat', () => {
 
   swipe(main, 260, 120)
 
-  expect(view.getByText('Squat Counter')).toBeTruthy()
+  expect(view.getByText('스쿼트 카운터')).toBeTruthy()
 })
 
 test('Swipe right on first tab is a no-op', () => {
@@ -100,7 +100,7 @@ test('Swipe right on first tab is a no-op', () => {
 
   swipe(main, 120, 260)
 
-  expect(view.getByText('Plank Timer')).toBeTruthy()
+  expect(view.getByText('플랭크 타이머')).toBeTruthy()
 })
 
 test('Swipe started from input does not navigate', () => {
@@ -121,42 +121,42 @@ test('Swipe started from input does not navigate', () => {
     pointerType: 'touch',
   })
 
-  expect(view.getByText('Squat Counter')).toBeTruthy()
+  expect(view.getByText('스쿼트 카운터')).toBeTruthy()
 })
 
 test('Tap navigation fallback switches tabs and updates active state', () => {
   const view = render(<App initialView="plank" />)
   const pushupTab = Array.from(view.container.querySelectorAll('button'))
-    .find((button) => button.querySelector('.app-tabbar__label')?.textContent?.trim() === 'Pushup')
+    .find((button) => button.querySelector('.app-tabbar__label')?.textContent?.trim() === '푸시업')
   if (!pushupTab) throw new Error('pushup tab button not found')
 
   fireEvent.click(pushupTab)
 
-  expect(view.getByText('Pushup Counter')).toBeTruthy()
+  expect(view.getByText('푸시업 카운터')).toBeTruthy()
   expect(pushupTab.getAttribute('aria-current')).toBe('page')
 })
 
 test('Tap navigation can open overview tab', () => {
   const view = render(<App initialView="plank" />)
   const overviewTab = Array.from(view.container.querySelectorAll('button'))
-    .find((button) => button.querySelector('.app-tabbar__label')?.textContent?.trim() === 'Overview')
+    .find((button) => button.querySelector('.app-tabbar__label')?.textContent?.trim() === '요약')
   if (!overviewTab) throw new Error('overview tab button not found')
 
   fireEvent.click(overviewTab)
 
-  expect(view.getByText('Workout Stats')).toBeTruthy()
+  expect(view.getByText('운동 통계')).toBeTruthy()
   expect(overviewTab.getAttribute('aria-current')).toBe('page')
 })
 
 test('Tap navigation can open deadhang tab', () => {
   const view = render(<App initialView="plank" />)
   const deadhangTab = Array.from(view.container.querySelectorAll('button'))
-    .find((button) => button.querySelector('.app-tabbar__label')?.textContent?.trim() === 'Deadhang')
+    .find((button) => button.querySelector('.app-tabbar__label')?.textContent?.trim() === '데드행')
   if (!deadhangTab) throw new Error('deadhang tab button not found')
 
   fireEvent.click(deadhangTab)
 
-  expect(view.getByText('Deadhang Timer')).toBeTruthy()
+  expect(view.getByText('데드행 타이머')).toBeTruthy()
   expect(deadhangTab.getAttribute('aria-current')).toBe('page')
 })
 
@@ -178,7 +178,7 @@ test('Pointer up from a different pointer id does not trigger swipe navigation',
     pointerType: 'touch',
   })
 
-  expect(view.getByText('Plank Timer')).toBeTruthy()
+  expect(view.getByText('플랭크 타이머')).toBeTruthy()
 })
 
 test('Swipe right from overview goes to dumbbell', () => {
@@ -187,7 +187,7 @@ test('Swipe right from overview goes to dumbbell', () => {
   if (!main) throw new Error('main element not found')
 
   swipe(main, 120, 260)
-  expect(view.getByText('Dumbbell Counter')).toBeTruthy()
+  expect(view.getByText('덤벨 컬 카운터')).toBeTruthy()
 })
 
 test('Summary export button is disabled when there is no today record', () => {
@@ -269,7 +269,7 @@ test('Squat complete shows recommendation', async () => {
   const view = render(<App initialView="squat" />)
 
   expect(view.container.querySelector('.recommendation-note')).toBeNull()
-  fireEvent.click(view.getByRole('button', { name: 'Complete squats' }))
+  fireEvent.click(view.getByRole('button', { name: '스쿼트 완료' }))
 
   await waitFor(() => {
     expect(view.container.querySelector('.recommendation-note')).toBeTruthy()
@@ -280,7 +280,7 @@ test('Pushup complete shows recommendation', async () => {
   const view = render(<App initialView="pushup" />)
 
   expect(view.container.querySelector('.recommendation-note')).toBeNull()
-  fireEvent.click(view.getByRole('button', { name: 'Complete pushups' }))
+  fireEvent.click(view.getByRole('button', { name: '푸시업 완료' }))
 
   await waitFor(() => {
     expect(view.container.querySelector('.recommendation-note')).toBeTruthy()
@@ -290,8 +290,8 @@ test('Pushup complete shows recommendation', async () => {
 test('Plank complete and cancel both save/update today record', async () => {
   happyWindow.localStorage.setItem('app-settings', JSON.stringify({ countdownSec: 0 }))
   const cancelView = render(<App initialView="plank" />)
-  fireEvent.click(cancelView.getByRole('button', { name: 'Start' }))
-  fireEvent.click(cancelView.getByRole('button', { name: 'Cancel' }))
+  fireEvent.click(cancelView.getByRole('button', { name: '시작' }))
+  fireEvent.click(cancelView.getByRole('button', { name: '취소' }))
 
   await waitFor(() => {
     const stored = readStoredRecords()
@@ -312,7 +312,7 @@ test('Plank complete and cancel both save/update today record', async () => {
   })
 
   const completeView = render(<App initialView="plank" />)
-  fireEvent.click(completeView.getByRole('button', { name: 'Start' }))
+  fireEvent.click(completeView.getByRole('button', { name: '시작' }))
 
   await waitFor(() => {
     const stored = readStoredRecords()
@@ -324,37 +324,37 @@ test('Plank complete and cancel both save/update today record', async () => {
 
 test('Deadhang start is disabled when plank is running', () => {
   const view = render(<App initialView="deadhang" initialPlankState="RUNNING" />)
-  const startButton = view.getByRole('button', { name: 'Start' })
+  const startButton = view.getByRole('button', { name: '시작' })
 
   expect(startButton.hasAttribute('disabled')).toBe(true)
 })
 
 test('Plank start is disabled while deadhang is running', () => {
   const view = render(<App initialView="deadhang" />)
-  const deadhangStartButton = view.getByRole('button', { name: 'Start' })
+  const deadhangStartButton = view.getByRole('button', { name: '시작' })
   fireEvent.click(deadhangStartButton)
 
   const plankTab = Array.from(view.container.querySelectorAll('button'))
-    .find((button) => button.querySelector('.app-tabbar__label')?.textContent?.trim() === 'Plank')
+    .find((button) => button.querySelector('.app-tabbar__label')?.textContent?.trim() === '플랭크')
   if (!plankTab) throw new Error('plank tab button not found')
   fireEvent.click(plankTab)
 
-  const plankStartButton = view.getByRole('button', { name: 'Start' })
+  const plankStartButton = view.getByRole('button', { name: '시작' })
   expect(plankStartButton.hasAttribute('disabled')).toBe(true)
 })
 
 test('Complete click shows save feedback lifecycle for squat', async () => {
   const view = render(<App initialView="squat" />)
-  const completeButton = view.getByRole('button', { name: 'Complete squats' })
+  const completeButton = view.getByRole('button', { name: '스쿼트 완료' })
 
-  expect(view.queryByText('Saving...')).toBeNull()
-  expect(view.queryByText('Saved just now')).toBeNull()
+  expect(view.queryByText('저장 중...')).toBeNull()
+  expect(view.queryByText('방금 저장됨')).toBeNull()
 
   fireEvent.click(completeButton)
 
-  expect(view.getByText('Saving...')).toBeTruthy()
+  expect(view.getByText('저장 중...')).toBeTruthy()
   await waitFor(() => {
-    expect(view.getByText('Saved just now')).toBeTruthy()
+    expect(view.getByText('방금 저장됨')).toBeTruthy()
   })
 })
 
@@ -370,19 +370,19 @@ test('Input change save path does not show complete save feedback', async () => 
     expect(stored).toHaveLength(1)
     expect(stored[0]?.squat.actual_reps).toBe(8)
   })
-  expect(view.queryByText('Saving...')).toBeNull()
-  expect(view.queryByText('Saved just now')).toBeNull()
+  expect(view.queryByText('저장 중...')).toBeNull()
+  expect(view.queryByText('방금 저장됨')).toBeNull()
 })
 
 test('Pushup complete click also shows save feedback lifecycle', async () => {
   const view = render(<App initialView="pushup" />)
-  const completeButton = view.getByRole('button', { name: 'Complete pushups' })
+  const completeButton = view.getByRole('button', { name: '푸시업 완료' })
 
   fireEvent.click(completeButton)
 
-  expect(view.getByText('Saving...')).toBeTruthy()
+  expect(view.getByText('저장 중...')).toBeTruthy()
   await waitFor(() => {
-    expect(view.getByText('Saved just now')).toBeTruthy()
+    expect(view.getByText('방금 저장됨')).toBeTruthy()
   })
 })
 
@@ -397,12 +397,12 @@ test('Save failure on complete shows inline error feedback', async () => {
 
   try {
     const view = render(<App initialView="squat" />)
-    const completeButton = view.getByRole('button', { name: 'Complete squats' })
+    const completeButton = view.getByRole('button', { name: '스쿼트 완료' })
 
     fireEvent.click(completeButton)
 
     await waitFor(() => {
-      expect(view.getByText('Save failed. Try again.')).toBeTruthy()
+      expect(view.getByText('저장하지 못했습니다. 다시 시도하세요.')).toBeTruthy()
     })
   } finally {
     Object.defineProperty(happyWindow.localStorage, 'setItem', {
@@ -455,8 +455,8 @@ test('Partial today record without plank log keeps plank view in IDLE', () => {
 
   const view = render(<App initialView="plank" />)
 
-  expect(view.getByText('Start')).toBeTruthy()
-  expect(view.queryByText('Cancel')).toBeNull()
+  expect(view.getByText('시작')).toBeTruthy()
+  expect(view.queryByText('취소')).toBeNull()
 })
 
 test('Summary export navigates to shortcuts URL when today record exists', () => {
@@ -495,7 +495,7 @@ test('Summary export shows hint when opening Shortcuts throws', () => {
 
     fireEvent.click(button)
 
-    expect(view.getByText('Could not open Shortcuts. Check that Apple Shortcuts is available on this device.')).toBeTruthy()
+    expect(view.getByText('단축어를 열 수 없습니다. 이 기기에서 Apple 단축어를 사용할 수 있는지 확인하세요.')).toBeTruthy()
   } finally {
     Object.defineProperty(happyWindow, 'location', {
       configurable: true,

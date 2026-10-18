@@ -58,7 +58,7 @@ function sampleRecord(date: string, plankSec: number): DailyRecord {
 function exportBackupText(): string {
   let exported = ''
   const view = render(<BackupRestore onRestored={() => {}} downloadFile={(_, contents) => { exported = contents }} />)
-  fireEvent.click(view.getByText('Export backup'))
+  fireEvent.click(view.getByText('백업 내보내기'))
   view.unmount()
   return exported
 }
@@ -74,10 +74,10 @@ test('export downloads a JSON file name with the export date', () => {
   let fileName = ''
   const view = render(<BackupRestore onRestored={() => {}} downloadFile={(name) => { fileName = name }} />)
 
-  fireEvent.click(view.getByText('Export backup'))
+  fireEvent.click(view.getByText('백업 내보내기'))
 
   expect(fileName).toMatch(/^daily-plank-squat-backup-\d{4}-\d{2}-\d{2}\.json$/)
-  expect(view.getByRole('status').textContent).toContain('Exported 1 records')
+  expect(view.getByRole('status').textContent).toContain('기록 1개를 내보냈습니다')
 })
 
 test('restore previews conflicts and applies the chosen record on confirm', async () => {
@@ -88,14 +88,14 @@ test('restore previews conflicts and applies the chosen record on confirm', asyn
 
   let restored = 0
   const view = render(<BackupRestore onRestored={() => { restored += 1 }} />)
-  chooseFile(view.getByLabelText('Backup file'), text)
+  chooseFile(view.getByLabelText('백업 파일'), text)
 
-  const preview = await waitFor(() => view.getByRole('region', { name: 'Restore preview' }))
-  expect(preview.textContent).toContain('0 new, 1 unchanged, 1 conflicting days')
+  const preview = await waitFor(() => view.getByRole('region', { name: '복원 미리보기' }))
+  expect(preview.textContent).toContain('새 기록 0일, 동일 1일, 충돌 1일')
   expect(preview.textContent).toContain('2026-09-01')
 
-  fireEvent.click(view.getByLabelText(/Use backup/))
-  fireEvent.click(view.getByText('Apply restore'))
+  fireEvent.click(view.getByLabelText(/백업 기록 사용/))
+  fireEvent.click(view.getByText('복원 적용'))
 
   expect(restored).toBe(1)
   expect(loadAllRecords().map((r) => r.plank.actual_sec)).toEqual([90, 45])
@@ -108,12 +108,12 @@ test('cancel leaves storage untouched', async () => {
   const before = localStorage.getItem('daily-records')
 
   const view = render(<BackupRestore onRestored={() => {}} />)
-  chooseFile(view.getByLabelText('Backup file'), text)
-  await waitFor(() => view.getByRole('region', { name: 'Restore preview' }))
-  fireEvent.click(view.getByLabelText(/Use backup/))
-  fireEvent.click(view.getByText('Cancel'))
+  chooseFile(view.getByLabelText('백업 파일'), text)
+  await waitFor(() => view.getByRole('region', { name: '복원 미리보기' }))
+  fireEvent.click(view.getByLabelText(/백업 기록 사용/))
+  fireEvent.click(view.getByText('취소'))
 
-  expect(view.queryByRole('region', { name: 'Restore preview' })).toBeNull()
+  expect(view.queryByRole('region', { name: '복원 미리보기' })).toBeNull()
   expect(localStorage.getItem('daily-records')).toBe(before)
   expect(localStorage.getItem('pre-restore-backup')).toBeNull()
 })
@@ -123,10 +123,10 @@ test('invalid file shows an error and changes nothing', async () => {
   const before = localStorage.getItem('daily-records')
 
   const view = render(<BackupRestore onRestored={() => {}} />)
-  chooseFile(view.getByLabelText('Backup file'), '{"app":"daily-plank-squat","schema_version":1,"records":"oops"}')
+  chooseFile(view.getByLabelText('백업 파일'), '{"app":"daily-plank-squat","schema_version":1,"records":"oops"}')
 
-  await waitFor(() => expect(view.getByRole('status').textContent).toContain('Invalid backup file'))
-  expect(view.queryByRole('region', { name: 'Restore preview' })).toBeNull()
+  await waitFor(() => expect(view.getByRole('status').textContent).toContain('잘못된 백업 파일입니다'))
+  expect(view.queryByRole('region', { name: '복원 미리보기' })).toBeNull()
   expect(localStorage.getItem('daily-records')).toBe(before)
 })
 
@@ -145,33 +145,33 @@ test('stale read is ignored and the preview is withdrawn while reading', async (
   let resolveFirst: (text: string) => void = () => {}
   let resolveSecond: (text: string) => void = () => {}
   const view = render(<BackupRestore onRestored={() => {}} />)
-  const input = view.getByLabelText('Backup file')
+  const input = view.getByLabelText('백업 파일')
 
   chooseFile(input, firstText)
-  const firstPreview = await waitFor(() => view.getByRole('region', { name: 'Restore preview' }))
-  expect(firstPreview.textContent).toContain('1 new')
+  const firstPreview = await waitFor(() => view.getByRole('region', { name: '복원 미리보기' }))
+  expect(firstPreview.textContent).toContain('새 기록 1일')
 
   chooseFakeFile(input, () => new Promise((resolve) => { resolveFirst = resolve }))
   chooseFakeFile(input, () => new Promise((resolve) => { resolveSecond = resolve }))
   // The earlier preview is withdrawn while reading, so it cannot be applied meanwhile.
-  expect(view.queryByRole('region', { name: 'Restore preview' })).toBeNull()
-  expect(view.getByRole('status').textContent).toBe('Reading file…')
+  expect(view.queryByRole('region', { name: '복원 미리보기' })).toBeNull()
+  expect(view.getByRole('status').textContent).toBe('파일을 읽는 중…')
 
   resolveSecond(secondText)
-  await waitFor(() => expect(view.getByRole('region', { name: 'Restore preview' }).textContent).toContain('2 new'))
+  await waitFor(() => expect(view.getByRole('region', { name: '복원 미리보기' }).textContent).toContain('새 기록 2일'))
   resolveFirst(firstText)
   await new Promise((resolve) => setTimeout(resolve, 0))
 
-  expect(view.getByRole('region', { name: 'Restore preview' }).textContent).toContain('2 new')
+  expect(view.getByRole('region', { name: '복원 미리보기' }).textContent).toContain('새 기록 2일')
   expect(view.queryByRole('status')).toBeNull()
 })
 
 test('unreadable file shows an error', async () => {
   const view = render(<BackupRestore onRestored={() => {}} />)
-  chooseFakeFile(view.getByLabelText('Backup file'), () => Promise.reject(new Error('NotReadableError')))
+  chooseFakeFile(view.getByLabelText('백업 파일'), () => Promise.reject(new Error('NotReadableError')))
 
-  await waitFor(() => expect(view.getByRole('status').textContent).toContain('Could not read the file — nothing was changed.'))
-  expect(view.queryByRole('region', { name: 'Restore preview' })).toBeNull()
+  await waitFor(() => expect(view.getByRole('status').textContent).toContain('파일을 읽지 못했습니다 — 변경된 내용이 없습니다.'))
+  expect(view.queryByRole('region', { name: '복원 미리보기' })).toBeNull()
 })
 
 test('conflict labels show the fields that differ', async () => {
@@ -180,11 +180,11 @@ test('conflict labels show the fields that differ', async () => {
   saveRecord(sampleRecord('2026-09-01', 60))
 
   const view = render(<BackupRestore onRestored={() => {}} />)
-  chooseFile(view.getByLabelText('Backup file'), text)
-  await waitFor(() => view.getByRole('region', { name: 'Restore preview' }))
+  chooseFile(view.getByLabelText('백업 파일'), text)
+  await waitFor(() => view.getByRole('region', { name: '복원 미리보기' }))
 
-  expect(view.getByLabelText(/Keep current/).parentElement?.textContent).toBe('Keep current — Deadhang 30s · Squat done: no')
-  expect(view.getByLabelText(/Use backup/).parentElement?.textContent).toBe('Use backup — Deadhang 40s · Squat done: yes')
+  expect(view.getByLabelText(/현재 기록 유지/).parentElement?.textContent).toBe('현재 기록 유지 — 데드행 30초 · 스쿼트 완료: 아니오')
+  expect(view.getByLabelText(/백업 기록 사용/).parentElement?.textContent).toBe('백업 기록 사용 — 데드행 40초 · 스쿼트 완료: 예')
 })
 
 test('conflict labels fall back to the main summary when only derived fields differ', async () => {
@@ -193,10 +193,10 @@ test('conflict labels fall back to the main summary when only derived fields dif
   saveRecord(sampleRecord('2026-09-01', 60))
 
   const view = render(<BackupRestore onRestored={() => {}} />)
-  chooseFile(view.getByLabelText('Backup file'), text)
-  await waitFor(() => view.getByRole('region', { name: 'Restore preview' }))
+  chooseFile(view.getByLabelText('백업 파일'), text)
+  await waitFor(() => view.getByRole('region', { name: '복원 미리보기' }))
 
-  expect(view.getByLabelText(/Use backup/).parentElement?.textContent).toBe('Use backup — Plank 60s · Squat 20 · Pushup 15')
+  expect(view.getByLabelText(/백업 기록 사용/).parentElement?.textContent).toBe('백업 기록 사용 — 플랭크 60초 · 스쿼트 20회 · 푸시업 15회')
 })
 
 test('conflict labels show non-summary fields such as success flags', async () => {
@@ -205,9 +205,9 @@ test('conflict labels show non-summary fields such as success flags', async () =
   saveRecord(sampleRecord('2026-09-01', 60))
 
   const view = render(<BackupRestore onRestored={() => {}} />)
-  chooseFile(view.getByLabelText('Backup file'), text)
-  await waitFor(() => view.getByRole('region', { name: 'Restore preview' }))
+  chooseFile(view.getByLabelText('백업 파일'), text)
+  await waitFor(() => view.getByRole('region', { name: '복원 미리보기' }))
 
-  expect(view.getByLabelText(/Keep current/).parentElement?.textContent).toBe('Keep current — Plank success: yes')
-  expect(view.getByLabelText(/Use backup/).parentElement?.textContent).toBe('Use backup — Plank success: no')
+  expect(view.getByLabelText(/현재 기록 유지/).parentElement?.textContent).toBe('현재 기록 유지 — 플랭크 성공: 예')
+  expect(view.getByLabelText(/백업 기록 사용/).parentElement?.textContent).toBe('백업 기록 사용 — 플랭크 성공: 아니오')
 })

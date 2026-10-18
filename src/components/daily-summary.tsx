@@ -1,5 +1,14 @@
 import type { DayType } from '../types'
-import { DAY_TYPE_LABEL, RECOVERY_DAY_SUBTITLE, RECOVERY_GUIDE_ITEMS, TOMORROW_LABEL } from '../locales/ko'
+import {
+  DAY_TYPE_LABEL,
+  EXERCISE_LABEL,
+  RECOVERY_DAY_SUBTITLE,
+  RECOVERY_GUIDE_ITEMS,
+  SUMMARY_COPY,
+  TOMORROW_LABEL,
+  formatReps,
+  formatSeconds,
+} from '../locales/ko'
 
 interface DailySummaryProps {
   plankTargetSec?: number
@@ -55,19 +64,19 @@ export default function DailySummary({
 
   return (
     <div className="daily-summary">
-      <h2>Daily Summary</h2>
+      <h2>{SUMMARY_COPY.title}</h2>
       <section>
-        <div className="summary-stat">Plank target: {plankTargetSec}s</div>
-        <div className="summary-stat">Squat target: {squatTargetReps}</div>
-        <div className="summary-stat">Pushup target: {pushupTargetReps}</div>
-        <div className="summary-stat">Deadhang target: {deadhangTargetSec}s</div>
-        <div className="summary-stat">Dumbbell target: {dumbbellTargetReps}</div>
-        <div className="summary-stat">Plank: {plankSuccess ? 'Complete' : 'Incomplete'}</div>
-        <div className="summary-stat">Squat: {squatSuccess ? 'Complete' : 'Incomplete'}</div>
-        <div className="summary-stat">Pushup: {pushupSuccess ? 'Complete' : 'Incomplete'}</div>
-        <div className="summary-stat">Deadhang: {deadhangSuccess ? 'Complete' : 'Incomplete'}</div>
-        <div className="summary-stat">Dumbbell: {dumbbellSuccess ? 'Complete' : 'Incomplete'}</div>
-        <div className="summary-stat">Fatigue: {fatigue.toFixed(3)}</div>
+        <div className="summary-stat">{SUMMARY_COPY.target(EXERCISE_LABEL.plank, formatSeconds(plankTargetSec))}</div>
+        <div className="summary-stat">{SUMMARY_COPY.target(EXERCISE_LABEL.squat, formatReps(squatTargetReps))}</div>
+        <div className="summary-stat">{SUMMARY_COPY.target(EXERCISE_LABEL.pushup, formatReps(pushupTargetReps))}</div>
+        <div className="summary-stat">{SUMMARY_COPY.target(EXERCISE_LABEL.deadhang, formatSeconds(deadhangTargetSec))}</div>
+        <div className="summary-stat">{SUMMARY_COPY.target(EXERCISE_LABEL.dumbbell, formatReps(dumbbellTargetReps))}</div>
+        <div className="summary-stat">{SUMMARY_COPY.status(EXERCISE_LABEL.plank, plankSuccess)}</div>
+        <div className="summary-stat">{SUMMARY_COPY.status(EXERCISE_LABEL.squat, squatSuccess)}</div>
+        <div className="summary-stat">{SUMMARY_COPY.status(EXERCISE_LABEL.pushup, pushupSuccess)}</div>
+        <div className="summary-stat">{SUMMARY_COPY.status(EXERCISE_LABEL.deadhang, deadhangSuccess)}</div>
+        <div className="summary-stat">{SUMMARY_COPY.status(EXERCISE_LABEL.dumbbell, dumbbellSuccess)}</div>
+        <div className="summary-stat">{SUMMARY_COPY.fatigue(fatigue.toFixed(3))}</div>
       </section>
       <section>
         <div className="summary-stat summary-day-type">
@@ -84,11 +93,11 @@ export default function DailySummary({
           </div>
         ) : (
           <>
-            <div className="summary-stat">Tomorrow plank target: {tomorrowPlankTargetSec}s</div>
-            <div className="summary-stat">Tomorrow squat target: {tomorrowSquatTargetReps}</div>
-            <div className="summary-stat">Tomorrow pushup target: {tomorrowPushupTargetReps}</div>
-            <div className="summary-stat">Tomorrow deadhang target: {tomorrowDeadhangTargetSec}s</div>
-            <div className="summary-stat">Tomorrow dumbbell target: {tomorrowDumbbellTargetReps}</div>
+            <div className="summary-stat">{SUMMARY_COPY.tomorrowTarget(EXERCISE_LABEL.plank, formatSeconds(tomorrowPlankTargetSec))}</div>
+            <div className="summary-stat">{SUMMARY_COPY.tomorrowTarget(EXERCISE_LABEL.squat, formatReps(tomorrowSquatTargetReps))}</div>
+            <div className="summary-stat">{SUMMARY_COPY.tomorrowTarget(EXERCISE_LABEL.pushup, formatReps(tomorrowPushupTargetReps))}</div>
+            <div className="summary-stat">{SUMMARY_COPY.tomorrowTarget(EXERCISE_LABEL.deadhang, formatSeconds(tomorrowDeadhangTargetSec))}</div>
+            <div className="summary-stat">{SUMMARY_COPY.tomorrowTarget(EXERCISE_LABEL.dumbbell, formatReps(tomorrowDumbbellTargetReps))}</div>
           </>
         )}
       </section>
@@ -99,15 +108,15 @@ export default function DailySummary({
           onClick={onExportToHealth}
           disabled={!canExportToHealth}
         >
-          Apple 건강에 기록
+          {SUMMARY_COPY.healthExport}
         </button>
         {healthExportHint ? <div className="summary-stat">{healthExportHint}</div> : null}
       </section>
       {overloadWarning ? (
-        <div className="summary-warning" role="alert">Warning: load above 95th percentile</div>
+        <div className="summary-warning" role="alert">{SUMMARY_COPY.overloadWarning}</div>
       ) : null}
       {suspiciousSession ? (
-        <div className="summary-warning" role="alert">Warning: unstable measurement environment</div>
+        <div className="summary-warning" role="alert">{SUMMARY_COPY.suspiciousWarning}</div>
       ) : null}
     </div>
   )

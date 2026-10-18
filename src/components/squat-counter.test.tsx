@@ -2,11 +2,11 @@ import { expect, test } from 'bun:test'
 import { renderToStaticMarkup } from 'react-dom/server'
 import SquatCounter from './squat-counter'
 
-test('Squat view shows Target reps and Done reps numeric inputs', () => {
+test('Squat view shows target and done reps numeric inputs', () => {
   const html = renderToStaticMarkup(<SquatCounter count={3} />)
 
-  expect(html).toContain('Target reps')
-  expect(html).toContain('Done reps')
+  expect(html).toContain('목표 횟수')
+  expect(html).toContain('완료 횟수')
   expect(html).toContain('type="text"')
   expect(html).toContain('inputMode="numeric"')
 })
@@ -14,7 +14,7 @@ test('Squat view shows Target reps and Done reps numeric inputs', () => {
 test('Squat view shows complete button', () => {
   const html = renderToStaticMarkup(<SquatCounter count={3} />)
 
-  expect(html).toContain('Complete')
+  expect(html).toContain('완료')
 })
 
 test('Squat view no longer renders +1/-1 buttons', () => {
@@ -27,9 +27,9 @@ test('Squat view no longer renders +1/-1 buttons', () => {
 test('SquatCounter controls have aria-labels', () => {
   const html = renderToStaticMarkup(<SquatCounter count={0} />)
 
-  expect(html).toContain('aria-label="Target reps"')
-  expect(html).toContain('aria-label="Done reps"')
-  expect(html).toContain('aria-label="Complete squats"')
+  expect(html).toContain('aria-label="목표 횟수"')
+  expect(html).toContain('aria-label="완료 횟수"')
+  expect(html).toContain('aria-label="스쿼트 완료"')
 })
 
 test('SquatCounter done reps value is rendered', () => {

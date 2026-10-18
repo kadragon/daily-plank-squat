@@ -1,3 +1,4 @@
+import { NAV_LABEL } from '../locales/ko'
 import type { AppSettings, ExerciseId } from '../storage/settings'
 
 export type AppView = 'plank' | 'squat' | 'pushup' | 'deadhang' | 'dumbbell' | 'overview' | 'settings'
@@ -10,13 +11,13 @@ export interface NavItemMeta {
 export const ALL_NAV_VIEWS: readonly AppView[] = ['plank', 'squat', 'pushup', 'deadhang', 'dumbbell', 'overview', 'settings']
 
 export const ALL_NAV_ITEMS: readonly NavItemMeta[] = [
-  { view: 'plank', label: 'Plank' },
-  { view: 'squat', label: 'Squat' },
-  { view: 'pushup', label: 'Pushup' },
-  { view: 'deadhang', label: 'Deadhang' },
-  { view: 'dumbbell', label: 'Dumbbell' },
-  { view: 'overview', label: 'Overview' },
-  { view: 'settings', label: 'Settings' },
+  { view: 'plank', label: NAV_LABEL.plank },
+  { view: 'squat', label: NAV_LABEL.squat },
+  { view: 'pushup', label: NAV_LABEL.pushup },
+  { view: 'deadhang', label: NAV_LABEL.deadhang },
+  { view: 'dumbbell', label: NAV_LABEL.dumbbell },
+  { view: 'overview', label: NAV_LABEL.overview },
+  { view: 'settings', label: NAV_LABEL.settings },
 ]
 
 export const EXERCISE_VIEW_MAP: Record<ExerciseId, AppView> = {

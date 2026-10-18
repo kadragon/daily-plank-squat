@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from 'react'
 import { buildDailyStatsSeries, computeWorkoutTotals, filterRecordsByRange, type StatsRange } from '../models/stats'
+import { EXERCISE_LABEL, SECONDS_UNIT, STATS_COPY, formatSeconds } from '../locales/ko'
 import type { DailyRecord } from '../types'
 
 interface WorkoutStatsProps {
@@ -7,6 +8,7 @@ interface WorkoutStatsProps {
 }
 
 interface ExerciseChartProps {
+  id: string
   title: string
   unit: string
   series: { date: string, value: number }[]
@@ -16,7 +18,7 @@ const CHART_PADDING = { top: 20, right: 16, bottom: 32, left: 36 }
 const CHART_HEIGHT = 160
 const GRID_LINES = 4
 
-function ExerciseChart({ title, unit, series }: ExerciseChartProps) {
+function ExerciseChart({ id, title, unit, series }: ExerciseChartProps) {
   const [hoverIndex, setHoverIndex] = useState<number | null>(null)
 
   const { toX, toY, linePoints, areaPoints, xLabelStep, gridValues, innerW, innerH } = useMemo(() => {
@@ -50,7 +52,7 @@ function ExerciseChart({ title, unit, series }: ExerciseChartProps) {
     return { toX, toY, linePoints, areaPoints, xLabelStep, gridValues, innerW, innerH }
   }, [series])
 
-  const chartId = `chart-${title.toLowerCase()}`
+  const chartId = `chart-${id}`
 
   const handlePointer = useCallback((e: React.PointerEvent<SVGSVGElement>) => {
     const svg = e.currentTarget
@@ -72,7 +74,7 @@ function ExerciseChart({ title, unit, series }: ExerciseChartProps) {
         viewBox={`0 0 100 ${CHART_HEIGHT}`}
         preserveAspectRatio="xMidYMid meet"
         role="img"
-        aria-label={`${title} chart`}
+        aria-label={STATS_COPY.chartAriaLabel(title)}
         onPointerMove={handlePointer}
         onPointerLeave={() => setHoverIndex(null)}
       >
@@ -110,7 +112,7 @@ function ExerciseChart({ title, unit, series }: ExerciseChartProps) {
 
         {series.map((p, i) => (
           <circle
-            key={`${title}-${p.date}`}
+            key={`${id}-${p.date}`}
             cx={toX(i)} cy={toY(p.value)} r="0.8"
             fill={hoverIndex === i ? 'var(--secondary)' : 'var(--primary)'}
             vectorEffect="non-scaling-stroke"
@@ -161,84 +163,89 @@ export default function WorkoutStats({ records = [] }: WorkoutStatsProps) {
   if (series.length === 0) {
     return (
       <div className="workout-stats">
-        <h2>Workout Stats</h2>
-        <p className="workout-stats__empty">No records yet. Complete a workout to see stats.</p>
+        <h2>{STATS_COPY.title}</h2>
+        <p className="workout-stats__empty">{STATS_COPY.empty}</p>
       </div>
     )
   }
 
   return (
     <div className="workout-stats">
-      <h2>Workout Stats</h2>
+      <h2>{STATS_COPY.title}</h2>
       <div className="workout-stats__range">
         <button
           type="button"
           className={`workout-stats__range-btn${range === 'all' ? ' workout-stats__range-btn--active' : ''}`}
           onClick={() => setRange('all')}
         >
-          All
+          {STATS_COPY.rangeAll}
         </button>
         <button
           type="button"
           className={`workout-stats__range-btn${range === '7d' ? ' workout-stats__range-btn--active' : ''}`}
           onClick={() => setRange('7d')}
         >
-          7D
+          {STATS_COPY.range7d}
         </button>
         <button
           type="button"
           className={`workout-stats__range-btn${range === '30d' ? ' workout-stats__range-btn--active' : ''}`}
           onClick={() => setRange('30d')}
         >
-          30D
+          {STATS_COPY.range30d}
         </button>
       </div>
 
       <section className="workout-stats__totals">
         <div className="workout-stats__total-card">
-          <span className="workout-stats__total-label">Total plank</span>
-          <span className="workout-stats__total-value">{totals.plankActualSec}s</span>
+          <span className="workout-stats__total-label">{STATS_COPY.total(EXERCISE_LABEL.plank)}</span>
+          <span className="workout-stats__total-value">{formatSeconds(totals.plankActualSec)}</span>
         </div>
         <div className="workout-stats__total-card">
-          <span className="workout-stats__total-label">Total squat</span>
+          <span className="workout-stats__total-label">{STATS_COPY.total(EXERCISE_LABEL.squat)}</span>
           <span className="workout-stats__total-value">{totals.squatActualReps}</span>
         </div>
         <div className="workout-stats__total-card">
-          <span className="workout-stats__total-label">Total pushup</span>
+          <span className="workout-stats__total-label">{STATS_COPY.total(EXERCISE_LABEL.pushup)}</span>
           <span className="workout-stats__total-value">{totals.pushupActualReps}</span>
         </div>
         <div className="workout-stats__total-card">
-          <span className="workout-stats__total-label">Total deadhang</span>
-          <span className="workout-stats__total-value">{totals.deadhangActualSec}s</span>
+          <span className="workout-stats__total-label">{STATS_COPY.total(EXERCISE_LABEL.deadhang)}</span>
+          <span className="workout-stats__total-value">{formatSeconds(totals.deadhangActualSec)}</span>
         </div>
         <div className="workout-stats__total-card">
-          <span className="workout-stats__total-label">Total dumbbell</span>
+          <span className="workout-stats__total-label">{STATS_COPY.total(EXERCISE_LABEL.dumbbell)}</span>
           <span className="workout-stats__total-value">{totals.dumbbellActualReps}</span>
         </div>
       </section>
 
       <ExerciseChart
-        title="Plank"
-        unit="s"
+        id="plank"
+        title={EXERCISE_LABEL.plank}
+        unit={SECONDS_UNIT}
         series={series.map((point) => ({ date: point.date, value: point.plankActualSec }))}
       />
       <ExerciseChart
-        title="Squat"
+        id="squat"
+        title={EXERCISE_LABEL.squat}
         unit=""
         series={series.map((point) => ({ date: point.date, value: point.squatActualReps }))}
       />
       <ExerciseChart
-        title="Pushup"
+        id="pushup"
+        title={EXERCISE_LABEL.pushup}
         unit=""
         series={series.map((point) => ({ date: point.date, value: point.pushupActualReps }))}
       />
       <ExerciseChart
-        title="Deadhang"
-        unit="s"
+        id="deadhang"
+        title={EXERCISE_LABEL.deadhang}
+        unit={SECONDS_UNIT}
         series={series.map((point) => ({ date: point.date, value: point.deadhangActualSec }))}
       />
       <ExerciseChart
-        title="Dumbbell"
+        id="dumbbell"
+        title={EXERCISE_LABEL.dumbbell}
         unit=""
         series={series.map((point) => ({ date: point.date, value: point.dumbbellActualReps }))}
       />

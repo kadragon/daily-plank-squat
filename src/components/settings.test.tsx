@@ -20,23 +20,23 @@ test('Settings renders exercise toggles for all exercises', () => {
     <Settings
       settings={defaultSettings()}
       exerciseTargets={[
-        { id: 'plank', label: 'Plank', currentTarget: 60, unit: 's' },
-        { id: 'squat', label: 'Squat', currentTarget: 20, unit: 'reps' },
-        { id: 'pushup', label: 'Pushup', currentTarget: 15, unit: 'reps' },
-        { id: 'deadhang', label: 'Deadhang', currentTarget: 30, unit: 's' },
-        { id: 'dumbbell', label: 'Dumbbell', currentTarget: 10, unit: 'reps' },
+        { id: 'plank', label: '플랭크', currentTarget: 60, unit: '초' },
+        { id: 'squat', label: '스쿼트', currentTarget: 20, unit: '회' },
+        { id: 'pushup', label: '푸시업', currentTarget: 15, unit: '회' },
+        { id: 'deadhang', label: '데드행', currentTarget: 30, unit: '초' },
+        { id: 'dumbbell', label: '덤벨 컬', currentTarget: 10, unit: '회' },
       ]}
       onToggleExercise={() => {}}
       onChangeTarget={() => {}}
     />,
   )
 
-  expect(html).toContain('Settings')
-  expect(html).toContain('Plank')
-  expect(html).toContain('Squat')
-  expect(html).toContain('Pushup')
-  expect(html).toContain('Deadhang')
-  expect(html).toContain('Dumbbell')
+  expect(html).toContain('설정')
+  expect(html).toContain('플랭크')
+  expect(html).toContain('스쿼트')
+  expect(html).toContain('푸시업')
+  expect(html).toContain('데드행')
+  expect(html).toContain('덤벨 컬')
 })
 
 test('Settings renders target inputs with current values', () => {
@@ -44,8 +44,8 @@ test('Settings renders target inputs with current values', () => {
     <Settings
       settings={defaultSettings()}
       exerciseTargets={[
-        { id: 'plank', label: 'Plank', currentTarget: 60, unit: 's' },
-        { id: 'squat', label: 'Squat', currentTarget: 20, unit: 'reps' },
+        { id: 'plank', label: '플랭크', currentTarget: 60, unit: '초' },
+        { id: 'squat', label: '스쿼트', currentTarget: 20, unit: '회' },
       ]}
       onToggleExercise={() => {}}
       onChangeTarget={() => {}}
@@ -63,7 +63,7 @@ test('Settings target input renders type="text" with inputMode="numeric"', () =>
     <Settings
       settings={defaultSettings()}
       exerciseTargets={[
-        { id: 'plank', label: 'Plank', currentTarget: 60, unit: 's' },
+        { id: 'plank', label: '플랭크', currentTarget: 60, unit: '초' },
       ]}
       onToggleExercise={() => {}}
       onChangeTarget={() => {}}
@@ -81,7 +81,7 @@ test('Settings renders countdown seconds setting', () => {
     <Settings
       settings={{ ...defaultSettings(), countdownSec: 5 }}
       exerciseTargets={[
-        { id: 'plank', label: 'Plank', currentTarget: 60, unit: 's' },
+        { id: 'plank', label: '플랭크', currentTarget: 60, unit: '초' },
       ]}
       onToggleExercise={() => {}}
       onChangeTarget={() => {}}
@@ -101,7 +101,7 @@ test('Settings disables target input for disabled exercises', () => {
     <Settings
       settings={settings}
       exerciseTargets={[
-        { id: 'squat', label: 'Squat', currentTarget: 20, unit: 'reps' },
+        { id: 'squat', label: '스쿼트', currentTarget: 20, unit: '회' },
       ]}
       onToggleExercise={() => {}}
       onChangeTarget={() => {}}

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { getWakeLock, syncWakeLock, type WakeLockSentinelLike } from './use-wake-lock'
+import { APP_COPY } from '../locales/ko'
 import type { PlankState } from '../types'
 
 export function useWorkoutWakeLock(plankState: PlankState, deadhangState: PlankState, initialNotice = ''): string {
@@ -19,7 +20,7 @@ export function useWorkoutWakeLock(plankState: PlankState, deadhangState: PlankS
         if (!isDisposed) {
           wakeLockSentinelRef.current = next
           if (hasRunningTimer && !wakeLock) {
-            setWakeLockNotice('Wake Lock is not supported on this device. Keep the screen on manually.')
+            setWakeLockNotice(APP_COPY.wakeLockUnsupported)
           } else {
             setWakeLockNotice('')
           }
@@ -27,7 +28,7 @@ export function useWorkoutWakeLock(plankState: PlankState, deadhangState: PlankS
       } catch (err) {
         console.warn('[useWorkoutWakeLock] Wake lock sync failed:', err)
         if (!isDisposed && hasRunningTimer) {
-          setWakeLockNotice('Wake Lock could not be acquired. Keep the screen on manually.')
+          setWakeLockNotice(APP_COPY.wakeLockFailed)
         }
       }
     }

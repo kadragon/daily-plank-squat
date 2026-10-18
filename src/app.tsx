@@ -26,7 +26,16 @@ import {
 import { TabIcon } from './components/tab-icon'
 import { saveRecord } from './storage/daily-record'
 import { buildHealthPayload, buildShortcutRunUrl } from './integrations/apple-health-shortcut'
-import { getRecommendationReasonText } from './locales/ko'
+import {
+  APP_COPY,
+  EXERCISE_LABEL,
+  REPS_COPY,
+  REPS_UNIT,
+  SAVE_FEEDBACK,
+  SECONDS_UNIT,
+  TIMER_COPY,
+  getRecommendationReasonText,
+} from './locales/ko'
 import { loadSettings, saveSettings, type AppSettings, type ExerciseId } from './storage/settings'
 import {
   createInitialAppState,
@@ -55,8 +64,6 @@ interface AppProps {
 }
 
 const APPLE_HEALTH_SHORTCUT_NAME = 'DailyPlankSquatToHealth'
-const HEALTH_EXPORT_ERROR_HINT = 'Could not open Shortcuts. Check that Apple Shortcuts is available on this device.'
-const SUSPICIOUS_EXPORT_HINT = '기록은 가능하지만 측정 환경 경고'
 
 export default function App({ initialView = 'plank', initialPlankState, initialWakeLockNotice }: AppProps) {
   const initial = useRef(createInitialAppState(initialPlankState)).current
@@ -94,7 +101,7 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
     dayType: initial.tomorrowDayType,
   })
   const todayRecord = useMemo(() => records.find((record) => record.date === today) ?? null, [records, today])
-  const summaryHealthHint = healthExportHint || (todayRecord?.flag_suspicious ? SUSPICIOUS_EXPORT_HINT : '')
+  const summaryHealthHint = healthExportHint || (todayRecord?.flag_suspicious ? APP_COPY.suspiciousExportHint : '')
 
   const [persistRequest, setPersistRequest] = useState<{ id: number, reason: PersistReason }>({ id: 0, reason: 'general' })
   const [completeSaveFeedback, setCompleteSaveFeedback] = useState<{
@@ -175,7 +182,7 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
 
   const showSaveFeedback = useCallback((target: CompleteSaveFeedbackTarget) => {
     clearCompleteSaveFeedbackTimer()
-    setCompleteSaveFeedback({ target, text: 'Saving...', tone: 'info' })
+    setCompleteSaveFeedback({ target, text: SAVE_FEEDBACK.saving, tone: 'info' })
   }, [clearCompleteSaveFeedbackTimer])
 
   const onSquatComplete = useCallback(() => {
@@ -234,7 +241,7 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
       setHealthExportHint('')
     } catch (err) {
       console.warn('[handleExportToHealth] Health export failed:', err)
-      setHealthExportHint(HEALTH_EXPORT_ERROR_HINT)
+      setHealthExportHint(APP_COPY.healthExportError)
     }
   }, [todayRecord])
 
@@ -278,7 +285,7 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
     const scheduleCompleteSaveFeedbackSuccess = (target: CompleteSaveFeedbackTarget) => {
       clearCompleteSaveFeedbackTimer()
       completeSaveFeedbackTimerRef.current = setTimeout(() => {
-        setCompleteSaveFeedback({ target, text: 'Saved just now', tone: 'success' })
+        setCompleteSaveFeedback({ target, text: SAVE_FEEDBACK.saved, tone: 'success' })
         completeSaveFeedbackTimerRef.current = setTimeout(() => {
           setCompleteSaveFeedback((current) => (current?.target === target ? null : current))
           completeSaveFeedbackTimerRef.current = null
@@ -345,7 +352,7 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
     } catch {
       if (feedbackTarget) {
         clearCompleteSaveFeedbackTimer()
-        setCompleteSaveFeedback({ target: feedbackTarget, text: 'Save failed. Try again.', tone: 'error' })
+        setCompleteSaveFeedback({ target: feedbackTarget, text: SAVE_FEEDBACK.failed, tone: 'error' })
       }
       return
     }
@@ -447,9 +454,9 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
           const pushupSaveFeedback = completeSaveFeedback?.target === 'pushup' ? completeSaveFeedback : null
           return (
             <RepsCounter
-              title="Pushup Counter"
+              title={REPS_COPY.pushupTitle}
               idPrefix="pushup"
-              exerciseName="pushups"
+              exerciseName={EXERCISE_LABEL.pushup}
               count={pushup.count}
               targetReps={pushup.target}
               showRecommendation={pushup.completed}
@@ -468,7 +475,7 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
         return (
           <>
             <PlankTimer
-              title="Deadhang Timer"
+              title={TIMER_COPY.deadhangTitle}
               elapsedMs={deadhang.elapsedMs}
               targetSec={deadhangTargetSec}
               state={deadhang.state}
@@ -490,9 +497,9 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
           const dumbbellSaveFeedback = completeSaveFeedback?.target === 'dumbbell' ? completeSaveFeedback : null
           return (
             <RepsCounter
-              title="Dumbbell Counter"
+              title={REPS_COPY.dumbbellTitle}
               idPrefix="dumbbell"
-              exerciseName="dumbbell curls"
+              exerciseName={EXERCISE_LABEL.dumbbell}
               count={dumbbellExercise.count}
               targetReps={dumbbellExercise.target}
               showRecommendation={dumbbellExercise.completed}
@@ -540,11 +547,11 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
           <Settings
             settings={appSettings}
             exerciseTargets={[
-              { id: 'plank', label: 'Plank', currentTarget: plankTargetSec, unit: 's' },
-              { id: 'squat', label: 'Squat', currentTarget: squat.target, unit: 'reps' },
-              { id: 'pushup', label: 'Pushup', currentTarget: pushup.target, unit: 'reps' },
-              { id: 'deadhang', label: 'Deadhang', currentTarget: deadhangTargetSec, unit: 's' },
-              { id: 'dumbbell', label: 'Dumbbell', currentTarget: dumbbellExercise.target, unit: 'reps' },
+              { id: 'plank', label: EXERCISE_LABEL.plank, currentTarget: plankTargetSec, unit: SECONDS_UNIT },
+              { id: 'squat', label: EXERCISE_LABEL.squat, currentTarget: squat.target, unit: REPS_UNIT },
+              { id: 'pushup', label: EXERCISE_LABEL.pushup, currentTarget: pushup.target, unit: REPS_UNIT },
+              { id: 'deadhang', label: EXERCISE_LABEL.deadhang, currentTarget: deadhangTargetSec, unit: SECONDS_UNIT },
+              { id: 'dumbbell', label: EXERCISE_LABEL.dumbbell, currentTarget: dumbbellExercise.target, unit: REPS_UNIT },
             ]}
             onToggleExercise={handleToggleExercise}
             onChangeTarget={handleSettingsTargetChange}
@@ -565,8 +572,8 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
     <div className="app">
       <div className="app-shell">
         <header className="app-header" data-swipe-ignore="true">
-          <h1 className="app-title">Daily Training</h1>
-          <p className="app-subtitle">Train consistently. Recover intelligently.</p>
+          <h1 className="app-title">{APP_COPY.title}</h1>
+          <p className="app-subtitle">{APP_COPY.subtitle}</p>
         </header>
         <main
           className={`main-content${isWorkoutView(view) ? ' main-content--workout main-content--swipe' : ''}`}
@@ -580,7 +587,7 @@ export default function App({ initialView = 'plank', initialPlankState, initialW
             {renderView()}
           </div>
         </main>
-        <nav className="nav app-tabbar" aria-label="Exercise navigation" data-swipe-ignore="true">
+        <nav className="nav app-tabbar" aria-label={APP_COPY.navLabel} data-swipe-ignore="true">
           {activeNavItems.map((item) => (
             <button
               key={item.view}

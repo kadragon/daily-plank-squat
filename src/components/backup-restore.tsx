@@ -11,6 +11,7 @@ import {
   type RestorePreview,
   serializeBackup,
 } from '../storage/backup'
+import { BACKUP_COPY, DAY_TYPE_LABEL, EXERCISE_LABEL, REPS_UNIT, SECONDS_UNIT } from '../locales/ko'
 import type { DailyRecord } from '../types'
 
 interface BackupRestoreProps {
@@ -38,7 +39,7 @@ function downloadViaBlob(fileName: string, contents: string): void {
 }
 
 function yesNo(value: boolean): string {
-  return value ? 'yes' : 'no'
+  return value ? BACKUP_COPY.yes : BACKUP_COPY.no
 }
 
 interface ExerciseResult {
@@ -48,11 +49,11 @@ interface ExerciseResult {
 }
 
 function exerciseParts(name: string, unit: string, result: ExerciseResult | null): string[] {
-  if (!result) return [`${name} none`]
+  if (!result) return [BACKUP_COPY.none(name)]
   return [
-    `${name} ${result.actual}${unit}`,
-    `${name} target ${result.target}${unit}`,
-    `${name} success: ${yesNo(result.success)}`,
+    BACKUP_COPY.actual(name, `${result.actual}${unit}`),
+    BACKUP_COPY.target(name, `${result.target}${unit}`),
+    BACKUP_COPY.success(name, yesNo(result.success)),
   ]
 }
 
@@ -62,9 +63,9 @@ function recordParts(record: DailyRecord): string[] {
     ({ actual: r.actual_reps, target: r.target_reps, success: r.success })
   const secs = (r: { target_sec: number, actual_sec: number, success: boolean }) =>
     ({ actual: r.actual_sec, target: r.target_sec, success: r.success })
-  const [plank, ...plankRest] = exerciseParts('Plank', 's', secs(record.plank))
-  const [squat, ...squatRest] = exerciseParts('Squat', '', reps(record.squat))
-  const [pushup, ...pushupRest] = exerciseParts('Pushup', '', reps(record.pushup))
+  const [plank, ...plankRest] = exerciseParts(EXERCISE_LABEL.plank, SECONDS_UNIT, secs(record.plank))
+  const [squat, ...squatRest] = exerciseParts(EXERCISE_LABEL.squat, REPS_UNIT, reps(record.squat))
+  const [pushup, ...pushupRest] = exerciseParts(EXERCISE_LABEL.pushup, REPS_UNIT, reps(record.pushup))
   return [
     plank,
     squat,
@@ -72,13 +73,13 @@ function recordParts(record: DailyRecord): string[] {
     ...plankRest,
     ...squatRest,
     ...pushupRest,
-    ...exerciseParts('Deadhang', 's', secs(record.deadhang)),
-    ...exerciseParts('Dumbbell', '', record.dumbbell && reps(record.dumbbell)),
-    `Squat done: ${yesNo(record.squat_completed)}`,
-    `Pushup done: ${yesNo(record.pushup_completed)}`,
-    `Dumbbell done: ${yesNo(record.dumbbell_completed)}`,
-    `Day: ${record.day_type ?? 'training'}`,
-    `Flagged: ${yesNo(record.flag_suspicious)}`,
+    ...exerciseParts(EXERCISE_LABEL.deadhang, SECONDS_UNIT, secs(record.deadhang)),
+    ...exerciseParts(EXERCISE_LABEL.dumbbell, REPS_UNIT, record.dumbbell && reps(record.dumbbell)),
+    BACKUP_COPY.done(EXERCISE_LABEL.squat, yesNo(record.squat_completed)),
+    BACKUP_COPY.done(EXERCISE_LABEL.pushup, yesNo(record.pushup_completed)),
+    BACKUP_COPY.done(EXERCISE_LABEL.dumbbell, yesNo(record.dumbbell_completed)),
+    BACKUP_COPY.dayType(DAY_TYPE_LABEL[record.day_type ?? 'training']),
+    BACKUP_COPY.flagged(yesNo(record.flag_suspicious)),
   ]
 }
 
@@ -99,8 +100,8 @@ export default function BackupRestore({ onRestored, downloadFile = downloadViaBl
     const { backup, skippedDates } = exportBackup()
     downloadFile(backupFileName(backup), serializeBackup(backup))
     setMessage(skippedDates.length > 0
-      ? `Exported ${backup.records.length} records. Skipped invalid records: ${skippedDates.join(', ')}.`
-      : `Exported ${backup.records.length} records.`)
+      ? BACKUP_COPY.exportedWithSkipped(backup.records.length, skippedDates)
+      : BACKUP_COPY.exported(backup.records.length))
   }
 
   async function handleFileChange(input: HTMLInputElement) {
@@ -111,21 +112,21 @@ export default function BackupRestore({ onRestored, downloadFile = downloadViaBl
     // A later pick supersedes any read still in flight; the old preview goes away so it cannot be applied meanwhile.
     const readId = ++readIdRef.current
     setPending(null)
-    setMessage('Reading file…')
+    setMessage(BACKUP_COPY.reading)
     let text: string
     try {
       text = await file.text()
     } catch (err) {
       if (readId !== readIdRef.current) return
       console.warn('[BackupRestore] file read failed:', err)
-      setMessage('Could not read the file — nothing was changed.')
+      setMessage(BACKUP_COPY.readFailed)
       return
     }
     if (readId !== readIdRef.current) return
 
     const result = parseBackup(text)
     if (!result.ok) {
-      setMessage(`Invalid backup file — nothing was changed. (${result.error})`)
+      setMessage(BACKUP_COPY.invalid(result.error))
       return
     }
 
@@ -144,7 +145,7 @@ export default function BackupRestore({ onRestored, downloadFile = downloadViaBl
       applyRestore(pending.backup, { conflicts: pending.choices, includeSettings: pending.includeSettings })
     } catch (err) {
       console.warn('[BackupRestore] restore failed:', err)
-      setMessage('Restore failed — existing data was kept.')
+      setMessage(BACKUP_COPY.restoreFailed)
       return
     }
     setPending(null)
@@ -157,30 +158,32 @@ export default function BackupRestore({ onRestored, downloadFile = downloadViaBl
 
   return (
     <section className="settings__backup">
-      <h3>Backup</h3>
-      <p className="settings__backup-note">Files stay on this device. Nothing is uploaded.</p>
+      <h3>{BACKUP_COPY.title}</h3>
+      <p className="settings__backup-note">{BACKUP_COPY.note}</p>
       <div className="settings__backup-actions">
         <button type="button" className="btn" onClick={handleExport}>
-          Export backup
+          {BACKUP_COPY.export}
         </button>
         <label className="btn btn--danger settings__backup-file">
-          Restore from file
+          {BACKUP_COPY.restoreFromFile}
           <input
             type="file"
             accept="application/json,.json"
-            aria-label="Backup file"
+            aria-label={BACKUP_COPY.fileAriaLabel}
             onChange={(e) => { void handleFileChange(e.currentTarget) }}
           />
         </label>
       </div>
       {message ? <p className="settings__backup-message" role="status">{message}</p> : null}
       {pending ? (
-        <section className="settings__backup-preview" aria-label="Restore preview">
+        <section className="settings__backup-preview" aria-label={BACKUP_COPY.previewAriaLabel}>
           <p>
-            {`Backup from ${backupDateKey(pending.backup)}: `
-              + `${pending.preview.newDates.length} new, `
-              + `${pending.preview.identicalDates.length} unchanged, `
-              + `${pending.preview.conflicts.length} conflicting days.`}
+            {BACKUP_COPY.previewSummary(
+              backupDateKey(pending.backup),
+              pending.preview.newDates.length,
+              pending.preview.identicalDates.length,
+              pending.preview.conflicts.length,
+            )}
           </p>
           {pending.preview.conflicts.map((conflict) => {
             const choice = pending.choices[conflict.date] ?? 'keep'
@@ -194,7 +197,7 @@ export default function BackupRestore({ onRestored, downloadFile = downloadViaBl
                     checked={choice === 'keep'}
                     onChange={() => setChoice(conflict.date, 'keep')}
                   />
-                  Keep current — {describeConflict(conflict.existing, conflict.incoming)}
+                  {BACKUP_COPY.currentChoice(describeConflict(conflict.existing, conflict.incoming))}
                 </label>
                 <label>
                   <input
@@ -203,7 +206,7 @@ export default function BackupRestore({ onRestored, downloadFile = downloadViaBl
                     checked={choice === 'replace'}
                     onChange={() => setChoice(conflict.date, 'replace')}
                   />
-                  Use backup — {describeConflict(conflict.incoming, conflict.existing)}
+                  {BACKUP_COPY.backupChoice(describeConflict(conflict.incoming, conflict.existing))}
                 </label>
               </fieldset>
             )
@@ -218,15 +221,15 @@ export default function BackupRestore({ onRestored, downloadFile = downloadViaBl
                   setPending((current) => current && { ...current, includeSettings })
                 }}
               />
-              Also restore settings
+              {BACKUP_COPY.includeSettings}
             </label>
           ) : null}
           <div className="settings__backup-actions">
             <button type="button" className="btn" onClick={handleConfirm}>
-              Apply restore
+              {BACKUP_COPY.apply}
             </button>
             <button type="button" className="btn btn--danger" onClick={() => setPending(null)}>
-              Cancel
+              {BACKUP_COPY.cancel}
             </button>
           </div>
         </section>
