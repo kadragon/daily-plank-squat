@@ -36,10 +36,8 @@ export interface UseTimedExerciseReturn {
   handleCancel: () => void
 }
 
-// The previous success is re-judged against the current target, which may have changed since it was logged.
-function isBetterResult(next: TimedWorkoutResult, previous: TimedWorkoutResult, targetSec: number): boolean {
-  const previousSuccess = previous.success && previous.actualSec >= targetSec
-  if (next.success !== previousSuccess) return next.success
+function isBetterResult(next: TimedWorkoutResult, previous: TimedWorkoutResult): boolean {
+  if (next.success !== previous.success) return next.success
   return next.actualSec > previous.actualSec
 }
 
@@ -100,9 +98,16 @@ export function useTimedExercise({
   }, [otherTimerRunning, logged, result, countdownSec, setSuspiciousSession, syncState])
 
   const logRun = useCallback((next: TimedWorkoutResult, elapsedMs: number) => {
-    const previous = previousResultRef.current
+    const stored = previousResultRef.current
     previousResultRef.current = null
-    if (previous && !isBetterResult(next, previous, targetSec)) return
+    if (stored) {
+      // Re-judge the earlier result against the current target, which may have changed since it was logged.
+      const previous = { actualSec: stored.actualSec, success: stored.actualSec >= targetSec }
+      if (!isBetterResult(next, previous)) {
+        if (previous.success !== stored.success) setResult(previous)
+        return
+      }
+    }
     completedElapsedMsRef.current = elapsedMs
     loggedVisibilityTrackerRef.current = visibilityTrackerRef.current
     setResult(next)

@@ -21,6 +21,13 @@ if (typeof document === 'undefined') {
 
 let now = 0
 let nowSpy: ReturnType<typeof spyOn> | null = null
+let pendingFrames: FrameRequestCallback[] = []
+
+function flushFrames() {
+  const frames = pendingFrames
+  pendingFrames = []
+  act(() => { for (const frame of frames) frame(now) })
+}
 
 const originalFrameApi = {
   requestAnimationFrame: globalThis.requestAnimationFrame,
@@ -30,8 +37,12 @@ const originalFrameApi = {
 beforeEach(() => {
   now = 1_000
   nowSpy = spyOn(performance, 'now').mockImplementation(() => now)
-  // Frames never fire: each test drives the timer through explicit handler calls only.
-  Object.assign(globalThis, { requestAnimationFrame: () => 0, cancelAnimationFrame: () => {} })
+  // Frames fire only through flushFrames(), so each test controls when the running timer ticks.
+  pendingFrames = []
+  Object.assign(globalThis, {
+    requestAnimationFrame: (callback: FrameRequestCallback) => pendingFrames.push(callback),
+    cancelAnimationFrame: (id: number) => { pendingFrames[id - 1] = () => {} },
+  })
 })
 
 afterEach(() => {
@@ -71,7 +82,7 @@ test('restarting keeps the earlier logged result while the new run is in progres
 })
 
 test('cancelling a shorter rerun keeps the earlier result and its snapshot', () => {
-  const { view, persisted } = renderTimed({ actualSec: 60, success: true, logged: true })
+  const { view, persisted } = renderTimed({ actualSec: 60, success: true, logged: true }, 60)
   const earlierTracker = view.result.current.loggedVisibilityTrackerRef.current
 
   act(() => view.result.current.handleStart())
@@ -128,4 +139,44 @@ test('an earlier success under a lower target does not beat a longer rerun under
   act(() => view.result.current.handleCancel())
 
   expect(view.result.current.result).toEqual({ actualSec: 70, success: false })
+})
+
+test('an earlier run that meets a lowered target is kept over a shorter successful rerun', () => {
+  const { view } = renderTimed({ actualSec: 60, success: false, logged: true }, 50)
+
+  act(() => view.result.current.handleStart())
+  now += 50_000
+  flushFrames()
+
+  expect(view.result.current.state).toBe('COMPLETED')
+  expect(view.result.current.result).toEqual({ actualSec: 60, success: true })
+})
+
+test('a kept earlier result is re-judged against a raised target', () => {
+  const { view } = renderTimed({ actualSec: 60, success: true, logged: true }, 90)
+
+  act(() => view.result.current.handleStart())
+  now += 50_000
+  act(() => view.result.current.handleCancel())
+
+  expect(view.result.current.result).toEqual({ actualSec: 60, success: false })
+})
+
+test('a rerun that reaches the target replaces an earlier unsuccessful result', () => {
+  const { view, persisted } = renderTimed({ actualSec: 30, success: false, logged: true }, 45)
+  const earlierTracker = view.result.current.loggedVisibilityTrackerRef.current
+
+  act(() => view.result.current.handleStart())
+  now += 20_000
+  flushFrames()
+  expect(view.result.current.result).toEqual({ actualSec: 30, success: false })
+
+  now += 25_000
+  flushFrames()
+
+  expect(view.result.current.state).toBe('COMPLETED')
+  expect(view.result.current.result).toEqual({ actualSec: 45, success: true })
+  expect(view.result.current.completedElapsedMsRef.current).toBe(45_000)
+  expect(view.result.current.loggedVisibilityTrackerRef.current).not.toBe(earlierTracker)
+  expect(persisted).toHaveLength(1)
 })
