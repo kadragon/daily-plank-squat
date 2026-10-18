@@ -22,11 +22,13 @@ export interface BuildDailyRecordInput {
   plankTargetSec: number
   plankResult: TimedWorkoutResult
   plankLogged: boolean
+  plankCancelled: boolean
   plankVisibilityTracker: VisibilityTracker
   plankSessionElapsedMs: number
   deadhangTargetSec: number
   deadhangResult: TimedWorkoutResult
   deadhangLogged: boolean
+  deadhangCancelled: boolean
   deadhangVisibilityTracker: VisibilityTracker
   deadhangSessionElapsedMs: number
   squatTargetReps: number
@@ -67,6 +69,8 @@ export function buildDailyRecord(input: BuildDailyRecordInput): BuildDailyRecord
       target_sec: input.plankTargetSec,
       actual_sec: input.plankResult.actualSec,
       success: input.plankResult.success,
+      inactive_time_ratio: plankInactiveTimeRatio,
+      cancelled: input.plankCancelled,
     },
     squat: {
       target_reps: input.squatTargetReps,
@@ -82,6 +86,8 @@ export function buildDailyRecord(input: BuildDailyRecordInput): BuildDailyRecord
       target_sec: input.deadhangTargetSec,
       actual_sec: input.deadhangResult.actualSec,
       success: input.deadhangResult.success,
+      inactive_time_ratio: deadhangInactiveTimeRatio,
+      cancelled: input.deadhangCancelled,
     },
     dumbbell: {
       target_reps: input.dumbbellTargetReps,

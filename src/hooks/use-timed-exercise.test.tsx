@@ -55,6 +55,7 @@ afterEach(() => {
 function renderTimed(
   initial: { actualSec: number, success: boolean, logged: boolean, inactiveTimeRatio?: number },
   initialTargetSec = 600,
+  countdownSec = 0,
 ) {
   const persisted: number[] = []
   const suspiciousResets: boolean[] = []
@@ -65,7 +66,7 @@ function renderTimed(
     initialLogged: initial.logged,
     initialInactiveTimeRatio: initial.inactiveTimeRatio ?? 0,
     targetSec,
-    countdownSec: 0,
+    countdownSec,
     otherTimerRunning: false,
     onProgressSeconds: () => {},
     requestPersist: () => { persisted.push(now) },
@@ -146,7 +147,7 @@ test('an earlier success under a lower target does not beat a longer rerun under
   expect(view.result.current.result).toEqual({ actualSec: 70, success: false })
 })
 
-test('an earlier run that meets a lowered target is kept over a shorter successful rerun', () => {
+test('an earlier cancelled run that meets a lowered target loses to a successful rerun', () => {
   const { view } = renderTimed({ actualSec: 60, success: false, logged: true }, 50)
 
   act(() => view.result.current.handleStart())
@@ -154,7 +155,7 @@ test('an earlier run that meets a lowered target is kept over a shorter successf
   flushFrames()
 
   expect(view.result.current.state).toBe('COMPLETED')
-  expect(view.result.current.result).toEqual({ actualSec: 60, success: true })
+  expect(view.result.current.result).toEqual({ actualSec: 50, success: true })
 })
 
 test('a kept earlier result is re-judged against a raised target', () => {
@@ -241,4 +242,45 @@ test('a logged success is re-judged when the target is raised', () => {
 
   view.rerender({ targetSec: 60 })
   expect(view.result.current.result).toEqual({ actualSec: 60, success: true })
+})
+
+test('a logged cancelled run is not upgraded when the target is lowered', () => {
+  const { view } = renderTimed({ actualSec: 50, success: false, logged: true }, 60)
+
+  view.rerender({ targetSec: 45 })
+  expect(view.result.current.result).toEqual({ actualSec: 50, success: false })
+})
+
+test('cancelling a rerun during its countdown reports that the earlier result was kept', () => {
+  const { view, persisted } = renderTimed({ actualSec: 60, success: true, logged: true }, 60, 3)
+
+  act(() => view.result.current.handleStart())
+  expect(view.result.current.state).toBe('COUNTDOWN')
+  act(() => view.result.current.handleCancel())
+
+  expect(view.result.current.state).toBe('CANCELLED')
+  expect(view.result.current.result).toEqual({ actualSec: 60, success: true })
+  expect(view.result.current.earlierResultKept).toBe(true)
+  expect(persisted).toEqual([])
+})
+
+test('cancelling a rerun of a 0s result during its countdown does not report it as kept', () => {
+  const { view } = renderTimed({ actualSec: 0, success: false, logged: true }, 60, 3)
+
+  act(() => view.result.current.handleStart())
+  act(() => view.result.current.handleCancel())
+
+  expect(view.result.current.earlierResultKept).toBe(false)
+})
+
+test('a completed run downgraded by a raised target is not reported as cancelled', () => {
+  const { view } = renderTimed({ actualSec: 60, success: true, logged: true }, 60)
+  view.rerender({ targetSec: 90 })
+
+  expect(view.result.current.result).toEqual({ actualSec: 60, success: false })
+  expect(view.result.current.cancelled).toBe(false)
+
+  cleanup()
+  const cancelled = renderTimed({ actualSec: 50, success: false, logged: true }, 60)
+  expect(cancelled.view.result.current.cancelled).toBe(true)
 })

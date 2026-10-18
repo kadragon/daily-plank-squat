@@ -2,7 +2,7 @@ import {
   computeTomorrowPlan,
 } from '../models/fatigue'
 import { loadAllRecords } from '../storage/daily-record'
-import type { BaseTargets, DailyRecord, DayType, FatigueParams, PlankState, RecommendationReason } from '../types'
+import type { BaseTargets, DailyRecord, DayType, ExerciseRecord, FatigueParams, PlankState, RecommendationReason } from '../types'
 import { addDaysToDateKey, getTodayDateKey } from '../utils/date-key'
 
 export interface InitialAppState {
@@ -25,7 +25,8 @@ export interface InitialAppState {
   fatigue: number
   overloadWarning: boolean
   suspiciousSession: boolean
-  inactiveTimeRatio: number
+  plankInactiveTimeRatio: number
+  deadhangInactiveTimeRatio: number
   tomorrowPlankTargetSec: number
   tomorrowSquatTargetReps: number
   tomorrowPushupTargetReps: number
@@ -80,6 +81,12 @@ function isDeadhangLogged(record: DailyRecord | null): boolean {
 
 export { todayKey }
 
+// Whether the logged run reached its target; `success` alone may have been downgraded by a later target raise.
+function reachedTarget(record: ExerciseRecord | undefined): boolean {
+  if (!record) return false
+  return record.cancelled === undefined ? record.success : !record.cancelled
+}
+
 function resolveTimedExerciseState(logged: boolean, success: boolean | undefined): PlankState {
   if (!logged) return 'IDLE'
   return success ? 'COMPLETED' : 'CANCELLED'
@@ -114,9 +121,9 @@ export function createInitialAppState(initialPlankState?: PlankState): InitialAp
     deadhangTargetSec: todayTargets.deadhang_target_sec,
     dumbbellTargetReps: todayTargets.dumbbell_target_reps,
     plankActualSec: todayRecord?.plank.actual_sec ?? 0,
-    plankSuccess: todayRecord?.plank.success ?? false,
+    plankSuccess: reachedTarget(todayRecord?.plank),
     deadhangActualSec: todayRecord?.deadhang.actual_sec ?? 0,
-    deadhangSuccess: todayRecord?.deadhang.success ?? false,
+    deadhangSuccess: reachedTarget(todayRecord?.deadhang),
     squatActualReps: todayRecord?.squat.actual_reps ?? 0,
     squatSuccess: todayRecord?.squat.success ?? false,
     pushupActualReps: todayRecord?.pushup.actual_reps ?? 0,
@@ -126,7 +133,8 @@ export function createInitialAppState(initialPlankState?: PlankState): InitialAp
     fatigue: todayRecord?.fatigue ?? todayTargets.fatigue,
     overloadWarning: todayRecord ? tomorrowPlan.overload_warning : false,
     suspiciousSession: todayRecord?.flag_suspicious ?? false,
-    inactiveTimeRatio: todayRecord?.inactive_time_ratio ?? 0,
+    plankInactiveTimeRatio: todayRecord?.plank.inactive_time_ratio ?? todayRecord?.inactive_time_ratio ?? 0,
+    deadhangInactiveTimeRatio: todayRecord?.deadhang.inactive_time_ratio ?? todayRecord?.inactive_time_ratio ?? 0,
     tomorrowPlankTargetSec: tomorrowPlan.plank_target_sec,
     tomorrowSquatTargetReps: tomorrowPlan.squat_target_reps,
     tomorrowPushupTargetReps: tomorrowPlan.pushup_target_reps,
@@ -138,8 +146,8 @@ export function createInitialAppState(initialPlankState?: PlankState): InitialAp
     tomorrowDeadhangReason: tomorrowPlan.deadhang_reason,
     tomorrowDumbbellReason: tomorrowPlan.dumbbell_reason,
     tomorrowDayType: tomorrowPlan.day_type,
-    plankState: initialPlankState ?? resolveTimedExerciseState(plankLoggedToday, todayRecord?.plank.success),
-    deadhangState: resolveTimedExerciseState(deadhangLoggedToday, todayRecord?.deadhang.success),
+    plankState: initialPlankState ?? resolveTimedExerciseState(plankLoggedToday, reachedTarget(todayRecord?.plank)),
+    deadhangState: resolveTimedExerciseState(deadhangLoggedToday, reachedTarget(todayRecord?.deadhang)),
     alreadyLoggedPlankToday: plankLoggedToday,
     alreadyLoggedDeadhangToday: deadhangLoggedToday,
     squatCompleted: todayRecord?.squat_completed ?? false,

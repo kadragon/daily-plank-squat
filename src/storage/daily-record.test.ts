@@ -366,3 +366,18 @@ test('Legacy records with rpe fields are loaded ignoring rpe', () => {
   expect('rpe' in (record?.squat ?? {})).toBe(false)
   expect('rpe_unlock' in (record ?? {})).toBe(false)
 })
+
+test('per-exercise inactive ratios and cancelled flags round-trip and legacy records load without them', () => {
+  const today = getTodayDateKey()
+  saveRecord({
+    ...sampleRecord(today),
+    plank: { target_sec: 60, actual_sec: 60, success: true, inactive_time_ratio: 0.7, cancelled: false },
+    deadhang: { target_sec: 30, actual_sec: 30, success: true, inactive_time_ratio: 0 },
+  })
+  expect(loadTodayRecord()?.plank.inactive_time_ratio).toBe(0.7)
+  expect(loadTodayRecord()?.plank.cancelled).toBe(false)
+  expect(loadTodayRecord()?.deadhang.inactive_time_ratio).toBe(0)
+
+  saveRecord(sampleRecord(today))
+  expect(loadTodayRecord()?.plank).toEqual({ target_sec: 60, actual_sec: 60, success: true })
+})

@@ -26,6 +26,7 @@ export interface UseTimedExerciseReturn {
   countdownMs: number
   result: TimedWorkoutResult
   logged: boolean
+  cancelled: boolean
   earlierResultKept: boolean
   timerRef: React.RefObject<DomainPlankTimer | null>
   visibilityTrackerRef: React.RefObject<VisibilityTracker>
@@ -38,8 +39,9 @@ export interface UseTimedExerciseReturn {
   handleCancel: () => void
 }
 
+// Re-judging only downgrades: a cancelled run never finished, so a lowered target does not make it a success.
 function judgeResult(result: TimedWorkoutResult, targetSec: number): TimedWorkoutResult {
-  const success = result.actualSec >= targetSec
+  const success = result.success && result.actualSec >= targetSec
   return success === result.success ? result : { actualSec: result.actualSec, success }
 }
 
@@ -64,7 +66,6 @@ export function useTimedExercise({
 }: UseTimedExerciseOptions): UseTimedExerciseReturn {
   const timerRef = useRef<DomainPlankTimer | null>(null)
   // A restored logged result has no live tracker; seed one with the stored ratio so later persists keep its flag.
-  // The record keeps only the day's max ratio, so with both timed exercises logged each inherits it (over-flags).
   const visibilityTrackerRef = useRef<VisibilityTracker>({
     ...createVisibilityTracker(),
     hiddenDurationMs: initialLogged ? initialInactiveTimeRatio * initialActualSec * 1000 : 0,
@@ -145,6 +146,9 @@ export function useTimedExercise({
       const elapsed = timerRef.current?.getCurrentElapsed(now) ?? 0
       logRun({ actualSec: cancelResult.actual_sec, success: false }, elapsed)
       requestPersist()
+    } else if (wasCountdown && previousResultRef.current) {
+      // A rerun cancelled before it began never beats the earlier result; logRun only reports it as kept.
+      logRun({ actualSec: 0, success: false }, 0)
     }
     syncState()
   }, [logRun, requestPersist, syncState])
@@ -218,6 +222,8 @@ export function useTimedExercise({
     countdownMs,
     result: judgedResult,
     logged,
+    // The stored result's success is whether the run reached its target, before any re-judging.
+    cancelled: logged && !result.success,
     earlierResultKept,
     timerRef,
     visibilityTrackerRef,
