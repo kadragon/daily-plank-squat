@@ -199,6 +199,18 @@ test('a rerun that is not better reports that the earlier result was kept', () =
   expect(view.result.current.earlierResultKept).toBe(false)
 })
 
+test('a rerun that ties the earlier result does not report it as better', () => {
+  const { view } = renderTimed({ actualSec: 60, success: true, logged: true }, 60)
+
+  act(() => view.result.current.handleStart())
+  now += 60_000
+  flushFrames()
+
+  expect(view.result.current.state).toBe('COMPLETED')
+  expect(view.result.current.result).toEqual({ actualSec: 60, success: true })
+  expect(view.result.current.earlierResultKept).toBe(false)
+})
+
 test('a rerun that replaces the earlier result does not report it as kept', () => {
   const { view } = renderTimed({ actualSec: 20, success: false, logged: true })
 

@@ -64,6 +64,7 @@ export function useTimedExercise({
 }: UseTimedExerciseOptions): UseTimedExerciseReturn {
   const timerRef = useRef<DomainPlankTimer | null>(null)
   // A restored logged result has no live tracker; seed one with the stored ratio so later persists keep its flag.
+  // The record keeps only the day's max ratio, so with both timed exercises logged each inherits it (over-flags).
   const visibilityTrackerRef = useRef<VisibilityTracker>({
     ...createVisibilityTracker(),
     hiddenDurationMs: initialLogged ? initialInactiveTimeRatio * initialActualSec * 1000 : 0,
@@ -114,8 +115,10 @@ export function useTimedExercise({
   const logRun = useCallback((next: TimedWorkoutResult, elapsedMs: number) => {
     const stored = previousResultRef.current
     previousResultRef.current = null
-    if (stored && !isBetterResult(next, judgeResult(stored, targetSec))) {
-      setEarlierResultKept(true)
+    const previous = stored && judgeResult(stored, targetSec)
+    if (previous && !isBetterResult(next, previous)) {
+      // A tie keeps the earlier result too, but only a strictly better one is worth telling the user about.
+      setEarlierResultKept(isBetterResult(previous, next))
       return
     }
     completedElapsedMsRef.current = elapsedMs
