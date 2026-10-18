@@ -79,7 +79,8 @@ export function useRepsExercise({
       console.error('[useRepsExercise] counterRef is null in handleComplete — this should never happen')
       return
     }
-    if (count === 0) {
+    // Read the ref, not `count`: a direct-entry draft committed in the same tap is not rendered yet.
+    if (counterRef.current.count === 0) {
       counterRef.current.count = target
     }
     const finalCount = completeSquatCounter(counterRef.current)
@@ -89,7 +90,7 @@ export function useRepsExercise({
     setCompleted(true)
     onComplete(finalCount, target)
     requestPersist(persistReason)
-  }, [count, target, goalAlerts, persistReason, requestPersist, onComplete])
+  }, [target, goalAlerts, persistReason, requestPersist, onComplete])
 
   return {
     count,
