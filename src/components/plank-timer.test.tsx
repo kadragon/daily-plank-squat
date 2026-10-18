@@ -82,13 +82,39 @@ test('PlankTimer RUNNING markup has plank-timer--running class', () => {
   expect(html).toContain('plank-timer--running')
 })
 
-test('PlankTimer progress bar shows correct width in RUNNING state', () => {
+test('PlankTimer progress ring reports 50% in RUNNING state', () => {
   const html = renderToStaticMarkup(
     <PlankTimer state="RUNNING" elapsedMs={30_000} targetSec={60} />,
   )
 
-  expect(html).toContain('progress-fill')
-  expect(html).toContain('width:50%')
+  expect(html).toContain('timer-ring__fill')
+  expect(html).toContain('role="progressbar"')
+  expect(html).toContain('aria-valuenow="50"')
+  expect(html).not.toContain('progress-bar')
+})
+
+test('PlankTimer primary button color class follows state', () => {
+  expect(renderToStaticMarkup(<PlankTimer state="IDLE" />)).toContain('timer-primary--go')
+  expect(renderToStaticMarkup(<PlankTimer state="RUNNING" />)).toContain('timer-primary--pause')
+  expect(renderToStaticMarkup(<PlankTimer state="PAUSED" />)).toContain('timer-primary--go')
+})
+
+test('PlankTimer cancel in RUNNING and PAUSED is described as a long press', () => {
+  for (const state of ['RUNNING', 'PAUSED'] as const) {
+    const html = renderToStaticMarkup(<PlankTimer state={state} />)
+
+    expect(html).toContain('aria-describedby=')
+    expect(html).toContain('길게 눌러 취소')
+  }
+})
+
+test('PlankTimer shows 다음 운동 only after the session ends and only with onNext', () => {
+  const noop = () => {}
+
+  expect(renderToStaticMarkup(<PlankTimer state="COMPLETED" onNext={noop} />)).toContain('다음 운동')
+  expect(renderToStaticMarkup(<PlankTimer state="CANCELLED" onNext={noop} />)).toContain('다음 운동')
+  expect(renderToStaticMarkup(<PlankTimer state="RUNNING" onNext={noop} />)).not.toContain('다음 운동')
+  expect(renderToStaticMarkup(<PlankTimer state="COMPLETED" />)).not.toContain('다음 운동')
 })
 
 test('PlankTimer renders custom title via title prop', () => {

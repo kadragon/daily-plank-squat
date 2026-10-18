@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from 'bun:test'
-import { cleanup, fireEvent, render, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, waitFor } from '@testing-library/react'
 import { Window } from 'happy-dom'
 import App from './app'
 import type { DailyRecord } from './types'
@@ -42,6 +42,13 @@ function swipe(main: HTMLElement, startX: number, endX: number, y = 220) {
     pointerId: 1,
     pointerType: 'touch',
   })
+}
+
+// Holds past the 600ms cancel threshold with real timers, then releases.
+async function longPress(button: HTMLElement) {
+  fireEvent.pointerDown(button, { pointerId: 7, button: 0, pointerType: 'touch' })
+  await act(() => new Promise<void>((resolve) => setTimeout(resolve, 700)))
+  fireEvent.pointerUp(button, { pointerId: 7, button: 0, pointerType: 'touch' })
 }
 
 function readStoredRecords(): DailyRecord[] {
@@ -375,7 +382,7 @@ test('Plank complete and cancel both save/update today record', async () => {
   happyWindow.localStorage.setItem('app-settings', JSON.stringify({ countdownSec: 0 }))
   const cancelView = render(<App initialView="plank" />)
   fireEvent.click(cancelView.getByRole('button', { name: '시작' }))
-  fireEvent.click(cancelView.getByRole('button', { name: '취소' }))
+  await longPress(cancelView.getByRole('button', { name: '취소' }))
 
   await waitFor(() => {
     const stored = readStoredRecords()
@@ -589,7 +596,7 @@ test('Cancelled plank is not marked completed on the today card but shows its re
   happyWindow.localStorage.setItem('app-settings', JSON.stringify({ countdownSec: 0 }))
   const view = render(<App initialView="plank" />)
   fireEvent.click(view.getByRole('button', { name: '시작' }))
-  fireEvent.click(view.getByRole('button', { name: '취소' }))
+  await longPress(view.getByRole('button', { name: '취소' }))
   await waitFor(() => {
     expect(readStoredRecords()).toHaveLength(1)
   })
@@ -611,4 +618,60 @@ test('Squat reaching target shows completed mark on the today card', () => {
   const squatCard = view.getByRole('button', { name: /^스쿼트 열기/ })
 
   expect(squatCard.className).toContain('exercise-card--completed')
+})
+
+test('Short tap on plank cancel while running keeps the session running', async () => {
+  happyWindow.localStorage.setItem('app-settings', JSON.stringify({ countdownSec: 0 }))
+  const view = render(<App initialView="plank" />)
+  fireEvent.click(view.getByRole('button', { name: '시작' }))
+
+  const cancel = view.getByRole('button', { name: '취소' })
+  fireEvent.pointerDown(cancel, { pointerId: 7, button: 0, pointerType: 'touch' })
+  fireEvent.pointerUp(cancel, { pointerId: 7, button: 0, pointerType: 'touch' })
+  fireEvent.click(cancel)
+  // Plain wait: the running timer keeps scheduling frames, so act() would never settle.
+  await new Promise<void>((resolve) => setTimeout(resolve, 700))
+
+  expect(view.getByRole('button', { name: '일시정지' })).toBeTruthy()
+  expect(view.container.querySelector('.plank-timer--running')).toBeTruthy()
+})
+
+test('Dragging across the cancel button does not swipe to another exercise', () => {
+  happyWindow.localStorage.setItem('app-settings', JSON.stringify({ countdownSec: 0 }))
+  const view = render(<App initialView="plank" />)
+  fireEvent.click(view.getByRole('button', { name: '시작' }))
+
+  const main = view.container.querySelector('main') as HTMLElement
+  fireEvent.pointerDown(view.getByRole('button', { name: '취소' }), { clientX: 300, clientY: 220, pointerId: 1, pointerType: 'touch' })
+  fireEvent.pointerUp(main, { clientX: 40, clientY: 220, pointerId: 1, pointerType: 'touch' })
+
+  expect(view.getByRole('heading', { name: '플랭크 타이머' })).toBeTruthy()
+})
+
+test('다음 운동 after a completed plank opens the next not-completed exercise', async () => {
+  happyWindow.localStorage.setItem('app-settings', JSON.stringify({ countdownSec: 0 }))
+  seedTodayRecord({
+    plank: { target_sec: 0, actual_sec: 0, success: false },
+    squat: { target_reps: 20, actual_reps: 21, success: true },
+    pushup: { target_reps: 15, actual_reps: 10, success: false },
+  })
+  const view = render(<App initialView="plank" />)
+  fireEvent.click(view.getByRole('button', { name: '시작' }))
+
+  fireEvent.click(await view.findByRole('button', { name: '다음 운동' }))
+
+  expect(view.getByRole('heading', { name: '푸시업 카운터' })).toBeTruthy()
+})
+
+test('다음 운동 after a cancelled plank returns to 오늘 운동 when every other exercise is done', async () => {
+  happyWindow.localStorage.setItem('app-settings', JSON.stringify({ countdownSec: 0 }))
+  seedTodayRecord({ plank: { target_sec: 60, actual_sec: 0, success: false } })
+  const view = render(<App initialView="plank" />)
+  fireEvent.click(view.getByRole('button', { name: '시작' }))
+  await longPress(view.getByRole('button', { name: '취소' }))
+
+  fireEvent.click(await view.findByRole('button', { name: '다음 운동' }))
+
+  expect(view.getByRole('button', { name: /^플랭크 열기/ })).toBeTruthy()
+  expect(view.queryByRole('heading', { name: '플랭크 타이머' })).toBeNull()
 })

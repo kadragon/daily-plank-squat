@@ -101,6 +101,9 @@ export const TIMER_COPY = {
   pause: '일시정지',
   resume: '재개',
   cancel: '취소',
+  cancelHoldHint: '길게 눌러 취소',
+  next: '다음 운동',
+  progressLabel: '진행률',
   result: (sec: number) => `결과: ${formatSeconds(sec)}`,
   cancelled: (sec: number) => `취소됨: ${formatSeconds(sec)}`,
 } as const

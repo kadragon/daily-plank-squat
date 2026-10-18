@@ -22,6 +22,7 @@ import {
   TAB_ITEMS,
   getActiveTab,
   getEnabledExerciseViews,
+  getNextExerciseView,
   isWorkoutView,
   isScrollableView,
   resolveView,
@@ -437,6 +438,10 @@ export default function App({ initialView = 'today', initialPlankState, initialW
     }
   })
 
+  function openNextExercise(current: ExerciseId) {
+    setView(getNextExerciseView(current, enabledExerciseViews, (id) => exerciseProgress[id].success))
+  }
+
   function renderView() {
     switch (view) {
       case 'plank':
@@ -455,6 +460,7 @@ export default function App({ initialView = 'today', initialPlankState, initialW
               onPause={plank.handlePause}
               onResume={plank.handleResume}
               onCancel={plank.handleCancel}
+              onNext={() => openNextExercise('plank')}
             />
             {wakeLockNotice ? <div className="wake-lock-notice">{wakeLockNotice}</div> : null}
           </>
@@ -517,6 +523,7 @@ export default function App({ initialView = 'today', initialPlankState, initialW
               onPause={deadhang.handlePause}
               onResume={deadhang.handleResume}
               onCancel={deadhang.handleCancel}
+              onNext={() => openNextExercise('deadhang')}
             />
             {wakeLockNotice ? <div className="wake-lock-notice">{wakeLockNotice}</div> : null}
           </>

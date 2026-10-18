@@ -26,6 +26,9 @@
   --primary: var(--ink);
   --secondary: var(--sale);
   --focus: var(--ink);
+  --timer-go: var(--success);
+  --timer-pause: #c2410c;
+  --timer-ring-track: var(--hairline-soft);
 
   /* ── Radius: pills for CTAs, square for cards (Nike geometry) ── */
   --radius-pill: 9999px;
@@ -256,16 +259,52 @@ body {
   letter-spacing: 0.06em;
 }
 
-/* The hero numeral: campaign display tier, staged on soft-cloud */
+/* Circular progress ring with the hero numeral centered inside */
+.timer-ring {
+  position: relative;
+  width: min(100%, 300px);
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+}
+
+.timer-ring__svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.timer-ring__track,
+.timer-ring__fill {
+  fill: none;
+  stroke-width: 6;
+}
+
+.timer-ring__track {
+  stroke: var(--timer-ring-track);
+}
+
+.timer-ring__fill {
+  stroke: var(--ink);
+  stroke-linecap: round;
+  transition: stroke-dashoffset 300ms linear;
+}
+
+.plank-timer--completed .timer-ring__fill {
+  stroke: var(--success);
+}
+
+/* The hero numeral: campaign display tier */
 .timer-display,
 .countdown-display {
-  width: 100%;
+  position: relative;
   display: block;
   text-align: center;
-  background: var(--soft-cloud);
-  padding: 1.5rem 0.5rem 1.1rem;
+  padding-top: 0.2em;
   font-family: var(--font-display);
-  font-size: clamp(5rem, 26vw, 7.5rem);
+  font-size: clamp(4rem, 20vw, 5.5rem);
   font-weight: 400;
   line-height: 0.86;
   letter-spacing: 0.02em;
@@ -302,23 +341,97 @@ body {
   color: var(--success);
 }
 
-.progress-bar {
-  width: 100%;
-  height: 6px;
+/* One large state-driven primary control in the thumb zone */
+.btn.timer-primary {
+  width: 96px;
+  height: 96px;
+  min-width: 0;
+  padding: 0;
+  border-radius: 50%;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.15rem;
+  font-size: 0.9rem;
+  color: var(--on-primary);
+}
+
+.btn.timer-primary--go {
+  background-color: var(--timer-go);
+  border-color: var(--timer-go);
+}
+
+.btn.timer-primary--pause {
+  background-color: var(--timer-pause);
+  border-color: var(--timer-pause);
+}
+
+.btn.timer-primary:not(:disabled):hover {
+  filter: brightness(0.92);
+}
+
+.btn.timer-primary:disabled {
   background-color: var(--soft-cloud);
-  border-radius: var(--radius-pill);
+  border-color: var(--hairline);
+  color: var(--stone);
+}
+
+.timer-primary__icon {
+  width: 34px;
+  height: 34px;
+}
+
+.timer-controls:has(.timer-primary) {
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Long-press cancel: fill sweeps across while held */
+.long-press-btn {
+  position: relative;
   overflow: hidden;
+  min-height: 44px;
+  padding: 0.6rem 1.5rem;
+  font-size: 0.9rem;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: none;
 }
 
-.progress-fill {
-  height: 100%;
-  background: var(--ink);
-  border-radius: var(--radius-pill);
-  transition: width 300ms linear;
+.long-press-btn__fill {
+  position: absolute;
+  inset: 0;
+  background-color: var(--hairline);
+  transform: scaleX(0);
+  transform-origin: left center;
 }
 
-.plank-timer--completed .progress-fill {
-  background: var(--success);
+.long-press-btn--pressing .long-press-btn__fill {
+  transform: scaleX(1);
+  transition: transform var(--long-press-ms, 600ms) linear;
+}
+
+.long-press-btn__label {
+  position: relative;
+}
+
+.timer-controls:has(.timer-next) {
+  flex-direction: column;
+  align-items: center;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .reps-counter {

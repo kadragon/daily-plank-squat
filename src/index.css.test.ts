@@ -81,3 +81,13 @@ test('tab bar stays visible: sticky on mobile, fixed-height frame on desktop', a
   expect(appShellBlock).not.toMatch(/\n\s*height:/)
   expect(css).toMatch(/@media\s*\(min-width:\s*768px\)\s*\{[\s\S]*?\.app-shell\s*\{[\s\S]*?\n\s*height:\s*min\(860px,\s*calc\(100dvh - 4rem\)\);/)
 })
+
+test('timer state colors are tokens on :root and the primary button uses them', async () => {
+  const css = await readIndexCss()
+  const rootBlock = css.match(/:root\s*\{([\s\S]*?)\}/)?.[1] ?? ''
+
+  expect(rootBlock).toContain('--timer-go:')
+  expect(rootBlock).toContain('--timer-pause:')
+  expect(css).toMatch(/\.btn\.timer-primary--go\s*\{[^}]*background-color:\s*var\(--timer-go\);/)
+  expect(css).toMatch(/\.btn\.timer-primary--pause\s*\{[^}]*background-color:\s*var\(--timer-pause\);/)
+})
