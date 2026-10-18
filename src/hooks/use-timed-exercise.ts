@@ -26,6 +26,7 @@ export interface UseTimedExerciseReturn {
   countdownMs: number
   result: TimedWorkoutResult
   logged: boolean
+  cancelled: boolean
   earlierResultKept: boolean
   timerRef: React.RefObject<DomainPlankTimer | null>
   visibilityTrackerRef: React.RefObject<VisibilityTracker>
@@ -146,9 +147,8 @@ export function useTimedExercise({
       logRun({ actualSec: cancelResult.actual_sec, success: false }, elapsed)
       requestPersist()
     } else if (wasCountdown && previousResultRef.current) {
-      // A rerun cancelled before it began logs nothing, so the earlier result stands.
-      previousResultRef.current = null
-      setEarlierResultKept(true)
+      // A rerun cancelled before it began never beats the earlier result; logRun only reports it as kept.
+      logRun({ actualSec: 0, success: false }, 0)
     }
     syncState()
   }, [logRun, requestPersist, syncState])
@@ -222,6 +222,8 @@ export function useTimedExercise({
     countdownMs,
     result: judgedResult,
     logged,
+    // The stored result's success is whether the run reached its target, before any re-judging.
+    cancelled: logged && !result.success,
     earlierResultKept,
     timerRef,
     visibilityTrackerRef,

@@ -81,6 +81,7 @@ function readSecondsRecord(value: unknown, path: string): ExerciseRecord {
     ...(obj.inactive_time_ratio !== undefined
       ? { inactive_time_ratio: readCount(obj.inactive_time_ratio, `${path}.inactive_time_ratio`, 1) }
       : {}),
+    ...(obj.cancelled !== undefined ? { cancelled: readBoolean(obj.cancelled, `${path}.cancelled`) } : {}),
   }
 }
 

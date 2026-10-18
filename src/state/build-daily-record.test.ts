@@ -6,11 +6,13 @@ const BASE_INPUT = {
   plankTargetSec: 60,
   plankResult: { actualSec: 60, success: true },
   plankLogged: true,
+  plankCancelled: false,
   plankVisibilityTracker: { hiddenAt: null, hiddenDurationMs: 0 },
   plankSessionElapsedMs: 60000,
   deadhangTargetSec: 30,
   deadhangResult: { actualSec: 30, success: true },
   deadhangLogged: false,
+  deadhangCancelled: false,
   deadhangVisibilityTracker: { hiddenAt: null, hiddenDurationMs: 0 },
   deadhangSessionElapsedMs: 0,
   squatTargetReps: 20,
@@ -50,4 +52,19 @@ test('buildDailyRecord stores each timed exercise its own inactive ratio and the
   expect(draftRecord.deadhang.inactive_time_ratio).toBe(0)
   expect(draftRecord.inactive_time_ratio).toBeCloseTo(0.7)
   expect(flagSuspicious).toBe(true)
+})
+
+test('buildDailyRecord stores whether each timed run was cancelled apart from its success', () => {
+  const { draftRecord } = buildDailyRecord({
+    ...BASE_INPUT,
+    plankTargetSec: 90,
+    plankResult: { actualSec: 60, success: false },
+    deadhangLogged: true,
+    deadhangResult: { actualSec: 20, success: false },
+    deadhangCancelled: true,
+    deadhangSessionElapsedMs: 20_000,
+    dayType: 'training',
+  })
+  expect(draftRecord.plank.cancelled).toBe(false)
+  expect(draftRecord.deadhang.cancelled).toBe(true)
 })

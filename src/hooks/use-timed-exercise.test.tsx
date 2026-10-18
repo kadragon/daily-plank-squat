@@ -263,3 +263,24 @@ test('cancelling a rerun during its countdown reports that the earlier result wa
   expect(view.result.current.earlierResultKept).toBe(true)
   expect(persisted).toEqual([])
 })
+
+test('cancelling a rerun of a 0s result during its countdown does not report it as kept', () => {
+  const { view } = renderTimed({ actualSec: 0, success: false, logged: true }, 60, 3)
+
+  act(() => view.result.current.handleStart())
+  act(() => view.result.current.handleCancel())
+
+  expect(view.result.current.earlierResultKept).toBe(false)
+})
+
+test('a completed run downgraded by a raised target is not reported as cancelled', () => {
+  const { view } = renderTimed({ actualSec: 60, success: true, logged: true }, 60)
+  view.rerender({ targetSec: 90 })
+
+  expect(view.result.current.result).toEqual({ actualSec: 60, success: false })
+  expect(view.result.current.cancelled).toBe(false)
+
+  cleanup()
+  const cancelled = renderTimed({ actualSec: 50, success: false, logged: true }, 60)
+  expect(cancelled.view.result.current.cancelled).toBe(true)
+})

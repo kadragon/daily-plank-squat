@@ -47,7 +47,7 @@ function sampleRecord(date: string, seed = 0): DailyRecord {
       target_sec: 60 + seed,
       actual_sec: 55 + seed,
       success: seed % 2 === 0,
-      ...(seed % 4 === 0 ? { inactive_time_ratio: 0.25 } : {}),
+      ...(seed % 4 === 0 ? { inactive_time_ratio: 0.25, cancelled: seed % 8 === 0 } : {}),
     },
     squat: { target_reps: 20 + seed, actual_reps: 20 + seed, success: true },
     pushup: { target_reps: 15, actual_reps: 12 + (seed % 4), success: false },
@@ -258,6 +258,10 @@ const invalidCases: Array<[string, () => string]> = [
   ['plank inactive ratio above 1', () => JSON.stringify({
     ...validEnvelope(),
     records: [{ ...sampleRecord('2026-09-01'), plank: { target_sec: 60, actual_sec: 60, success: true, inactive_time_ratio: 1.5 } }],
+  })],
+  ['non-boolean plank cancelled', () => JSON.stringify({
+    ...validEnvelope(),
+    records: [{ ...sampleRecord('2026-09-01'), plank: { target_sec: 60, actual_sec: 60, success: true, cancelled: 'no' } }],
   })],
   ['missing plank', () => JSON.stringify({ ...validEnvelope(), records: [{ ...sampleRecord('2026-09-01'), plank: undefined }] })],
   ['unknown day_type', () => JSON.stringify({ ...validEnvelope(), records: [{ ...sampleRecord('2026-09-01'), day_type: 'rest' }] })],

@@ -30,6 +30,7 @@ function asExerciseRecord(value: unknown): ExerciseRecord | null {
     actual_sec: value.actual_sec,
     success: value.success,
     ...(typeof value.inactive_time_ratio === 'number' ? { inactive_time_ratio: value.inactive_time_ratio } : {}),
+    ...(typeof value.cancelled === 'boolean' ? { cancelled: value.cancelled } : {}),
   }
 }
 

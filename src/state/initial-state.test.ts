@@ -75,3 +75,24 @@ test('a legacy record without per-exercise ratios falls back to the day ratio', 
   expect(initial.plankInactiveTimeRatio).toBe(0.7)
   expect(initial.deadhangInactiveTimeRatio).toBe(0.7)
 })
+
+test('a completed run downgraded by a raised target restores as completed', () => {
+  seedToday({ plank: { target_sec: 90, actual_sec: 60, success: false, cancelled: false } })
+
+  const initial = createInitialAppState()
+  expect(initial.plankSuccess).toBe(true)
+  expect(initial.plankState).toBe('COMPLETED')
+})
+
+test('a cancelled run restores as cancelled, and legacy records fall back to success', () => {
+  seedToday({
+    plank: { target_sec: 60, actual_sec: 50, success: false, cancelled: true },
+    deadhang: { target_sec: 30, actual_sec: 20, success: false },
+  })
+
+  const initial = createInitialAppState()
+  expect(initial.plankSuccess).toBe(false)
+  expect(initial.plankState).toBe('CANCELLED')
+  expect(initial.deadhangSuccess).toBe(false)
+  expect(initial.deadhangState).toBe('CANCELLED')
+})
