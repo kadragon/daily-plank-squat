@@ -27,12 +27,18 @@ export interface UseTimedExerciseReturn {
   logged: boolean
   timerRef: React.RefObject<DomainPlankTimer | null>
   visibilityTrackerRef: React.RefObject<VisibilityTracker>
+  loggedVisibilityTrackerRef: React.RefObject<VisibilityTracker>
   completedElapsedMsRef: React.RefObject<number>
   syncState: (now?: number) => void
   handleStart: () => void
   handlePause: () => void
   handleResume: () => void
   handleCancel: () => void
+}
+
+function isBetterResult(next: TimedWorkoutResult, previous: TimedWorkoutResult): boolean {
+  if (next.success !== previous.success) return next.success
+  return next.actualSec > previous.actualSec
 }
 
 export function useTimedExercise({
@@ -50,6 +56,8 @@ export function useTimedExercise({
 }: UseTimedExerciseOptions): UseTimedExerciseReturn {
   const timerRef = useRef<DomainPlankTimer | null>(null)
   const visibilityTrackerRef = useRef(createVisibilityTracker())
+  // Tracker of the run behind `result`; `visibilityTrackerRef` moves on to a rerun as soon as it starts.
+  const loggedVisibilityTrackerRef = useRef(visibilityTrackerRef.current)
   const completedElapsedMsRef = useRef(initialActualSec * 1000)
 
   if (timerRef.current === null) {
@@ -63,6 +71,8 @@ export function useTimedExercise({
   const countdownDurationRef = useRef(0)
   const [result, setResult] = useState<TimedWorkoutResult>({ actualSec: initialActualSec, success: initialSuccess })
   const [logged, setLogged] = useState(initialLogged)
+  // Result a rerun must not discard: kept unless the rerun ends with a better result.
+  const previousResultRef = useRef<TimedWorkoutResult | null>(null)
 
   const syncState = useCallback((now = nowMs()) => {
     setState(timerRef.current?.state() ?? 'IDLE')
@@ -71,11 +81,10 @@ export function useTimedExercise({
 
   const handleStart = useCallback(() => {
     if (otherTimerRunning) return
+    previousResultRef.current = logged ? result : null
     visibilityTrackerRef.current = createVisibilityTracker()
-    setResult({ actualSec: 0, success: false })
-    setLogged(false)
-    setSuspiciousSession(false)
-    completedElapsedMsRef.current = 0
+    // A kept earlier result keeps its flag; the next persist recomputes it either way.
+    if (!logged) setSuspiciousSession(false)
     if (countdownSec > 0) {
       const now = nowMs()
       timerRef.current?.startCountdown(now)
@@ -86,7 +95,24 @@ export function useTimedExercise({
       timerRef.current?.start(nowMs())
     }
     syncState()
-  }, [otherTimerRunning, countdownSec, setSuspiciousSession, syncState])
+  }, [otherTimerRunning, logged, result, countdownSec, setSuspiciousSession, syncState])
+
+  const logRun = useCallback((next: TimedWorkoutResult, elapsedMs: number) => {
+    const stored = previousResultRef.current
+    previousResultRef.current = null
+    if (stored) {
+      // Re-judge the earlier result against the current target, which may have changed since it was logged.
+      const previous = { actualSec: stored.actualSec, success: stored.actualSec >= targetSec }
+      if (!isBetterResult(next, previous)) {
+        if (previous.success !== stored.success) setResult(previous)
+        return
+      }
+    }
+    completedElapsedMsRef.current = elapsedMs
+    loggedVisibilityTrackerRef.current = visibilityTrackerRef.current
+    setResult(next)
+    setLogged(true)
+  }, [targetSec])
 
   const handlePause = useCallback(() => {
     timerRef.current?.pause(nowMs())
@@ -104,13 +130,11 @@ export function useTimedExercise({
     const cancelResult = timerRef.current?.cancel(now)
     if (cancelResult && !wasCountdown) {
       const elapsed = timerRef.current?.getCurrentElapsed(now) ?? 0
-      completedElapsedMsRef.current = elapsed
-      setResult({ actualSec: cancelResult.actual_sec, success: false })
-      setLogged(true)
+      logRun({ actualSec: cancelResult.actual_sec, success: false }, elapsed)
       requestPersist()
     }
     syncState()
-  }, [requestPersist, syncState])
+  }, [logRun, requestPersist, syncState])
 
   // Animation frame loop for countdown
   useEffect(() => {
@@ -151,9 +175,10 @@ export function useTimedExercise({
       if (currentElapsed >= targetSec * 1000) {
         const completeResult = timerRef.current?.complete(now)
         if (completeResult) {
-          completedElapsedMsRef.current = timerRef.current?.getCurrentElapsed(now) ?? currentElapsed
-          setResult({ actualSec: completeResult.actual_sec, success: completeResult.success })
-          setLogged(true)
+          logRun(
+            { actualSec: completeResult.actual_sec, success: completeResult.success },
+            timerRef.current?.getCurrentElapsed(now) ?? currentElapsed,
+          )
           onCompleted?.()
           requestPersist()
         }
@@ -166,7 +191,7 @@ export function useTimedExercise({
 
     frameId = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(frameId)
-  }, [state, targetSec, onProgressSeconds, onCompleted, requestPersist, syncState])
+  }, [state, targetSec, onProgressSeconds, onCompleted, logRun, requestPersist, syncState])
 
   return {
     state,
@@ -176,6 +201,7 @@ export function useTimedExercise({
     logged,
     timerRef,
     visibilityTrackerRef,
+    loggedVisibilityTrackerRef,
     completedElapsedMsRef,
     syncState,
     handleStart,

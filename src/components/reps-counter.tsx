@@ -1,6 +1,10 @@
 import { useRef, useState } from 'react'
 import { EXERCISE_LABEL, REPS_COPY, formatReps, formatTomorrowRecommendation } from '../locales/ko'
 
+function isValidDraft(value: string): boolean {
+  return /^\d{1,4}$/.test(value)
+}
+
 interface RepsCounterProps {
   title?: string
   idPrefix?: string
@@ -37,8 +41,20 @@ export default function RepsCounter({
   // Set when the edit was already closed (submit/Escape) so a blur fired by unmounting the input is ignored.
   const editClosedRef = useRef(false)
 
+  // A button tap may not blur the input (e.g. iOS Safari), so buttons resolve an open draft themselves.
+  const adjustBase = draft !== null && isValidDraft(draft) ? Number(draft) : count
+
   function adjust(delta: number) {
-    onDoneRepsChange?.(String(Math.max(0, count + delta)))
+    if (draft !== null) {
+      editClosedRef.current = true
+      setDraft(null)
+    }
+    onDoneRepsChange?.(String(Math.max(0, adjustBase + delta)))
+  }
+
+  function complete() {
+    if (draft !== null) closeDraft(true)
+    onComplete?.()
   }
 
   function openDraft() {
@@ -49,7 +65,7 @@ export default function RepsCounter({
   function closeDraft(commit: boolean) {
     if (editClosedRef.current) return
     editClosedRef.current = true
-    if (commit && draft !== null && /^\d{1,4}$/.test(draft) && Number(draft) !== count) onDoneRepsChange?.(draft)
+    if (commit && draft !== null && isValidDraft(draft) && Number(draft) !== count) onDoneRepsChange?.(draft)
     setDraft(null)
   }
 
@@ -104,7 +120,7 @@ export default function RepsCounter({
           type="button"
           className="btn btn--secondary reps-adjust__minor"
           aria-label={REPS_COPY.decrementAriaLabel}
-          disabled={count <= 0}
+          disabled={adjustBase <= 0}
           onClick={() => adjust(-1)}
         >
           {REPS_COPY.decrement}
@@ -141,7 +157,7 @@ export default function RepsCounter({
           type="button"
           className={`btn btn--primary reps-complete${goalReached ? ' reps-complete--ready' : ''}`}
           aria-label={REPS_COPY.completeAriaLabel(exerciseName)}
-          onClick={onComplete}
+          onClick={complete}
         >
           {REPS_COPY.complete}
         </button>
