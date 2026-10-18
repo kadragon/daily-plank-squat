@@ -14,7 +14,7 @@ test('Squat view shows target and done reps numeric inputs', () => {
 test('Squat view shows complete button', () => {
   const html = renderToStaticMarkup(<SquatCounter count={3} />)
 
-  expect(html).toContain('완료')
+  expect(html).toContain('>완료</button>')
 })
 
 test('Squat view no longer renders +1/-1 buttons', () => {
