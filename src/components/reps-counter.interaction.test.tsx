@@ -124,3 +124,24 @@ test('Empty or non-numeric direct entry is discarded', () => {
 
   expect(changes).toEqual([])
 })
+
+test('Opening and closing direct entry without a change does not report a change', () => {
+  const { view, changes } = renderCounter(0)
+
+  fireEvent.click(view.getByRole('button', { name: /완료 횟수 0/ }))
+  fireEvent.blur(view.container.querySelector('#squat-done-reps') as HTMLInputElement)
+
+  expect(changes).toEqual([])
+})
+
+test('Direct entry is limited to four digits', () => {
+  const { view, changes } = renderCounter(3)
+
+  fireEvent.click(view.getByRole('button', { name: /완료 횟수 3/ }))
+  const input = view.container.querySelector('#squat-done-reps') as HTMLInputElement
+  expect(input.maxLength).toBe(4)
+  fireEvent.input(input, { target: { value: '99999999999999999999999' } })
+  fireEvent.submit(input.form as HTMLFormElement)
+
+  expect(changes).toEqual([])
+})

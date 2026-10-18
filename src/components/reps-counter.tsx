@@ -49,7 +49,7 @@ export default function RepsCounter({
   function closeDraft(commit: boolean) {
     if (editClosedRef.current) return
     editClosedRef.current = true
-    if (commit && draft !== null && /^\d+$/.test(draft)) onDoneRepsChange?.(draft)
+    if (commit && draft !== null && /^\d{1,4}$/.test(draft) && Number(draft) !== count) onDoneRepsChange?.(draft)
     setDraft(null)
   }
 
@@ -84,6 +84,7 @@ export default function RepsCounter({
                 type="text"
                 inputMode="numeric"
                 pattern="[0-9]*"
+                maxLength={4}
                 enterKeyHint="done"
                 // biome-ignore lint/a11y/noAutofocus: the input only exists after the user taps the count to edit it
                 autoFocus

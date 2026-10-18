@@ -488,6 +488,7 @@ export default function App({ initialView = 'today', initialPlankState, initialW
           const pushupSaveFeedback = completeSaveFeedback?.target === 'pushup' ? completeSaveFeedback : null
           return (
             <RepsCounter
+              key="pushup"
               title={REPS_COPY.pushupTitle}
               idPrefix="pushup"
               exerciseName={EXERCISE_LABEL.pushup}
@@ -531,6 +532,7 @@ export default function App({ initialView = 'today', initialPlankState, initialW
           const dumbbellSaveFeedback = completeSaveFeedback?.target === 'dumbbell' ? completeSaveFeedback : null
           return (
             <RepsCounter
+              key="dumbbell"
               title={REPS_COPY.dumbbellTitle}
               idPrefix="dumbbell"
               exerciseName={EXERCISE_LABEL.dumbbell}

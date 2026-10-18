@@ -362,6 +362,32 @@ test('Changing pushup target reps in settings immediately saves today record', a
   })
 })
 
+test('Lowering a reps target in settings below the done count marks the exercise successful', async () => {
+  seedTodayRecord({ squat: { target_reps: 20, actual_reps: 15, success: false } })
+  const view = render(<App initialView="settings" />)
+  const targetInput = view.container.querySelector('#settings-target-squat')
+  if (!targetInput) throw new Error('squat settings target input not found')
+
+  setNumberInputValue(targetInput, '10')
+  await waitFor(() => {
+    const stored = readStoredRecords()
+    expect(stored[0]?.squat.target_reps).toBe(10)
+    expect(stored[0]?.squat.success).toBe(true)
+  })
+})
+
+test('Switching exercises discards an open direct entry instead of carrying it over', () => {
+  const view = render(<App initialView="pushup" />)
+  const input = openDoneRepsEntry(view, 'pushup')
+  setNumberInputValue(input, '37')
+
+  fireEvent.click(view.getByRole('button', { name: '덤벨 컬' }))
+
+  expect(view.getByText('덤벨 컬 카운터')).toBeTruthy()
+  expect(view.container.querySelector('#dumbbell-done-reps')).toBeNull()
+  expect(view.container.querySelector('input')).toBeNull()
+})
+
 test('Tapping +1, +5 and −1 on the dumbbell screen updates the count and saves it', async () => {
   const view = render(<App initialView="dumbbell" />)
 

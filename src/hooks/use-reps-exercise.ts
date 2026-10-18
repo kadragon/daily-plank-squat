@@ -68,6 +68,12 @@ export function useRepsExercise({
     requestPersist()
   }, [target, goalAlerts, requestPersist])
 
+  const updateTarget = useCallback((value: number) => {
+    setTarget(value)
+    setSuccess(computeSquatSuccess(count, value))
+    goalAlerts.onProgress(count, value)
+  }, [count, goalAlerts])
+
   const handleComplete = useCallback(() => {
     if (!counterRef.current) {
       console.error('[useRepsExercise] counterRef is null in handleComplete — this should never happen')
@@ -91,7 +97,7 @@ export function useRepsExercise({
     success,
     completed,
     counterRef,
-    setTarget,
+    setTarget: updateTarget,
     handleDoneRepsChange,
     handleComplete,
   }
