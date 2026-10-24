@@ -283,3 +283,34 @@ for (const [label, makeText] of invalidCases) {
     expect(snapshotStorage()).toEqual(before)
   })
 }
+
+for (const exercise of ['plank', 'deadhang'] as const) {
+  for (const success of [true, false]) {
+    test(`restore compares legacy ${exercise} defaults symmetrically (success=${success})`, () => {
+      const legacy = sampleRecord('2026-09-01', 1)
+      legacy[exercise].success = success
+      const explicit = structuredClone(legacy)
+      explicit[exercise].inactive_time_ratio = legacy.inactive_time_ratio
+      explicit[exercise].cancelled = !success
+      for (const [existing, incoming] of [[legacy, explicit], [explicit, legacy]]) {
+        saveRecord(existing)
+        const backup = parseOk(serializeBackup({ ...createBackup(), records: [incoming] }))
+        expect(previewRestore(backup).identicalDates).toEqual([legacy.date])
+        expect(previewRestore(backup).conflicts).toEqual([])
+        applyRestore(backup, { conflicts: {}, includeSettings: false })
+        expect(loadAllRecords()).toEqual([existing])
+      }
+    })
+  }
+
+  test(`restore still detects meaningful ${exercise} metadata differences`, () => {
+    const legacy = sampleRecord('2026-09-01', 1)
+    saveRecord(legacy)
+    for (const metadata of [{ inactive_time_ratio: 0 }, { cancelled: legacy[exercise].success }]) {
+      const incoming = structuredClone(legacy)
+      Object.assign(incoming[exercise], metadata)
+      const backup = parseOk(serializeBackup({ ...createBackup(), records: [incoming] }))
+      expect(previewRestore(backup).conflicts.map((conflict) => conflict.date)).toEqual([legacy.date])
+    }
+  })
+}

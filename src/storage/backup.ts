@@ -173,7 +173,19 @@ function readBackup(value: unknown): BackupFile {
 
 function canonicalRecord(record: DailyRecord): string {
   try {
-    return JSON.stringify(readDailyRecord(record, 'record'))
+    const normalized = readDailyRecord(record, 'record')
+    // Match initial-state fallbacks without changing imported or stored records.
+    for (const key of ['plank', 'deadhang'] as const) {
+      const exercise = normalized[key]
+      normalized[key] = {
+        target_sec: exercise.target_sec,
+        actual_sec: exercise.actual_sec,
+        success: exercise.success,
+        inactive_time_ratio: exercise.inactive_time_ratio ?? normalized.inactive_time_ratio,
+        cancelled: exercise.cancelled ?? !exercise.success,
+      }
+    }
+    return JSON.stringify(normalized)
   } catch {
     // Legacy stored records may predate strict validation; compare them as-is.
     return JSON.stringify(record)

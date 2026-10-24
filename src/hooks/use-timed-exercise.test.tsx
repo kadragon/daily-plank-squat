@@ -134,7 +134,7 @@ test('a kept earlier result keeps its suspicious flag when a rerun starts', () =
   cleanup()
   const fresh = renderTimed({ actualSec: 0, success: false, logged: false })
   act(() => fresh.view.result.current.handleStart())
-  expect(fresh.suspiciousResets).toEqual([false])
+  expect(fresh.suspiciousResets).toEqual([])
 })
 
 test('an earlier success under a lower target does not beat a longer rerun under the raised target', () => {
@@ -283,4 +283,14 @@ test('a completed run downgraded by a raised target is not reported as cancelled
   cleanup()
   const cancelled = renderTimed({ actualSec: 50, success: false, logged: true }, 60)
   expect(cancelled.view.result.current.cancelled).toBe(true)
+})
+
+test('cancelling a first countdown preserves the shared stored warning without persisting', () => {
+  const { view, suspiciousResets, persisted } = renderTimed({ actualSec: 0, success: false, logged: false }, 60, 3)
+  act(() => view.result.current.handleStart())
+  expect(view.result.current.state).toBe('COUNTDOWN')
+  act(() => view.result.current.handleCancel())
+  expect(view.result.current.logged).toBe(false)
+  expect(persisted).toEqual([])
+  expect(suspiciousResets).toEqual([])
 })

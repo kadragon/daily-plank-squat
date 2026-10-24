@@ -62,7 +62,6 @@ export function useTimedExercise({
   onProgressSeconds,
   onCompleted,
   requestPersist,
-  setSuspiciousSession,
 }: UseTimedExerciseOptions): UseTimedExerciseReturn {
   const timerRef = useRef<DomainPlankTimer | null>(null)
   // A restored logged result has no live tracker; seed one with the stored ratio so later persists keep its flag.
@@ -99,8 +98,7 @@ export function useTimedExercise({
     previousResultRef.current = logged ? result : null
     setEarlierResultKept(false)
     visibilityTrackerRef.current = createVisibilityTracker()
-    // A kept earlier result keeps its flag; the next persist recomputes it either way.
-    if (!logged) setSuspiciousSession(false)
+    // The shared warning describes stored results until the next persist recomputes it.
     if (countdownSec > 0) {
       const now = nowMs()
       timerRef.current?.startCountdown(now)
@@ -111,7 +109,7 @@ export function useTimedExercise({
       timerRef.current?.start(nowMs())
     }
     syncState()
-  }, [otherTimerRunning, logged, result, countdownSec, setSuspiciousSession, syncState])
+  }, [otherTimerRunning, logged, result, countdownSec, syncState])
 
   const logRun = useCallback((next: TimedWorkoutResult, elapsedMs: number) => {
     const stored = previousResultRef.current
