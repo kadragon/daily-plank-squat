@@ -314,3 +314,18 @@ for (const exercise of ['plank', 'deadhang'] as const) {
     }
   })
 }
+
+for (const exercise of ['plank', 'deadhang'] as const) {
+  test(`restore normalizes skipped legacy ${exercise} to writer defaults`, () => {
+    const legacy = sampleRecord('2026-09-01', 1)
+    legacy[exercise] = { target_sec: 60, actual_sec: 0, success: false }
+    const explicit = structuredClone(legacy)
+    explicit[exercise].inactive_time_ratio = 0
+    explicit[exercise].cancelled = false
+    for (const [existing, incoming] of [[legacy, explicit], [explicit, legacy]]) {
+      saveRecord(existing)
+      const backup = parseOk(serializeBackup({ ...createBackup(), records: [incoming] }))
+      expect(previewRestore(backup).identicalDates).toEqual([legacy.date])
+    }
+  })
+}

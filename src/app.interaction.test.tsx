@@ -720,3 +720,21 @@ test('다음 운동 after a cancelled plank returns to 오늘 운동 when every 
   expect(view.getByRole('button', { name: /^플랭크 열기/ })).toBeTruthy()
   expect(view.queryByRole('heading', { name: '플랭크 타이머' })).toBeNull()
 })
+
+test('Stored suspicious warning survives cancelling a first timed countdown', () => {
+  happyWindow.localStorage.setItem('app-settings', JSON.stringify({ countdownSec: 10 }))
+  seedTodayRecord({
+    plank: { target_sec: 60, actual_sec: 0, success: false },
+    inactive_time_ratio: 0.7,
+    flag_suspicious: true,
+  })
+  const stored = happyWindow.localStorage.getItem('daily-records')
+  const view = render(<App initialView="today" />)
+  expect(view.container.querySelector('.summary-warning')).toBeTruthy()
+  fireEvent.click(view.getByRole('button', { name: /^플랭크 열기/ }))
+  fireEvent.click(view.getByRole('button', { name: '시작' }))
+  fireEvent.click(view.getByRole('button', { name: '취소' }))
+  fireEvent.click(getTab(view, '오늘 운동'))
+  expect(view.container.querySelector('.summary-warning')).toBeTruthy()
+  expect(happyWindow.localStorage.getItem('daily-records')).toBe(stored)
+})
