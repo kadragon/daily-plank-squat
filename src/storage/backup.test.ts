@@ -14,6 +14,7 @@ import { loadAllRecords, saveRecord } from './daily-record'
 import { loadSettings, saveSettings, type AppSettings } from './settings'
 import type { DailyRecord } from '../types'
 import { addDaysToDateKey } from '../utils/date-key'
+import { createVisibilityTracker, getInactiveTimeRatio } from '../hooks/use-visibility'
 
 function createMemoryStorage(): Storage {
   const data = new Map<string, string>()
@@ -283,3 +284,68 @@ for (const [label, makeText] of invalidCases) {
     expect(snapshotStorage()).toEqual(before)
   })
 }
+
+for (const exercise of ['plank', 'deadhang'] as const) {
+  for (const success of [true, false]) {
+    test(`restore compares legacy ${exercise} defaults symmetrically (success=${success})`, () => {
+      const legacy = sampleRecord('2026-09-01', 1)
+      legacy[exercise].success = success
+      const explicit = structuredClone(legacy)
+      explicit[exercise].inactive_time_ratio = legacy.inactive_time_ratio
+      explicit[exercise].cancelled = !success
+      for (const [existing, incoming] of [[legacy, explicit], [explicit, legacy]]) {
+        saveRecord(existing)
+        const backup = parseOk(serializeBackup({ ...createBackup(), records: [incoming] }))
+        expect(previewRestore(backup).identicalDates).toEqual([legacy.date])
+        expect(previewRestore(backup).conflicts).toEqual([])
+        applyRestore(backup, { conflicts: {}, includeSettings: false })
+        expect(loadAllRecords()).toEqual([existing])
+      }
+    })
+  }
+
+  test(`restore still detects meaningful ${exercise} metadata differences`, () => {
+    const legacy = sampleRecord('2026-09-01', 1)
+    saveRecord(legacy)
+    for (const metadata of [{ inactive_time_ratio: 0 }, { cancelled: legacy[exercise].success }]) {
+      const incoming = structuredClone(legacy)
+      Object.assign(incoming[exercise], metadata)
+      const backup = parseOk(serializeBackup({ ...createBackup(), records: [incoming] }))
+      expect(previewRestore(backup).conflicts.map((conflict) => conflict.date)).toEqual([legacy.date])
+    }
+  })
+}
+
+for (const exercise of ['plank', 'deadhang'] as const) {
+  test(`restore normalizes skipped legacy ${exercise} to writer defaults`, () => {
+    const legacy = sampleRecord('2026-09-01', 1)
+    legacy[exercise] = { target_sec: 60, actual_sec: 0, success: false }
+    const explicit = structuredClone(legacy)
+    explicit[exercise].inactive_time_ratio = 0
+    explicit[exercise].cancelled = false
+    for (const [existing, incoming] of [[legacy, explicit], [explicit, legacy]]) {
+      saveRecord(existing)
+      const backup = parseOk(serializeBackup({ ...createBackup(), records: [incoming] }))
+      expect(previewRestore(backup).identicalDates).toEqual([legacy.date])
+    }
+  })
+}
+
+test('restore ignores ratio roundoff from a restored visibility tracker', () => {
+  const legacy = sampleRecord('2026-09-01', 1)
+  legacy.plank.actual_sec = 3
+  legacy.plank.success = true
+  legacy.inactive_time_ratio = 0.1
+  const explicit = structuredClone(legacy)
+  const tracker = createVisibilityTracker()
+  tracker.hiddenDurationMs = legacy.inactive_time_ratio * legacy.plank.actual_sec * 1000
+  const ratio = getInactiveTimeRatio(tracker, legacy.plank.actual_sec * 1000, 0)
+  expect(ratio).not.toBe(legacy.inactive_time_ratio)
+  explicit.plank.inactive_time_ratio = ratio
+  explicit.inactive_time_ratio = ratio
+  for (const [existing, incoming] of [[legacy, explicit], [explicit, legacy]]) {
+    saveRecord(existing)
+    const backup = parseOk(serializeBackup({ ...createBackup(), records: [incoming] }))
+    expect(previewRestore(backup).identicalDates).toEqual([legacy.date])
+  }
+})
