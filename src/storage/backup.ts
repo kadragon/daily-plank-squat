@@ -171,6 +171,12 @@ function readBackup(value: unknown): BackupFile {
   }
 }
 
+// Restored trackers multiply and divide ratios by elapsed milliseconds.
+// Ignore roundoff below 12 decimal places only in comparisons, not stored data.
+function comparisonRatio(ratio: number): number {
+  return Number(ratio.toFixed(12))
+}
+
 function canonicalRecord(record: DailyRecord): string {
   try {
     const normalized = readDailyRecord(record, 'record')
@@ -182,10 +188,11 @@ function canonicalRecord(record: DailyRecord): string {
         target_sec: exercise.target_sec,
         actual_sec: exercise.actual_sec,
         success: exercise.success,
-        inactive_time_ratio: exercise.inactive_time_ratio ?? (logged ? normalized.inactive_time_ratio : 0),
+        inactive_time_ratio: comparisonRatio(exercise.inactive_time_ratio ?? (logged ? normalized.inactive_time_ratio : 0)),
         cancelled: exercise.cancelled ?? (logged && !exercise.success),
       }
     }
+    normalized.inactive_time_ratio = comparisonRatio(normalized.inactive_time_ratio)
     return JSON.stringify(normalized)
   } catch {
     // Legacy stored records may predate strict validation; compare them as-is.
