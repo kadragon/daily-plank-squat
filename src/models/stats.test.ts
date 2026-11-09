@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test'
-import { buildDailyStatsSeries, computeWorkoutTotals, filterRecordsByRange } from './stats'
+import { MAX_SERIES_DAYS, buildDailyStatsSeries, computeWorkoutTotals, filterRecordsByRange } from './stats'
 import type { DailyRecord } from '../types'
 
 function record(date: string, plank: number, squat: number, pushup: number): DailyRecord {
@@ -159,4 +159,18 @@ test('buildDailyStatsSeries spans every day of the 7d range ending today', () =>
     '2026-02-20',
   ])
   expect(series.map((point) => point.squatActualReps)).toEqual([null, null, 21, null, null, null, null])
+})
+
+test('buildDailyStatsSeries skips malformed dates and bounds the all-range span', () => {
+  const malformed = { ...record('2026-02-01', 60, 20, 15), date: 'invalid' }
+  expect(buildDailyStatsSeries([record('2026-02-01', 60, 20, 15), malformed], 'all', '2026-02-10'))
+    .toEqual(buildDailyStatsSeries([record('2026-02-01', 60, 20, 15)], 'all', '2026-02-10'))
+
+  const series = buildDailyStatsSeries(
+    [record('1000-01-01', 10, 1, 1), record('2026-02-01', 60, 20, 15)],
+    'all',
+    '2026-02-10',
+  )
+  expect(series.length).toBe(MAX_SERIES_DAYS)
+  expect(series[series.length - 1].date).toBe('2026-02-01')
 })

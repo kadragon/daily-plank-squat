@@ -1,7 +1,10 @@
 import type { DailyRecord } from '../types'
-import { addDaysToDateKey, getTodayDateKey } from '../utils/date-key'
+import { addDaysToDateKey, getTodayDateKey, isValidDateKey } from '../utils/date-key'
 
 export type StatsRange = 'all' | '7d' | '30d'
+
+// Upper bound on expanded days, so a stray ancient date cannot blow up the chart.
+export const MAX_SERIES_DAYS = 3650
 
 export interface WorkoutTotals {
   plankActualSec: number
@@ -87,7 +90,8 @@ function toPoint(record: DailyRecord): DailyStatsPoint {
 
 /**
  * One point per calendar day: 7d/30d span the whole range ending today,
- * 'all' spans the first through the last stored record.
+ * 'all' spans the first through the last stored record, capped at MAX_SERIES_DAYS.
+ * Records with malformed dates are skipped.
  */
 export function buildDailyStatsSeries(
   records: DailyRecord[],
@@ -95,11 +99,14 @@ export function buildDailyStatsSeries(
   todayDateKey = getTodayDateKey(),
 ): DailyStatsPoint[] {
   const inRange = filterRecordsByRange(records, range, todayDateKey)
+    .filter((record) => isValidDateKey(record.date))
   if (range === 'all' && inRange.length === 0) return []
 
   const byDate = new Map(inRange.map((record) => [record.date, record]))
-  const start = range === 'all' ? inRange[0].date : rangeStartDateKey(range, todayDateKey)
   const end = range === 'all' ? inRange[inRange.length - 1].date : todayDateKey
+  const earliest = addDaysToDateKey(end, -(MAX_SERIES_DAYS - 1))
+  const first = range === 'all' ? inRange[0].date : rangeStartDateKey(range, todayDateKey)
+  const start = first < earliest ? earliest : first
 
   const series: DailyStatsPoint[] = []
   for (let date = start; date <= end; date = addDaysToDateKey(date, 1)) {

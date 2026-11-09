@@ -73,6 +73,16 @@ test('WorkoutStats shows all/7d/30d range filters', () => {
   expect(html).toContain('>30일<')
 })
 
+test('WorkoutStats draws an isolated recorded day as its own segment', () => {
+  const html = renderToStaticMarkup(
+    <WorkoutStats records={[record('2026-02-01', 60, 20, 15), record('2026-02-04', 62, 22, 17)]} />,
+  )
+
+  // Five charts, each with two separate segments and two points; nothing spans 02-02..02-03.
+  expect(html.match(/<polyline /g)?.length).toBe(10)
+  expect(html.match(/<circle /g)?.length).toBe(10)
+})
+
 test('WorkoutStats breaks chart lines across days without records', () => {
   const html = renderToStaticMarkup(
     <WorkoutStats

@@ -18,6 +18,7 @@ const CHART_PADDING = { top: 20, right: 16, bottom: 32, left: 36 }
 const CHART_HEIGHT = 160
 const GRID_LINES = 4
 const MAX_X_LABELS = 4
+const ISOLATED_TICK_HALF_WIDTH = 1.5
 
 // Contiguous runs of recorded days; a missing day breaks the line.
 function toSegments(series: ExerciseChartProps['series']): { index: number, value: number }[][] {
@@ -39,7 +40,7 @@ function ExerciseChart({ id, title, unit, series }: ExerciseChartProps) {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
 
   const { toX, toY, segments, xLabelStep, gridValues, innerW, innerH } = useMemo(() => {
-    const maxValue = Math.max(1, ...series.map((p) => p.value ?? 0))
+    const maxValue = series.reduce((max, p) => Math.max(max, p.value ?? 0), 1)
     const yMax = Math.ceil(maxValue * 1.15) || 1
 
     const innerW = 100 - CHART_PADDING.left - CHART_PADDING.right
@@ -153,7 +154,20 @@ function ExerciseChart({ id, title, unit, series }: ExerciseChartProps) {
             </g>
           ))}
 
-          {segments.filter((segment) => segment.length > 1).map((segment) => {
+          {segments.map((segment) => {
+            if (segment.length === 1) {
+              // An isolated day has no neighbor to connect to: draw a short tick so it stays visible.
+              const { index, value } = segment[0]
+              return (
+                <polyline
+                  key={`${id}-seg-${series[index].date}`}
+                  points={`${toX(index) - ISOLATED_TICK_HALF_WIDTH},${toY(value)} ${toX(index) + ISOLATED_TICK_HALF_WIDTH},${toY(value)}`}
+                  fill="none" stroke="var(--primary)" strokeWidth="0.6"
+                  strokeLinecap="round"
+                  vectorEffect="non-scaling-stroke"
+                />
+              )
+            }
             const first = segment[0].index
             const last = segment[segment.length - 1].index
             const points = segment.map((p) => `${toX(p.index)},${toY(p.value)}`)
