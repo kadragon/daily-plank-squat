@@ -11,13 +11,15 @@ export interface WorkoutTotals {
   dumbbellActualReps: number
 }
 
+// Values are null on calendar days without a stored record ("no record"),
+// which is not the same as a recorded 0.
 export interface DailyStatsPoint {
   date: string
-  plankActualSec: number
-  squatActualReps: number
-  pushupActualReps: number
-  deadhangActualSec: number
-  dumbbellActualReps: number
+  plankActualSec: number | null
+  squatActualReps: number | null
+  pushupActualReps: number | null
+  deadhangActualSec: number | null
+  dumbbellActualReps: number | null
 }
 
 function toSortedRecords(records: DailyRecord[]): DailyRecord[] {
@@ -32,8 +34,7 @@ export function filterRecordsByRange(
   const sorted = toSortedRecords(records)
   if (range === 'all') return sorted
 
-  const days = range === '7d' ? 7 : 30
-  const lowerBound = addDaysToDateKey(todayDateKey, -(days - 1))
+  const lowerBound = rangeStartDateKey(range, todayDateKey)
 
   return sorted.filter((record) => record.date >= lowerBound && record.date <= todayDateKey)
 }
@@ -57,13 +58,53 @@ export function computeWorkoutTotals(records: DailyRecord[]): WorkoutTotals {
   )
 }
 
-export function buildDailyStatsSeries(records: DailyRecord[]): DailyStatsPoint[] {
-  return toSortedRecords(records).map((record) => ({
+function rangeStartDateKey(range: Exclude<StatsRange, 'all'>, todayDateKey: string): string {
+  const days = range === '7d' ? 7 : 30
+  return addDaysToDateKey(todayDateKey, -(days - 1))
+}
+
+function emptyPoint(date: string): DailyStatsPoint {
+  return {
+    date,
+    plankActualSec: null,
+    squatActualReps: null,
+    pushupActualReps: null,
+    deadhangActualSec: null,
+    dumbbellActualReps: null,
+  }
+}
+
+function toPoint(record: DailyRecord): DailyStatsPoint {
+  return {
     date: record.date,
     plankActualSec: record.plank.actual_sec,
     squatActualReps: record.squat.actual_reps,
     pushupActualReps: record.pushup.actual_reps,
     deadhangActualSec: record.deadhang.actual_sec,
     dumbbellActualReps: record.dumbbell?.actual_reps ?? 0,
-  }))
+  }
+}
+
+/**
+ * One point per calendar day: 7d/30d span the whole range ending today,
+ * 'all' spans the first through the last stored record.
+ */
+export function buildDailyStatsSeries(
+  records: DailyRecord[],
+  range: StatsRange = 'all',
+  todayDateKey = getTodayDateKey(),
+): DailyStatsPoint[] {
+  const inRange = filterRecordsByRange(records, range, todayDateKey)
+  if (range === 'all' && inRange.length === 0) return []
+
+  const byDate = new Map(inRange.map((record) => [record.date, record]))
+  const start = range === 'all' ? inRange[0].date : rangeStartDateKey(range, todayDateKey)
+  const end = range === 'all' ? inRange[inRange.length - 1].date : todayDateKey
+
+  const series: DailyStatsPoint[] = []
+  for (let date = start; date <= end; date = addDaysToDateKey(date, 1)) {
+    const record = byDate.get(date)
+    series.push(record ? toPoint(record) : emptyPoint(date))
+  }
+  return series
 }

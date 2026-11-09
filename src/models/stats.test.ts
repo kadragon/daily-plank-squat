@@ -113,3 +113,50 @@ test('buildDailyStatsSeries returns date-sorted daily values', () => {
     },
   ])
 })
+
+test('buildDailyStatsSeries expands missing days as null and keeps totals', () => {
+  const records = [
+    record('2026-02-04', 70, 22, 0),
+    record('2026-02-01', 60, 20, 15),
+  ]
+
+  const series = buildDailyStatsSeries(records, 'all', '2026-02-10')
+
+  expect(series.map((point) => point.date)).toEqual([
+    '2026-02-01',
+    '2026-02-02',
+    '2026-02-03',
+    '2026-02-04',
+  ])
+  expect(series.map((point) => point.plankActualSec)).toEqual([60, null, null, 70])
+  expect(series[1]).toEqual({
+    date: '2026-02-02',
+    plankActualSec: null,
+    squatActualReps: null,
+    pushupActualReps: null,
+    deadhangActualSec: null,
+    dumbbellActualReps: null,
+  })
+  // A recorded 0 stays 0 and is distinct from a missing day.
+  expect(series[3].pushupActualReps).toBe(0)
+  expect(computeWorkoutTotals(records).plankActualSec).toBe(130)
+})
+
+test('buildDailyStatsSeries spans every day of the 7d range ending today', () => {
+  const series = buildDailyStatsSeries(
+    [record('2026-02-01', 60, 20, 15), record('2026-02-16', 61, 21, 16)],
+    '7d',
+    '2026-02-20',
+  )
+
+  expect(series.map((point) => point.date)).toEqual([
+    '2026-02-14',
+    '2026-02-15',
+    '2026-02-16',
+    '2026-02-17',
+    '2026-02-18',
+    '2026-02-19',
+    '2026-02-20',
+  ])
+  expect(series.map((point) => point.squatActualReps)).toEqual([null, null, 21, null, null, null, null])
+})
