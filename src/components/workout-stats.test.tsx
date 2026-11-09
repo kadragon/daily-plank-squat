@@ -101,3 +101,11 @@ test('WorkoutStats breaks chart lines across days without records', () => {
   // The missing day still gets its own x-axis slot.
   expect(html).toContain('>02-03<')
 })
+
+test('WorkoutStats shows the empty message when no record has a chartable date', () => {
+  const html = renderToStaticMarkup(
+    <WorkoutStats records={[{ ...record('2026-02-01', 60, 20, 15), date: 'invalid' }]} />,
+  )
+
+  expect(html).toContain('아직 기록이 없습니다. 운동을 완료하면 통계가 표시됩니다.')
+})

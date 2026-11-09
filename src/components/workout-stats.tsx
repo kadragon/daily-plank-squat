@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { buildDailyStatsSeries, computeWorkoutTotals, filterRecordsByRange, type StatsRange } from '../models/stats'
 import { EXERCISE_LABEL, REPS_UNIT, SECONDS_UNIT, STATS_COPY, formatSeconds } from '../locales/ko'
 import type { DailyRecord } from '../types'
@@ -37,7 +37,10 @@ function toSegments(series: ExerciseChartProps['series']): { index: number, valu
 }
 
 function ExerciseChart({ id, title, unit, series }: ExerciseChartProps) {
-  const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
+  // Selection is kept by date so it survives records being added or removed.
+  const [selectedDate, setSelectedDate] = useState<string | null>(null)
+  const foundIndex = selectedDate === null ? -1 : series.findIndex((p) => p.date === selectedDate)
+  const selectedIndex = foundIndex === -1 ? null : foundIndex
 
   const { toX, toY, segments, xLabelStep, gridValues, innerW, innerH } = useMemo(() => {
     const maxValue = series.reduce((max, p) => Math.max(max, p.value ?? 0), 1)
@@ -64,47 +67,52 @@ function ExerciseChart({ id, title, unit, series }: ExerciseChartProps) {
   }, [series])
 
   const chartId = `chart-${id}`
-  const readoutId = `${chartId}-readout`
   const lastIndex = series.length - 1
 
-  const handlePointer = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+  const selectAt = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect()
     if (rect.width === 0) return
     const xPct = ((e.clientX - rect.left) / rect.width) * 100
     const idx = series.length === 1
       ? 0
       : Math.round(((xPct - CHART_PADDING.left) / innerW) * (series.length - 1))
-    setSelectedIndex(Math.max(0, Math.min(series.length - 1, idx)))
-  }, [series.length, innerW])
+    setSelectedDate(series[Math.max(0, Math.min(series.length - 1, idx))].date)
+  }, [series, innerW])
+
+  // Mouse hover previews a day; touch selects only on tap (click), so a scroll
+  // that starts on the chart never leaves a selection behind.
+  const handlePointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType === 'mouse') selectAt(e)
+  }, [selectAt])
 
   const handlePointerLeave = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
-    // Keep a tapped selection on touch; only a mouse hover is transient.
-    if (e.pointerType === 'mouse') setSelectedIndex(null)
+    if (e.pointerType === 'mouse') setSelectedDate(null)
   }, [])
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
-    const step = (delta: number) => (current: number | null) =>
-      current === null ? lastIndex : Math.max(0, Math.min(lastIndex, current + delta))
+    const selectIndex = (index: number) =>
+      setSelectedDate(series[Math.max(0, Math.min(lastIndex, index))].date)
+    const step = (delta: number) => selectIndex(selectedIndex === null ? lastIndex : selectedIndex + delta)
     switch (e.key) {
-      case 'ArrowLeft': setSelectedIndex(step(-1)); break
-      case 'ArrowRight': setSelectedIndex(step(1)); break
-      case 'Home': setSelectedIndex(0); break
-      case 'End': setSelectedIndex(lastIndex); break
-      case 'Escape': setSelectedIndex(null); break
+      case 'ArrowLeft': step(-1); break
+      case 'ArrowRight': step(1); break
+      case 'Home': selectIndex(0); break
+      case 'End': selectIndex(lastIndex); break
+      case 'Escape': setSelectedDate(null); break
       default: return
     }
     e.preventDefault()
-  }, [lastIndex])
+  }, [series, lastIndex, selectedIndex])
 
   if (series.length === 0) return null
 
+  const describe = (point: ExerciseChartProps['series'][number]) => STATS_COPY.readout(
+    point.date,
+    point.value === null ? STATS_COPY.noRecord : `${point.value}${unit}`,
+  )
   const selected = selectedIndex === null ? null : series[selectedIndex]
-  const readoutText = selected
-    ? STATS_COPY.readout(
-      selected.date,
-      selected.value === null ? STATS_COPY.noRecord : `${selected.value}${unit}`,
-    )
-    : ''
+  const readoutText = selected ? describe(selected) : ''
+  const valueIndex = selectedIndex ?? lastIndex
 
   return (
     <section className="workout-stats__chart">
@@ -114,13 +122,12 @@ function ExerciseChart({ id, title, unit, series }: ExerciseChartProps) {
         role="slider"
         tabIndex={0}
         aria-label={STATS_COPY.chartAriaLabel(title)}
-        aria-describedby={readoutId}
         aria-valuemin={0}
         aria-valuemax={lastIndex}
-        aria-valuenow={selectedIndex ?? lastIndex}
-        aria-valuetext={readoutText || undefined}
-        onPointerDown={handlePointer}
-        onPointerMove={handlePointer}
+        aria-valuenow={valueIndex}
+        aria-valuetext={describe(series[valueIndex])}
+        onClick={selectAt}
+        onPointerMove={handlePointerMove}
         onPointerLeave={handlePointerLeave}
         onKeyDown={handleKeyDown}
       >
@@ -231,7 +238,7 @@ function ExerciseChart({ id, title, unit, series }: ExerciseChartProps) {
           )}
         </svg>
       </div>
-      <p id={readoutId} className="workout-stats__readout">{readoutText}</p>
+      <p className="workout-stats__readout">{readoutText}</p>
     </section>
   )
 }
@@ -242,7 +249,8 @@ export default function WorkoutStats({ records = [] }: WorkoutStatsProps) {
   const totals = useMemo(() => computeWorkoutTotals(filtered), [filtered])
   const series = useMemo(() => buildDailyStatsSeries(records, range), [records, range])
 
-  if (filtered.length === 0) {
+  // A missing day is null for every exercise, so plank tells whether any day was recorded.
+  if (!series.some((point) => point.plankActualSec !== null)) {
     return (
       <div className="workout-stats">
         <h2>{STATS_COPY.title}</h2>
@@ -301,39 +309,36 @@ export default function WorkoutStats({ records = [] }: WorkoutStatsProps) {
         </div>
       </section>
 
-      {/* Keyed by range so a day selection never outlives the series it indexed. */}
-      <Fragment key={range}>
-        <ExerciseChart
-          id="plank"
-          title={EXERCISE_LABEL.plank}
-          unit={SECONDS_UNIT}
-          series={series.map((point) => ({ date: point.date, value: point.plankActualSec }))}
-        />
-        <ExerciseChart
-          id="squat"
-          title={EXERCISE_LABEL.squat}
-          unit={REPS_UNIT}
-          series={series.map((point) => ({ date: point.date, value: point.squatActualReps }))}
-        />
-        <ExerciseChart
-          id="pushup"
-          title={EXERCISE_LABEL.pushup}
-          unit={REPS_UNIT}
-          series={series.map((point) => ({ date: point.date, value: point.pushupActualReps }))}
-        />
-        <ExerciseChart
-          id="deadhang"
-          title={EXERCISE_LABEL.deadhang}
-          unit={SECONDS_UNIT}
-          series={series.map((point) => ({ date: point.date, value: point.deadhangActualSec }))}
-        />
-        <ExerciseChart
-          id="dumbbell"
-          title={EXERCISE_LABEL.dumbbell}
-          unit={REPS_UNIT}
-          series={series.map((point) => ({ date: point.date, value: point.dumbbellActualReps }))}
-        />
-      </Fragment>
+      <ExerciseChart
+        id="plank"
+        title={EXERCISE_LABEL.plank}
+        unit={SECONDS_UNIT}
+        series={series.map((point) => ({ date: point.date, value: point.plankActualSec }))}
+      />
+      <ExerciseChart
+        id="squat"
+        title={EXERCISE_LABEL.squat}
+        unit={REPS_UNIT}
+        series={series.map((point) => ({ date: point.date, value: point.squatActualReps }))}
+      />
+      <ExerciseChart
+        id="pushup"
+        title={EXERCISE_LABEL.pushup}
+        unit={REPS_UNIT}
+        series={series.map((point) => ({ date: point.date, value: point.pushupActualReps }))}
+      />
+      <ExerciseChart
+        id="deadhang"
+        title={EXERCISE_LABEL.deadhang}
+        unit={SECONDS_UNIT}
+        series={series.map((point) => ({ date: point.date, value: point.deadhangActualSec }))}
+      />
+      <ExerciseChart
+        id="dumbbell"
+        title={EXERCISE_LABEL.dumbbell}
+        unit={REPS_UNIT}
+        series={series.map((point) => ({ date: point.date, value: point.dumbbellActualReps }))}
+      />
     </div>
   )
 }

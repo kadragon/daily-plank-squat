@@ -53,7 +53,7 @@ const RECORDS = [record('2026-02-01', 60, 0), record('2026-02-03', 75, 22)]
 
 function chart(view: ReturnType<typeof render>, label: string) {
   const svg = view.getByLabelText(label)
-  const readout = view.container.querySelector(`#${svg.getAttribute('aria-describedby')}`)
+  const readout = svg.closest('.workout-stats__chart')?.querySelector('.workout-stats__readout') ?? null
   return { svg, readout }
 }
 
@@ -92,8 +92,13 @@ test('tapping a chart selects the nearest day', () => {
     left: 0, top: 0, width: 100, height: 160, right: 100, bottom: 160, x: 0, y: 0, toJSON: () => ({}),
   })
 
-  // Chart inner area spans x=36..84, so x=60 is the middle day.
+  // A touch that starts a scroll must not select a day.
   fireEvent.pointerDown(svg, { clientX: 60, pointerType: 'touch' })
+  fireEvent.pointerMove(svg, { clientX: 60, pointerType: 'touch' })
+  expect(readout?.textContent).toBe('')
+
+  // Chart inner area spans x=36..84, so x=60 is the middle day.
+  fireEvent.click(svg, { clientX: 60 })
   expect(readout?.textContent).toBe('2026-02-02 · 기록 없음')
 
   fireEvent.pointerLeave(svg, { pointerType: 'touch' })
@@ -111,4 +116,22 @@ test('switching range clears a day selection from the previous range', () => {
 
   fireEvent.click(view.getByText('7일'))
   expect(chart(view, '플랭크 차트').readout?.textContent).toBe('')
+})
+
+test('selection follows the chosen date when records change', () => {
+  const view = render(<WorkoutStats records={RECORDS} />)
+  fireEvent.keyDown(chart(view, '플랭크 차트').svg, { key: 'End' })
+
+  view.rerender(<WorkoutStats records={[record('2026-01-31', 50, 10), ...RECORDS]} />)
+  expect(chart(view, '플랭크 차트').readout?.textContent).toBe('2026-02-03 · 75초')
+
+  view.rerender(<WorkoutStats records={[RECORDS[0]]} />)
+  const { svg, readout } = chart(view, '플랭크 차트')
+  expect(readout?.textContent).toBe('')
+  expect(Number(svg.getAttribute('aria-valuenow'))).toBeLessThanOrEqual(Number(svg.getAttribute('aria-valuemax')))
+})
+
+test('unselected slider still announces the latest day', () => {
+  const view = render(<WorkoutStats records={RECORDS} />)
+  expect(chart(view, '플랭크 차트').svg.getAttribute('aria-valuetext')).toBe('2026-02-03 · 75초')
 })

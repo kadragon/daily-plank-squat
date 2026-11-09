@@ -174,3 +174,14 @@ test('buildDailyStatsSeries skips malformed dates and bounds the all-range span'
   expect(series.length).toBe(MAX_SERIES_DAYS)
   expect(series[series.length - 1].date).toBe('2026-02-01')
 })
+
+test('buildDailyStatsSeries keeps real days charted when a record is dated in the future', () => {
+  const series = buildDailyStatsSeries(
+    [record('2026-01-31', 50, 10, 5), record('2026-02-01', 60, 20, 15), record('2099-01-01', 70, 21, 16)],
+    'all',
+    '2026-02-03',
+  )
+
+  expect(series.map((point) => point.date)).toEqual(['2026-01-31', '2026-02-01'])
+  expect(series.map((point) => point.plankActualSec)).toEqual([50, 60])
+})

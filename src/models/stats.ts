@@ -91,15 +91,17 @@ function toPoint(record: DailyRecord): DailyStatsPoint {
 /**
  * One point per calendar day: 7d/30d span the whole range ending today,
  * 'all' spans the first through the last stored record, capped at MAX_SERIES_DAYS.
- * Records with malformed dates are skipped.
+ * Records with malformed or future dates are skipped.
  */
 export function buildDailyStatsSeries(
   records: DailyRecord[],
   range: StatsRange = 'all',
   todayDateKey = getTodayDateKey(),
 ): DailyStatsPoint[] {
+  // Future-dated records (wrong clock, imported backup) are not charted; they would push
+  // every real day out of the capped 'all' window.
   const inRange = filterRecordsByRange(records, range, todayDateKey)
-    .filter((record) => isValidDateKey(record.date))
+    .filter((record) => isValidDateKey(record.date) && record.date <= todayDateKey)
   if (range === 'all' && inRange.length === 0) return []
 
   const byDate = new Map(inRange.map((record) => [record.date, record]))
