@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test'
-import { buildDailyStatsSeries, computeWorkoutTotals, filterRecordsByRange } from './stats'
+import { MAX_SERIES_DAYS, buildDailyStatsSeries, computeWorkoutTotals, filterRecordsByRange } from './stats'
 import type { DailyRecord } from '../types'
 
 function record(date: string, plank: number, squat: number, pushup: number): DailyRecord {
@@ -112,4 +112,76 @@ test('buildDailyStatsSeries returns date-sorted daily values', () => {
       dumbbellActualReps: 10,
     },
   ])
+})
+
+test('buildDailyStatsSeries expands missing days as null and keeps totals', () => {
+  const records = [
+    record('2026-02-04', 70, 22, 0),
+    record('2026-02-01', 60, 20, 15),
+  ]
+
+  const series = buildDailyStatsSeries(records, 'all', '2026-02-10')
+
+  expect(series.map((point) => point.date)).toEqual([
+    '2026-02-01',
+    '2026-02-02',
+    '2026-02-03',
+    '2026-02-04',
+  ])
+  expect(series.map((point) => point.plankActualSec)).toEqual([60, null, null, 70])
+  expect(series[1]).toEqual({
+    date: '2026-02-02',
+    plankActualSec: null,
+    squatActualReps: null,
+    pushupActualReps: null,
+    deadhangActualSec: null,
+    dumbbellActualReps: null,
+  })
+  // A recorded 0 stays 0 and is distinct from a missing day.
+  expect(series[3].pushupActualReps).toBe(0)
+  expect(computeWorkoutTotals(records).plankActualSec).toBe(130)
+})
+
+test('buildDailyStatsSeries spans every day of the 7d range ending today', () => {
+  const series = buildDailyStatsSeries(
+    [record('2026-02-01', 60, 20, 15), record('2026-02-16', 61, 21, 16)],
+    '7d',
+    '2026-02-20',
+  )
+
+  expect(series.map((point) => point.date)).toEqual([
+    '2026-02-14',
+    '2026-02-15',
+    '2026-02-16',
+    '2026-02-17',
+    '2026-02-18',
+    '2026-02-19',
+    '2026-02-20',
+  ])
+  expect(series.map((point) => point.squatActualReps)).toEqual([null, null, 21, null, null, null, null])
+})
+
+test('buildDailyStatsSeries skips malformed dates and bounds the all-range span', () => {
+  const malformed = { ...record('2026-02-01', 60, 20, 15), date: 'invalid' }
+  expect(buildDailyStatsSeries([record('2026-02-01', 60, 20, 15), malformed], 'all', '2026-02-10'))
+    .toEqual(buildDailyStatsSeries([record('2026-02-01', 60, 20, 15)], 'all', '2026-02-10'))
+
+  const series = buildDailyStatsSeries(
+    [record('1000-01-01', 10, 1, 1), record('2026-02-01', 60, 20, 15)],
+    'all',
+    '2026-02-10',
+  )
+  expect(series.length).toBe(MAX_SERIES_DAYS)
+  expect(series[series.length - 1].date).toBe('2026-02-01')
+})
+
+test('buildDailyStatsSeries keeps real days charted when a record is dated in the future', () => {
+  const series = buildDailyStatsSeries(
+    [record('2026-01-31', 50, 10, 5), record('2026-02-01', 60, 20, 15), record('2099-01-01', 70, 21, 16)],
+    'all',
+    '2026-02-03',
+  )
+
+  expect(series.map((point) => point.date)).toEqual(['2026-01-31', '2026-02-01'])
+  expect(series.map((point) => point.plankActualSec)).toEqual([50, 60])
 })

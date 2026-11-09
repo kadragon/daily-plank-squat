@@ -72,3 +72,40 @@ test('WorkoutStats shows all/7d/30d range filters', () => {
   expect(html).toContain('>7일<')
   expect(html).toContain('>30일<')
 })
+
+test('WorkoutStats draws an isolated recorded day as its own segment', () => {
+  const html = renderToStaticMarkup(
+    <WorkoutStats records={[record('2026-02-01', 60, 20, 15), record('2026-02-04', 62, 22, 17)]} />,
+  )
+
+  // Five charts, each with two separate segments and two points; nothing spans 02-02..02-03.
+  expect(html.match(/<polyline /g)?.length).toBe(10)
+  expect(html.match(/<circle /g)?.length).toBe(10)
+})
+
+test('WorkoutStats breaks chart lines across days without records', () => {
+  const html = renderToStaticMarkup(
+    <WorkoutStats
+      records={[
+        record('2026-02-01', 60, 20, 15),
+        record('2026-02-02', 61, 21, 16),
+        record('2026-02-04', 62, 22, 17),
+        record('2026-02-05', 63, 23, 18),
+      ]}
+    />,
+  )
+
+  // Five charts, each with two separate segments and one point per recorded day.
+  expect(html.match(/<polyline /g)?.length).toBe(10)
+  expect(html.match(/<circle /g)?.length).toBe(20)
+  // The missing day still gets its own x-axis slot.
+  expect(html).toContain('>02-03<')
+})
+
+test('WorkoutStats shows the empty message when no record has a chartable date', () => {
+  const html = renderToStaticMarkup(
+    <WorkoutStats records={[{ ...record('2026-02-01', 60, 20, 15), date: 'invalid' }]} />,
+  )
+
+  expect(html).toContain('아직 기록이 없습니다. 운동을 완료하면 통계가 표시됩니다.')
+})

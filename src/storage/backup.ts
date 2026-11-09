@@ -1,5 +1,5 @@
 import type { DailyRecord, DayType, DumbbellRecord, ExerciseRecord, SquatRecord } from '../types'
-import { toLocalDateKey } from '../utils/date-key'
+import { isValidDateKey, toLocalDateKey } from '../utils/date-key'
 import { DAILY_RECORDS_STORAGE_KEY, loadAllRecords } from './daily-record'
 import { ALL_EXERCISES, loadSettings, SETTINGS_STORAGE_KEY, type AppSettings, type ExerciseId } from './settings'
 
@@ -63,13 +63,6 @@ function readBoolean(value: unknown, path: string): boolean {
 function readObject(value: unknown, path: string): Record<string, unknown> {
   if (!isRecord(value)) fail(`${path} must be an object`)
   return value
-}
-
-function isValidDateKey(value: string): boolean {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
-  const [year, month, day] = value.split('-').map(Number)
-  const date = new Date(Date.UTC(year, month - 1, day))
-  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day
 }
 
 function readSecondsRecord(value: unknown, path: string): ExerciseRecord {

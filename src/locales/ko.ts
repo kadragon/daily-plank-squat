@@ -170,6 +170,8 @@ export const STATS_COPY = {
   range30d: '30일',
   total: (exerciseName: string) => `${exerciseName} 합계`,
   chartAriaLabel: (title: string) => `${title} 차트`,
+  noRecord: '기록 없음',
+  readout: (date: string, valueText: string) => `${date} · ${valueText}`,
 } as const
 
 export const BACKUP_COPY = {
